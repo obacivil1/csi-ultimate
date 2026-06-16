@@ -271,6 +271,7 @@
       <div class="plan-card" onclick="selectPlan('basic',this)" id="planBasic">
         <h4 style="color:#1F3864;">الباقة الأساسية</h4>
         <div class="price-tag">500 <small>ريال/شهر</small></div>
+        <div style="font-size:0.75em;color:var(--text-muted);margin:-5px 0 5px;">السنوي: 4,999 ريال/سنة</div>
         <ul class="features">
           <li>البحث في المنافسات الحكومية</li>
           <li class="limited">عرض 15 منافسة يومياً فقط</li>
@@ -285,6 +286,7 @@
         <div style="background:var(--gold);color:var(--gold-text);padding:2px 12px;border-radius:50px;font-size:0.75em;font-weight:700;display:inline-block;margin-bottom:5px;">✦ الأكثر طلباً</div>
         <h4 style="color:#1F3864;">الباقة الاحترافية</h4>
         <div class="price-tag">1,199 <small>ريال/شهر</small></div>
+        <div style="font-size:0.75em;color:var(--success);font-weight:700;margin:-5px 0 5px;">🔥 السنوي: 9,999 ريال (وفر 4,389)</div>
         <ul class="features">
           <li>جميع المنافسات (غير محدود)</li>
           <li>فلتر التشييد والبناء</li>
@@ -749,6 +751,7 @@ function selectPlan(planId, el) {
   document.querySelectorAll('#upgradeModal [id^=plan]').forEach(p => p.style.borderColor = 'transparent');
   el.style.borderColor = '#2E75B6';
   
+  const monthly = { basic: 500, professional: 1199, enterprise: 2999 };
   const prices = { basic: '500 ريال/شهر', professional: '1,199 ريال/شهر', enterprise: '2,999 ريال/شهر' };
   const names = { basic: 'الباقة الأساسية', professional: 'الباقة الاحترافية', enterprise: 'الباقة الشاملة' };
   document.getElementById('selectedPlan').textContent = `✅ اخترت: ${names[planId]} — ${prices[planId]}`;

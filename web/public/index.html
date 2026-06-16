@@ -5,24 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>منصة المنافسات والمقاولين</title>
 <link rel="stylesheet" href="/css/style.css">
-<style>
-  /* Anti-copy */
-  .sample-table { -webkit-user-select: none; user-select: none; }
-  .sample-table td::after { content: ''; position: absolute; inset: 0; pointer-events: none; }
-</style>
-<script>
-  document.addEventListener('contextmenu', e => e.preventDefault());
-  document.addEventListener('keydown', e => {
-    if ((e.ctrlKey && ['c','C','x','X','a','A','s','S','u','U','p','P'].includes(e.key)) || e.key === 'F12') {
-      e.preventDefault(); return false;
-    }
-  });
-  document.addEventListener('DOMContentLoaded', () => {
-    document.addEventListener('selectstart', e => {
-      if (e.target.closest('.sample-table')) e.preventDefault();
-    });
-  });
-</script>
+<meta name="description" content="منصة المنافسات والمقاولين السعودية — أكبر قاعدة بيانات للمنافسات الحكومية وبيانات المقاولين المعتمدين. 8,160+ منافسة، 13,514 مقاول، 611 مشروع. محدثة يومياً من منصة اعتماد.">
+<meta name="keywords" content="منافسات حكومية, مقاولين سعوديين, منصة اعتماد, مشاريع السعودية, مناقصات, tenders Saudi Arabia, contractors">
+<meta property="og:title" content="منصة المنافسات والمقاولين السعودية">
+<meta property="og:description" content="8,160+ منافسة حكومية و13,514 مقاول معتمد — محدثة يومياً">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://csi-ultimate.onrender.com">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏗️</text></svg>">
 </head>
 <body>
 
@@ -94,10 +83,10 @@
 <!-- Header -->
 <div class="landing-header">
   <div class="badge">🇸🇦 بيانات حكومية رسمية — محدثة يومياً</div>
-  <h1>🏗️ منتج المنافسات الحكومية والمقاولين</h1>
-  <p class="subtitle">Government Tenders & Contractors Database 2026</p>
+  <h1>🏗️ منصة المنافسات والمقاولين السعودية</h1>
+  <p class="subtitle">Saudi Tenders, Contractors & Projects Database 2026</p>
   <p style="font-size:1.1em;max-width:650px;margin:15px auto 0;opacity:0.85;">
-    أقوى قاعدة بيانات للمنافسات الحكومية السعودية وبيانات المقاولين المعتمدين<br>
+    8,160+ منافسة حكومية • 13,514 مقاول معتمد • 611 مشروع كبرى<br>
     كل ما تحتاج لتطوير أعمالك في قطاع المشتريات الحكومية
   </p>
   <button class="cta-btn" onclick="showModal('registerModal')">🚀 ابدأ الفترة المجانية — 7 أيام</button>
@@ -191,6 +180,18 @@
   </div>
 </div>
 
+<!-- Trust Section -->
+<div class="section" style="padding:30px 0;background:var(--bg-card);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+  <div class="container">
+    <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:40px;text-align:center;">
+      <div><div style="font-size:2em;font-weight:900;color:var(--accent-hover);">8,160+</div><div style="font-size:0.85em;color:var(--text-secondary);">منافسة حكومية</div></div>
+      <div><div style="font-size:2em;font-weight:900;color:var(--accent-hover);">13,514</div><div style="font-size:0.85em;color:var(--text-secondary);">مقاول مصنّف</div></div>
+      <div><div style="font-size:2em;font-weight:900;color:var(--accent-hover);">611</div><div style="font-size:0.85em;color:var(--text-secondary);">مشروع كبرى</div></div>
+      <div><div><span style="font-size:1.5em;">🇸🇦🌐</span></div><div style="font-size:0.85em;color:var(--text-secondary);">مصادر رسمية: اعتماد + مقاول</div></div>
+    </div>
+  </div>
+</div>
+
 <!-- Pricing -->
 <div class="section">
   <div class="container">
@@ -215,6 +216,7 @@
         <div class="popular">الأكثر طلباً</div>
         <h3>🚀 الباقة الاحترافية</h3>
         <div class="price">1,199 <span>ريال/شهر</span></div>
+        <div style="font-size:0.85em;color:var(--success);font-weight:700;margin:-5px 0 10px;">💡 السنوي: 9,999 ريال/سنة (وفر 4,389)</div>
         <ul>
           <li>جميع المنافسات النشطة (8,160+)</li>
           <li>جميع المقاولين (13,514)</li>
@@ -224,18 +226,18 @@
           <li>تنبيهات المنافسات العاجلة</li>
           <li>دعم فني مباشر</li>
         </ul>
-        <button class="btn" onclick="showModal('registerModal')">اشترك الآن</button>
+        <button class="btn" onclick="showModal('registerModal')">ابدأ الاشتراك</button>
       </div>
       <div class="pricing-card">
         <h3>🏢 الباقة الشاملة</h3>
-        <div class="price">2,999 <span>ريال/شهر</span></div>
+        <div class="price" style="font-size:1.6em;">تواصل معنا</div>
         <ul>
           <li>كل مزايا الباقة الاحترافية</li>
           <li>تحديث يومي</li>
           <li>API للتكامل مع أنظمتك</li>
           <li>تقارير مخصصة حسب الطلب</li>
           <li>استشارات تحليل بيانات</li>
-          <li>أولوية الدعم الفني</li>
+          <li>حسابات فريق (5 مستخدمين)</li>
         </ul>
         <button class="btn" onclick="showModal('registerModal')">تواصل معنا</button>
       </div>
@@ -249,14 +251,16 @@
   <p style="font-size:1.1em;opacity:0.9;margin-top:10px;">بدون بطاقة ائتمان — جرب واحكم بنفسك</p>
   <button class="btn" onclick="showModal('registerModal')">📥 ابدأ الفترة المجانية</button>
   <div class="contact-row">
-    <span>📧 البريد: sales@example.com</span>
-    <span>🌐 example.com/tenders</span>
+    <span>📧 البريد: obacivil1@gmail.com</span>
+    <span>🌐 csi-ultimate.onrender.com</span>
+    <span>📱 واتساب: <a href="https://wa.me/966500000000" style="color:white;text-decoration:underline;">+966 50 000 0000</a></span>
   </div>
 </div>
 
 <footer>
-  <p>© 2026 منتج المنافسات الحكومية والمقاولين — جميع الحقوق محفوظة</p>
+  <p>© 2026 منصة المنافسات والمقاولين السعودية — جميع الحقوق محفوظة</p>
   <p style="margin-top:5px;">مصادر البيانات: منصة اعتماد (tenders.etimad.sa) | موقع مقاول (muqawil.org)</p>
+  <p style="margin-top:5px;font-size:0.8em;">تواصل: obacivil1@gmail.com | واتساب: +966 50 000 0000</p>
 </footer>
 
 <script>
@@ -419,5 +423,6 @@ function setTheme(t) {
   <button data-theme="dark" onclick="setTheme('dark')" title="داكن">🌙</button>
   <button data-theme="nickel" onclick="setTheme('nickel')" title="نيكل">⚪</button>
 </div>
+<a href="https://wa.me/966500000000" target="_blank" style="position:fixed;bottom:90px;right:20px;z-index:999;background:#25D366;width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.2);text-decoration:none;font-size:1.5em;transition:transform 0.3s;color:white;" title="واتساب">💬</a>
 </body>
 </html>
