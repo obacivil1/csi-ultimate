@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { authenticate, getPlanLimits } from '../middleware/auth.mjs';
+import { getJSON } from '../cache.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const projectsRouter = Router();
@@ -10,8 +10,7 @@ export const projectsRouter = Router();
 const DATA_FILE = path.join(__dirname, '..', '..', 'data', 'projects_database.json');
 
 function loadProjects() {
-  try { return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); }
-  catch { return []; }
+  return getJSON('projects', DATA_FILE);
 }
 
 // GET /api/projects - List with filters
@@ -41,7 +40,10 @@ projectsRouter.get('/', authenticate, (req, res) => {
   // Plan limits
   const limits = getPlanLimits(req.user?.subscription || 'trial');
   let total = filtered.length;
-  if (limits.maxProjects && total > limits.maxProjects) total = limits.maxProjects;
+  if (limits.maxProjects && total > limits.maxProjects) {
+    total = limits.maxProjects;
+    filtered = filtered.slice(0, total);
+  }
 
   const totalPages = Math.ceil(total / Number(limit));
   const p = Number(page);

@@ -10,7 +10,7 @@ proposals/
 presentations/
 *.pptx
 *.xlsx
-data/muqawil_all_regions.json
+
 data/*_sustainable.json
 data/*_jobs_*.json
 data/leads_*.json

@@ -1,0 +1,250 @@
+[
+  {
+    "site": "bayt.com",
+    "url": "https://www.bayt.com/en/jobs/",
+    "tests": [
+      {
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "status": 200,
+        "contentType": "text/html; charset=UTF-8",
+        "title": "Jobs in the Middle East (Jun 2026) - Bayt.com",
+        "isBlocked": false,
+        "blockType": null,
+        "bodySnippet": "Home\nFind Jobs \nCreate Your Profile\nResources \nPremium\nLog In Register\nالعربية\nFor Employers\nSelect location\nAll locations\nAlgeria\nBahrain\nBahrain · Manama\nEgypt\nEgypt · Alexandria\nEgypt · Cairo\nIndia\nIraq\nIraq · Baghdad\nJordan\nJordan · Amman\nKuwait\nKuwait · Al Kuwait\nLebanon\nLebanon · Beirut\nLibya\nMorocco\nMorocco · Casablanca\nOman\nOman · Muscat\nPakistan\nQatar\nQatar · Doha\nSaudi Arabia\nSaudi Arabia · Dammam\nSaudi Arabia · Eastern Province\nSaudi Arabia · Jeddah\nSaudi Arabia · Jubail\nSaudi Arabia · Khobar\nSaudi Arabia · Mecca\nSaudi Arabia · Medina\nSaudi Arabia · Riyadh\nSyria\nTunisia\nTunisia · Tunis\nUnited Arab Emirates\nUnited Arab Emirates · Abu Dhabi\nUnited Arab Emirates · Ajman\nUnited Arab Emirates · Al Ain\nUnited Arab Emirates · Dubai\nUnited Arab Emirates · Fujairah\nUnited Arab Emirates ·",
+        "headers": {
+          "age": "99",
+          "allow": "GET, POST, HEAD",
+          "cache-control": "max-age=0, no-cache, no-store",
+          "cf-cache-status": "DYNAMIC",
+          "cf-ray": "a0b367bd9d46e219-MRS",
+          "content-encoding": "br",
+          "content-type": "text/html; charset=UTF-8",
+          "date": "Sat, 13 Jun 2026 19:12:10 GMT",
+          "pragma": "no-cache",
+          "server": "cloudflare",
+          "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+          "vary": "Accept-Encoding\nx-requested-with, Accept-Encoding",
+          "x-cache": "HIT",
+          "x-cache-hits": "1",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "sameorigin",
+          "x-page-speed": "1.14.36.1-0",
+          "x-permitted-cross-domain-policies": "none",
+          "x-varnish-ttl": "270",
+          "x-xss-protection": "1; mode=block"
+        },
+        "error": null,
+        "screenshot": null
+      },
+      {
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "status": 200,
+        "contentType": "text/html; charset=UTF-8",
+        "title": "Jobs in the Middle East (Jun 2026) - Bayt.com",
+        "isBlocked": false,
+        "blockType": null,
+        "bodySnippet": "Home\nFind Jobs \nCreate Your Profile\nResources \nPremium\nLog In Register\nالعربية\nFor Employers\nSelect location\nAll locations\nAlgeria\nBahrain\nBahrain · Manama\nEgypt\nEgypt · Alexandria\nEgypt · Cairo\nIndia\nIraq\nIraq · Baghdad\nJordan\nJordan · Amman\nKuwait\nKuwait · Al Kuwait\nLebanon\nLebanon · Beirut\nLibya\nMorocco\nMorocco · Casablanca\nOman\nOman · Muscat\nPakistan\nQatar\nQatar · Doha\nSaudi Arabia\nSaudi Arabia · Dammam\nSaudi Arabia · Eastern Province\nSaudi Arabia · Jeddah\nSaudi Arabia · Jubail\nSaudi Arabia · Khobar\nSaudi Arabia · Mecca\nSaudi Arabia · Medina\nSaudi Arabia · Riyadh\nSyria\nTunisia\nTunisia · Tunis\nUnited Arab Emirates\nUnited Arab Emirates · Abu Dhabi\nUnited Arab Emirates · Ajman\nUnited Arab Emirates · Al Ain\nUnited Arab Emirates · Dubai\nUnited Arab Emirates · Fujairah\nUnited Arab Emirates ·",
+        "headers": {
+          "age": "106",
+          "allow": "GET, POST, HEAD",
+          "cache-control": "max-age=0, no-cache, no-store",
+          "cf-cache-status": "DYNAMIC",
+          "cf-ray": "a0b367e7c979e209-MRS",
+          "content-encoding": "br",
+          "content-type": "text/html; charset=UTF-8",
+          "date": "Sat, 13 Jun 2026 19:12:16 GMT",
+          "pragma": "no-cache",
+          "server": "cloudflare",
+          "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+          "vary": "Accept-Encoding\nx-requested-with, Accept-Encoding",
+          "x-cache": "HIT",
+          "x-cache-hits": "2",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "sameorigin",
+          "x-page-speed": "1.14.36.1-0",
+          "x-permitted-cross-domain-policies": "none",
+          "x-varnish-ttl": "270",
+          "x-xss-protection": "1; mode=block"
+        },
+        "error": null,
+        "screenshot": null
+      }
+    ]
+  },
+  {
+    "site": "olx.com.pk",
+    "url": "https://www.olx.com.pk/",
+    "tests": [
+      {
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "status": 200,
+        "contentType": "text/html;charset=utf-8",
+        "title": "OLX - Buy and Sell for free anywhere in Pakistan with OLX online classifieds",
+        "isBlocked": false,
+        "blockType": null,
+        "bodySnippet": "Motors\nProperty\nLogin\nSELL\nSearch\nAll Categories\nMobile Phones\nCars\nMotorcycles\nHouses\nVideo-Audios\nTablets\nLand & Plots\nMobiles\nVehicles\nProperty For Sale\nProperty For Rent\nElectronics & Home Appliances\nBikes\nBusiness, Industrial & Agriculture\nServices\nJobs\nAnimals\nFurniture & Home Decor\nFashion & Beauty\nBooks, Sports & Hobbies\nKids\nMobile Phones\nView More\nRs 1.55 Lac\n\nSamsung S25 Pta Approved @ S25 Plus\n\nMochipura Morr, Lahore\n1 week ago\nRs 2.75 Lac\n\noneplus 15 ,Realme GT 8 pro Aramco F1 edition, Vivo IQOO 15,13\n\nD Ground, Faisalabad\n4 weeks ago\nRs 5,000\n\niPhone 6, 6splus 7, 7 Plus, 8, 8 Plus Xr delivery all Pakistan Non Pta\n\nShaheen Abad, Gujranwala\n3 days ago\nRs 32,000\n\nXiaomi Redmi Note 10\n\nSatellite Town, Rawalpindi\n2 weeks ago\nCars\nView More\nRs 41 Lacs\n\nHonda BR-V 2018\n\n2018\n•\n61,00",
+        "headers": {
+          "cache-control": "max-age=60",
+          "cf-cache-status": "DYNAMIC",
+          "cf-ray": "a0b368079da97923-RUH",
+          "content-encoding": "br",
+          "content-security-policy": "frame-ancestors https://sellercenter.olx.com.pk",
+          "content-type": "text/html;charset=utf-8",
+          "date": "Sat, 13 Jun 2026 19:12:22 GMT",
+          "server": "cloudflare",
+          "strict-transport-security": "max-age=63072000; includeSubDomains",
+          "vary": "Accept-Encoding, Cookie"
+        },
+        "error": null,
+        "screenshot": null
+      },
+      {
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "status": 200,
+        "contentType": "text/html;charset=utf-8",
+        "title": "OLX - Buy and Sell for free anywhere in Pakistan with OLX online classifieds",
+        "isBlocked": false,
+        "blockType": null,
+        "bodySnippet": "Motors\nProperty\nLogin\nSELL\nSearch\nAll Categories\nMobile Phones\nCars\nMotorcycles\nHouses\nVideo-Audios\nTablets\nLand & Plots\nMobiles\nVehicles\nProperty For Sale\nProperty For Rent\nElectronics & Home Appliances\nBikes\nBusiness, Industrial & Agriculture\nServices\nJobs\nAnimals\nFurniture & Home Decor\nFashion & Beauty\nBooks, Sports & Hobbies\nKids\nMobile Phones\nView More\nRs 28,999\n\nPixel 6A | Official PTA | 6/128GB\n\nDhobi Ghat, Faisalabad\n2 weeks ago\nRs 2.85 Lac\n\niPhone 17 pro Max Non PTA\n\nJohar Town Phase 1, Lahore\n4 days ago\nRs 45,000\n\nSamsung Mobile S23\n\nOthers, Gilgit\n4 hours ago\nRs 12,345\n\niPhone 13, 13 Pro, 14 & 14 Pro Max Available | PTA & Non-PTA\n\nCantt, Multan\n1 week ago\nCars\nView More\nRs 13 Lacs\n\nSuzuki Cultus 2009\n\n2009\n•\n50,000 km\n•\nPetrol\nSohan Valley, Islamabad\n1 week ago\nRs 10.90 Lacs\n\nSu",
+        "headers": {
+          "cache-control": "max-age=60",
+          "cf-cache-status": "DYNAMIC",
+          "cf-ray": "a0b368445ba22cf4-RUH",
+          "content-encoding": "br",
+          "content-security-policy": "frame-ancestors https://sellercenter.olx.com.pk",
+          "content-type": "text/html;charset=utf-8",
+          "date": "Sat, 13 Jun 2026 19:12:32 GMT",
+          "server": "cloudflare",
+          "strict-transport-security": "max-age=63072000; includeSubDomains",
+          "vary": "Accept-Encoding, Cookie"
+        },
+        "error": null,
+        "screenshot": null
+      }
+    ]
+  },
+  {
+    "site": "expatriates.com",
+    "url": "https://www.expatriates.com/",
+    "tests": [
+      {
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "status": 200,
+        "contentType": "text/html",
+        "title": "expatriates.com - the online community for expatriates",
+        "isBlocked": false,
+        "blockType": null,
+        "bodySnippet": "expatriates.com\nThe online community for expatriates\nHome Subscribe Contact Us My Ads Place an Ad\nAll Categories\nSearch\n\nWelcome to expatriates.com! The community web site created for and by expatriates. We invite you to place a free classified ad and browse classifieds ads in your city or country.\n\nPlace a Free Ad\nPopular Locations\nBahrain\nRiyadh\nJeddah\nDammam\nDubai\nHyderabad\nAmman\nAmsterdam\nAthens\nBeijing\nBrussels\nCairo\nDoha\nDubai\nGeneva\nHo Chi Minh City\nJakarta\nJubail\nKarachi\nKuala Lumpur\nKuwait\nManila\nMuscat\nSingapore\nAfrica\nAsia\nAustralia & Oceania\nEurope\nLatin America & Caribbean\nNorth America\nBrowse by Category\nJobs\nJob Seekers\nTemp Jobs\nItems For Sale\nAir Conditioners\nAppliances\nAuto Parts\nBaby & Kid Stuff\nBicycles\nBoats\nBooks\nClothing & Accessories\nCollectibles\nComputers\nElectrica",
+        "headers": {
+          "access-control-allow-headers": "*",
+          "access-control-allow-methods": "*",
+          "access-control-allow-origin": "*",
+          "age": "152",
+          "alt-svc": "h3=\":443\"; ma=86400",
+          "cache-control": "public, max-age=600",
+          "cf-cache-status": "HIT",
+          "cf-ray": "a0b368a3a9a961ee-MRS",
+          "content-encoding": "br",
+          "content-type": "text/html",
+          "date": "Sat, 13 Jun 2026 19:12:46 GMT",
+          "expires": "Sat, 13 Jun 2026 19:22:46 GMT",
+          "last-modified": "Sat, 13 Jun 2026 19:10:14 GMT",
+          "server": "cloudflare",
+          "server-timing": "cfCacheStatus;desc=\"HIT\"\ncfEdge;dur=4,cfOrigin;dur=0",
+          "speculation-rules": "\"/cdn-cgi/speculation\"",
+          "vary": "Accept-Encoding"
+        },
+        "error": null,
+        "screenshot": null
+      },
+      {
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "status": 200,
+        "contentType": "text/html",
+        "title": "expatriates.com - the online community for expatriates",
+        "isBlocked": false,
+        "blockType": null,
+        "bodySnippet": "expatriates.com\nThe online community for expatriates\nHome Subscribe Contact Us My Ads Place an Ad\nAll Categories\nSearch\n\nWelcome to expatriates.com! The community web site created for and by expatriates. We invite you to place a free classified ad and browse classifieds ads in your city or country.\n\nPlace a Free Ad\nPopular Locations\nBahrain\nRiyadh\nJeddah\nDammam\nDubai\nHyderabad\nAmman\nAmsterdam\nAthens\nBeijing\nBrussels\nCairo\nDoha\nDubai\nGeneva\nHo Chi Minh City\nJakarta\nJubail\nKarachi\nKuala Lumpur\nKuwait\nManila\nMuscat\nSingapore\nAfrica\nAsia\nAustralia & Oceania\nEurope\nLatin America & Caribbean\nNorth America\nBrowse by Category\nJobs\nJob Seekers\nTemp Jobs\nItems For Sale\nAir Conditioners\nAppliances\nAuto Parts\nBaby & Kid Stuff\nBicycles\nBoats\nBooks\nClothing & Accessories\nCollectibles\nComputers\nElectrica",
+        "headers": {
+          "access-control-allow-headers": "*",
+          "access-control-allow-methods": "*",
+          "access-control-allow-origin": "*",
+          "age": "158",
+          "alt-svc": "h3=\":443\"; ma=86400",
+          "cache-control": "public, max-age=600",
+          "cf-cache-status": "HIT",
+          "cf-ray": "a0b368c62d41e15e-MRS",
+          "content-encoding": "br",
+          "content-type": "text/html",
+          "date": "Sat, 13 Jun 2026 19:12:52 GMT",
+          "expires": "Sat, 13 Jun 2026 19:22:52 GMT",
+          "last-modified": "Sat, 13 Jun 2026 19:10:14 GMT",
+          "server": "cloudflare",
+          "server-timing": "cfCacheStatus;desc=\"HIT\"\ncfEdge;dur=8,cfOrigin;dur=0",
+          "speculation-rules": "\"/cdn-cgi/speculation\"",
+          "vary": "Accept-Encoding"
+        },
+        "error": null,
+        "screenshot": null
+      }
+    ]
+  },
+  {
+    "site": "sa.opensooq.com",
+    "url": "https://sa.opensooq.com/en",
+    "tests": [
+      {
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "status": 200,
+        "contentType": "text/html; charset=utf-8",
+        "title": "OpenSooq Saudi Arabia : Cars : Property : For Sale : Services : Jobs | OpenSooq",
+        "isBlocked": false,
+        "blockType": null,
+        "bodySnippet": "All Categories\nMotors\nProperty\nJobs\nServices\nContact Us\nEnglish\nSearch\n1\n1\nLogin or Sign Up\nAdd Listing\nOpenSooq Saudi Arabia\nView All\nShops\nAutos\nMotorcycles\nProperty For Sale\nProperty For Rent\nHome & Garden\nServices\nBusinesses & Equipment\nSports & Fitness\nPhones & Tablets\nComputers & Laptops\nGaming & Toys\nElectronics\nHousehold Appliances\nLeisure & Collectibles\nJobs\nJob Seekers\nEducation & Training\nPets & Accessories\nFashion & Kids\nBeauty & Health\nFood\nAll Categories\nReviews & Ratings\nSell Now\nSnap Photo . List It . Sell It\nSell Anything Now\n60 Million\nUser Visits\nBest Prices\nPost Your Listing and Earn Money\nSearch . Call . Buy\nSearch Now\nCars For Sale in Saudi Arabia\nBy Brand\nBy City\nBy Year\nToyota\nCamry\nCorolla\nYaris\nFortuner\nHilux\nHyundai\nAccent\nElantra\nSonata\nTucson\nAzera\nFord\nTaurus\n",
+        "headers": {
+          "access-control-allow-headers": "abBucket",
+          "cache-control": "private, no-cache",
+          "content-encoding": "gzip",
+          "content-type": "text/html; charset=utf-8",
+          "date": "Sat, 13 Jun 2026 19:13:01 GMT",
+          "server": "nginx",
+          "strict-transport-security": "max-age=31536000; includeSubdomains; preload",
+          "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Accept-Encoding",
+          "x-backend-server": "127.0.0.1:3005",
+          "x-current-path": "/en",
+          "x-middleware-set-cookie": "NEXT_LOCALE=en; Path=/; Expires=Sun, 13 Jun 2027 19:13:01 GMT; Max-Age=31536000; Domain=.opensooq.com; SameSite=lax,ecountry=sa; Path=/; Expires=Sun, 13 Jun 2027 19:13:01 GMT; Max-Age=31536000; Domain=.opensooq.com; SameSite=lax,source=desktop; Path=/; Expires=Sun, 13 Jun 2027 19:13:01 GMT; Max-Age=31536000; Domain=.opensooq.com; SameSite=lax",
+          "x-powered-by": "Next.js",
+          "x-request-uri": "https://sa.opensooq.com/en"
+        },
+        "error": null,
+        "screenshot": null
+      },
+      {
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "status": 200,
+        "contentType": "text/html; charset=utf-8",
+        "title": "OpenSooq Saudi Arabia : Cars : Property : For Sale : Services : Jobs | OpenSooq",
+        "isBlocked": false,
+        "blockType": null,
+        "bodySnippet": "All Categories\nMotors\nProperty\nJobs\nServices\nContact Us\nEnglish\nSearch\n1\n1\nLogin or Sign Up\nAdd Listing\nOpenSooq Saudi Arabia\nView All\nShops\nAutos\nMotorcycles\nProperty For Sale\nProperty For Rent\nHome & Garden\nServices\nBusinesses & Equipment\nSports & Fitness\nPhones & Tablets\nComputers & Laptops\nGaming & Toys\nElectronics\nHousehold Appliances\nLeisure & Collectibles\nJobs\nJob Seekers\nEducation & Training\nPets & Accessories\nFashion & Kids\nBeauty & Health\nFood\nAll Categories\nReviews & Ratings\nSell Now\nSnap Photo . List It . Sell It\nSell Anything Now\n60 Million\nUser Visits\nBest Prices\nPost Your Listing and Earn Money\nSearch . Call . Buy\nSearch Now\nCars For Sale in Saudi Arabia\nBy Brand\nBy City\nBy Year\nToyota\nCamry\nCorolla\nYaris\nFortuner\nHilux\nHyundai\nAccent\nElantra\nSonata\nTucson\nAzera\nFord\nTaurus\n",
+        "headers": {
+          "access-control-allow-headers": "abBucket",
+          "cache-control": "private, no-cache",
+          "content-encoding": "gzip",
+          "content-type": "text/html; charset=utf-8",
+          "date": "Sat, 13 Jun 2026 19:13:10 GMT",
+          "server": "nginx",
+          "strict-transport-security": "max-age=31536000; includeSubdomains; preload",
+          "vary": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Accept-Encoding",
+          "x-backend-server": "127.0.0.1:3002",
+          "x-current-path": "/en",
+          "x-middleware-set-cookie": "NEXT_LOCALE=en; Path=/; Expires=Sun, 13 Jun 2027 19:13:10 GMT; Max-Age=31536000; Domain=.opensooq.com; SameSite=lax,ecountry=sa; Path=/; Expires=Sun, 13 Jun 2027 19:13:10 GMT; Max-Age=31536000; Domain=.opensooq.com; SameSite=lax,source=desktop; Path=/; Expires=Sun, 13 Jun 2027 19:13:10 GMT; Max-Age=31536000; Domain=.opensooq.com; SameSite=lax",
+          "x-powered-by": "Next.js",
+          "x-request-uri": "https://sa.opensooq.com/en"
+        },
+        "error": null,
+        "screenshot": null
+      }
+    ]
+  }
+]

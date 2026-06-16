@@ -24,6 +24,7 @@
   .plan-card .price-tag { font-size:1.8em;font-weight:900;color:var(--accent-hover);margin:10px 0; }
   .plan-card .price-tag small { font-size:0.5em;font-weight:400;color:var(--text-muted); }
   .plan-card h4 { color:var(--accent-hover); }
+  .pagination button.active { background:var(--accent-hover);color:#fff;font-weight:700; }
 </style>
 <script>
   // Anti-copy: disable right-click
@@ -96,34 +97,35 @@
         ⚡ وصلت للحد المسموح في الفترة التجريبية. <a href="#" onclick="showUpgradeModal();return false;" style="color:#1F3864;font-weight:700;">اشترك الآن</a> للوصول لجميع البيانات
       </div>
       <div class="filter-bar" style="flex-wrap:wrap;">
-        <input type="text" id="tenderSearch" placeholder="🔍 بحث..." onkeyup="loadTenders()" style="flex:1;min-width:150px;">
-        <button onclick="loadTenders()">بحث</button>
+        <input type="text" id="tenderSearch" placeholder="🔍 بحث..." onkeyup="tenderPage=1;loadTenders()" style="flex:1;min-width:150px;">
+        <button onclick="tenderPage=1;loadTenders()">بحث</button>
         <label style="display:flex;align-items:center;gap:5px;font-size:0.85em;">
-          <input type="checkbox" id="filterConstruction" onchange="loadTenders()"> تشييد
+          <input type="checkbox" id="filterConstruction" onchange="tenderPage=1;loadTenders()"> تشييد
         </label>
         <label style="display:flex;align-items:center;gap:5px;font-size:0.85em;">
-          <input type="checkbox" id="filterExpiring" onchange="loadTenders()"> عاجل
+          <input type="checkbox" id="filterExpiring" onchange="tenderPage=1;loadTenders()"> عاجل
         </label>
-        <select id="filterMaxDays" onchange="loadTenders()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;">
+        <select id="filterMaxDays" onchange="tenderPage=1;loadTenders()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;">
           <option value="">المدة</option>
           <option value="3">🔥 3 أيام</option>
           <option value="7">7 أيام</option>
           <option value="14">14 يوم</option>
           <option value="30">30 يوم</option>
         </select>
-        <select id="filterType" onchange="loadTenders()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;">
+        <select id="filterType" onchange="tenderPage=1;loadTenders()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;">
           <option value="">النوع</option>
           <option value="منافسة عامة">منافسة عامة</option>
           <option value="شراء مباشر">شراء مباشر</option>
         </select>
-        <select id="filterActivity" onchange="loadTenders()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;max-width:180px;">
+        <select id="filterActivity" onchange="tenderPage=1;loadTenders()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;max-width:180px;">
           <option value="">النشاط</option>
         </select>
-        <select id="filterAgency" onchange="loadTenders()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;max-width:180px;">
+        <select id="filterAgency" onchange="tenderPage=1;loadTenders()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;max-width:180px;">
           <option value="">الجهة</option>
         </select>
-        <input type="date" id="filterDateFrom" onchange="loadTenders()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;">
-        <input type="date" id="filterDateTo" onchange="loadTenders()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;">
+        <input type="date" id="filterDateFrom" onchange="tenderPage=1;loadTenders()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;">
+        <input type="date" id="filterDateTo" onchange="tenderPage=1;loadTenders()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;">
+        <button onclick="exportTenders()" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 Excel</button>
       </div>
       <div style="overflow-x:auto;">
         <table class="data-table">
@@ -144,17 +146,18 @@
         ⚡ وصلت للحد المسموح في الفترة التجريبية. <a href="#" onclick="showUpgradeModal();return false;" style="color:#1F3864;font-weight:700;">اشترك الآن</a> للوصول لجميع المقاولين
       </div>
       <div class="filter-bar">
-        <input type="text" id="contractorSearch" placeholder="🔍 بحث في المقاولين..." onkeyup="loadContractors()">
-        <button onclick="loadContractors()">بحث</button>
-        <select id="filterRegion" onchange="onRegionChange()">
+        <input type="text" id="contractorSearch" placeholder="🔍 بحث في المقاولين..." onkeyup="contractorPage=1;loadContractors()">
+        <button onclick="contractorPage=1;loadContractors()">بحث</button>
+        <select id="filterRegion" onchange="contractorPage=1;onRegionChange()">
           <option value="">كل المناطق</option>
         </select>
         <select id="filterCity">
           <option value="">كل المدن</option>
         </select>
-        <label style="display:flex;align-items:center;gap:5px;font-size:0.9em;color:#555;">
-          <input type="checkbox" id="filterHasEmail" onchange="loadContractors()"> بإيميل فقط
+        <label style="display:flex;align-items:center;gap:5px;font-size:0.9em;color:var(--text-secondary);">
+          <input type="checkbox" id="filterHasEmail" onchange="contractorPage=1;loadContractors()"> بإيميل فقط
         </label>
+        <button onclick="exportContractors()" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 Excel</button>
       </div>
       <div style="overflow-x:auto;">
         <table class="data-table">
@@ -175,19 +178,20 @@
         ⚡ وصلت للحد المسموح في الفترة التجريبية. <a href="#" onclick="showUpgradeModal();return false;" style="color:#1F3864;font-weight:700;">اشترك الآن</a> للوصول لجميع المشاريع
       </div>
       <div style="display:flex;align-items:center;gap:15px;margin-bottom:20px;flex-wrap:wrap;">
-        <input type="text" id="projectSearch" placeholder="🔍 بحث في المشاريع، المقاول، المالك، الاستشاري..." onkeyup="loadProjects()" style="flex:1;min-width:200px;">
-        <button onclick="loadProjects()">بحث</button>
-        <select id="filterSector" onchange="loadProjects()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;">
+        <input type="text" id="projectSearch" placeholder="🔍 بحث في المشاريع، المقاول، المالك، الاستشاري..." onkeyup="projectPage=1;loadProjects()" style="flex:1;min-width:200px;">
+        <button onclick="projectPage=1;loadProjects()">بحث</button>
+        <select id="filterSector" onchange="projectPage=1;loadProjects()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;">
           <option value="">القطاع</option>
         </select>
-        <select id="filterProjectLocation" onchange="loadProjects()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;">
+        <select id="filterProjectLocation" onchange="projectPage=1;loadProjects()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;">
           <option value="">المنطقة</option>
         </select>
-        <select id="filterHasContractor" onchange="loadProjects()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;">
+        <select id="filterHasContractor" onchange="projectPage=1;loadProjects()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;">
           <option value="">الكل</option>
           <option value="yes">مع مقاول</option>
           <option value="no">بدون مقاول</option>
         </select>
+        <button onclick="exportProjects()" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 Excel</button>
       </div>
       <div style="overflow-x:auto;">
         <table class="data-table">
@@ -208,15 +212,16 @@
         ⚡ وصلت للحد المسموح في الفترة التجريبية. <a href="#" onclick="showUpgradeModal();return false;" style="color:#1F3864;font-weight:700;">اشترك الآن</a> للوصول لجميع الترسيات
       </div>
       <div style="display:flex;align-items:center;gap:15px;margin-bottom:20px;flex-wrap:wrap;">
-        <input type="text" id="awardSearch" placeholder="🔍 بحث..." onkeyup="loadAwards()" style="flex:1;min-width:200px;">
-        <button onclick="loadAwards()">بحث</button>
-        <select id="awardMinValue" onchange="loadAwards()" style="padding:10px;border:2px solid #e0e0e0;border-radius:8px;">
+        <input type="text" id="awardSearch" placeholder="🔍 بحث..." onkeyup="awardPage=1;loadAwards()" style="flex:1;min-width:200px;">
+        <button onclick="awardPage=1;loadAwards()">بحث</button>
+        <select id="awardMinValue" onchange="awardPage=1;loadAwards()" style="padding:10px;border:2px solid #e0e0e0;border-radius:8px;">
           <option value="">كل القيم</option>
           <option value="0">أقل من 10,000</option>
           <option value="10000">10,000 - 50,000</option>
           <option value="50000">50,000 - 100,000</option>
           <option value="100000">أكثر من 100,000</option>
         </select>
+        <button onclick="exportAwards()" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 Excel</button>
       </div>
       <div style="overflow-x:auto;">
         <table class="data-table">
@@ -334,6 +339,14 @@ const API = {
       credentials: 'include', body: JSON.stringify(data)
     });
     return r.json();
+  },
+  async download(path, data) {
+    const r = await fetch(path, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', body: JSON.stringify(data)
+    });
+    if (!r.ok) throw new Error('Export failed');
+    return r.blob();
   }
 };
 
@@ -363,6 +376,8 @@ function switchTab(tab, el) {
   if (tab === 'alerts') loadAlerts();
 }
 
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+
 // ── Auth Check ──
 async function checkAuth() {
   const res = await API.get('/api/auth/me');
@@ -376,10 +391,11 @@ async function checkAuth() {
     badge.textContent = `تجربة مجانية (${u.trialDaysLeft} أيام)`;
     badge.className = 'sub-badge trial';
     document.getElementById('subBanner').style.display = 'block';
-    document.getElementById('trialDays').textContent = u.trialDaysLeft;
-    document.getElementById('trialText').textContent = u.trialDaysLeft > 0
-      ? `باقي ${u.trialDaysLeft} أيام من الفترة المجانية. اشترك الآن للاستمرار!`
-      : 'انتهت الفترة التجريبية. اشترك الآن للاستمرار!';
+    if (u.trialDaysLeft > 0) {
+      document.getElementById('trialDays').textContent = u.trialDaysLeft;
+    } else {
+      document.getElementById('trialText').textContent = 'انتهت الفترة التجريبية. اشترك الآن للاستمرار!';
+    }
   } else if (u.subscription === 'expired') {
     badge.textContent = 'منتهية';
     badge.className = 'sub-badge expired';
@@ -472,13 +488,13 @@ async function loadTenders() {
     if (res.data && res.data.length) {
       tbody.innerHTML = res.data.map(t => `
         <tr>
-          <td>${t.name || ''}</td>
-          <td>${t.agency || ''}</td>
-          <td>${t.activity || ''}</td>
-          <td>${t.type || ''}</td>
-          <td>${t.lastDate || ''}</td>
+          <td>${esc(t.name)}</td>
+          <td>${esc(t.agency)}</td>
+          <td>${esc(t.activity)}</td>
+          <td>${esc(t.type)}</td>
+          <td>${esc(t.lastDate)}</td>
           <td>${t.remainingDays !== undefined && t.remainingDays !== null ? (t.remainingDays + ' يوم') : ''}</td>
-          <td>${t.status || ''}</td>
+          <td>${esc(t.status)}</td>
         </tr>
       `).join('');
     } else {
@@ -499,7 +515,7 @@ async function loadTenders() {
     }
     // Check plan limit
     const banner = document.getElementById('planLimitTenders');
-    if (res.plan && res.plan.limits && res.plan.limits.maxTenders > 0 && res.pagination.total >= res.plan.limits.maxTenders) {
+    if (res.plan && res.plan.limits && res.plan.limits.maxTenders > 0 && res.pagination && res.pagination.total >= res.plan.limits.maxTenders) {
       banner.style.display = 'block';
     } else {
       banner.style.display = 'none';
@@ -546,11 +562,11 @@ async function loadContractors() {
     if (res.data && res.data.length) {
       tbody.innerHTML = res.data.map(c => `
         <tr>
-          <td>${c.companyName || ''}</td>
-          <td>${c.region || ''}</td>
-          <td>${c.city || ''}</td>
-          <td style="direction:ltr;text-align:left;">${c.phone || ''}</td>
-          <td>${c.email || ''}</td>
+          <td>${esc(c.companyName)}</td>
+          <td>${esc(c.region)}</td>
+          <td>${esc(c.city)}</td>
+          <td style="direction:ltr;text-align:left;">${esc(c.phone)}</td>
+          <td>${esc(c.email)}</td>
         </tr>
       `).join('');
     } else {
@@ -570,7 +586,7 @@ async function loadContractors() {
     }
     // Check plan limit
     const banner = document.getElementById('planLimitContractors');
-    if (res.plan && res.plan.limits && res.plan.limits.maxContractors > 0 && res.pagination.total >= res.plan.limits.maxContractors) {
+    if (res.plan && res.plan.limits && res.plan.limits.maxContractors > 0 && res.pagination && res.pagination.total >= res.plan.limits.maxContractors) {
       banner.style.display = 'block';
     } else {
       banner.style.display = 'none';
@@ -613,24 +629,29 @@ async function loadProjects() {
       return;
     }
     tbody.innerHTML = res.data.map(p => `<tr>
-      <td><strong>${p.title || '—'}</strong></td>
-      <td>${p.owner || '—'}</td>
-      <td style="color:#1F3864;font-weight:600;">${p.contractor || '—'}</td>
-      <td>${p.consultant || '—'}</td>
-      <td style="direction:ltr;text-align:right;font-size:0.8em;">${p.value || '—'}</td>
-      <td>${p.location || '—'}</td>
-      <td>${p.sector || '—'}</td>
+      <td><strong>${esc(p.title)}</strong></td>
+      <td>${esc(p.owner)}</td>
+      <td style="color:#1F3864;font-weight:600;">${esc(p.contractor)}</td>
+      <td>${esc(p.consultant)}</td>
+      <td style="direction:ltr;text-align:right;font-size:0.8em;">${esc(p.value)}</td>
+      <td>${esc(p.location)}</td>
+      <td>${esc(p.sector)}</td>
     </tr>`).join('');
     // Pagination
-    const pg = res.pagination;
-    let pages = '';
-    for (let i = 1; i <= pg.totalPages; i++) {
-      pages += `<span class="page-num${i === pg.page ? ' active' : ''}" onclick="projectPage=${i};loadProjects()">${i}</span>`;
+    const pag = document.getElementById('projectPagination');
+    if (res.pagination) {
+      const { page, totalPages, total } = res.pagination;
+      let pagHtml = `<button ${page <= 1 ? 'disabled' : ''} onclick="projectPage--;loadProjects()">‹</button>`;
+      for (let i = Math.max(1, page - 2); i <= Math.min(totalPages, page + 2); i++) {
+        pagHtml += `<button class="${i === page ? 'active' : ''}" onclick="projectPage=${i};loadProjects()">${i}</button>`;
+      }
+      pagHtml += `<button ${page >= totalPages ? 'disabled' : ''} onclick="projectPage++;loadProjects()">›</button>`;
+      pagHtml += `<span style="margin-right:10px;color:#888;font-size:0.85em;">${total} نتيجة</span>`;
+      pag.innerHTML = pagHtml;
     }
-    document.getElementById('projectPagination').innerHTML = pages;
     // Plan limit banner
     const banner = document.getElementById('planLimitProjects');
-    if (res.plan && res.plan.limits && res.plan.limits.maxProjects > 0 && pg.total >= res.plan.limits.maxProjects) {
+    if (res.plan && res.plan.limits && res.plan.limits.maxProjects > 0 && res.pagination && res.pagination.total >= res.plan.limits.maxProjects) {
       banner.style.display = 'block';
     } else {
       banner.style.display = 'none';
@@ -681,12 +702,12 @@ async function loadAwards() {
       tbody.innerHTML = res.data.map(a => {
         const val = a.winner ? parseFloat(a.winner.value) : 0;
         return `<tr>
-          <td>${a.tenderName || ''}</td>
-          <td>${a.agency || ''}</td>
-          <td style="color:#1F3864;font-weight:700;">${a.winner ? a.winner.name : '—'}</td>
+          <td>${esc(a.tenderName)}</td>
+          <td>${esc(a.agency)}</td>
+          <td style="color:#1F3864;font-weight:700;">${a.winner ? esc(a.winner.name) : '—'}</td>
           <td style="direction:ltr;text-align:left;">${val ? val.toLocaleString() + ' ريال' : '—'}</td>
           <td>${a.biddersCount || 0}</td>
-          <td>${a.lastDate || ''}</td>
+          <td>${esc(a.lastDate)}</td>
         </tr>`;
       }).join('');
     } else {
@@ -706,7 +727,7 @@ async function loadAwards() {
     }
     // Check plan limit
     const banner = document.getElementById('planLimitAwards');
-    if (res.plan && res.plan.limits && res.plan.limits.maxAwards > 0 && res.pagination.total >= res.plan.limits.maxAwards) {
+    if (res.plan && res.plan.limits && res.plan.limits.maxAwards > 0 && res.pagination && res.pagination.total >= res.plan.limits.maxAwards) {
       banner.style.display = 'block';
     } else {
       banner.style.display = 'none';
@@ -714,6 +735,80 @@ async function loadAwards() {
   } catch(e) {
     document.getElementById('awardsBody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;">فشل التحميل</td></tr>';
   }
+}
+
+// ── Export ──
+async function exportTenders() {
+  try {
+    const body = {};
+    const search = document.getElementById('tenderSearch')?.value;
+    if (search) body.search = search;
+    const activity = document.getElementById('filterActivity')?.value;
+    if (activity) body.activity = activity;
+    const agency = document.getElementById('filterAgency')?.value;
+    if (agency) body.agency = agency;
+    const type = document.getElementById('filterType')?.value;
+    if (type) body.type = type;
+    const con = document.getElementById('filterConstruction')?.checked;
+    if (con) body.construction = 'true';
+    const maxDays = document.getElementById('filterMaxDays')?.value;
+    if (maxDays) body.maxDays = maxDays;
+    const blob = await API.download('/api/export/tenders', body);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'tenders.xlsx'; a.click();
+    URL.revokeObjectURL(url);
+    showToast('✅ جاري التصدير...', 'info');
+  } catch(e) { showToast('❌ فشل التصدير', 'error'); }
+}
+async function exportContractors() {
+  try {
+    const body = {};
+    const search = document.getElementById('contractorSearch')?.value;
+    if (search) body.search = search;
+    const region = document.getElementById('filterRegion')?.value;
+    if (region) body.region = region;
+    const city = document.getElementById('filterCity')?.value;
+    if (city) body.city = city;
+    const hasEmail = document.getElementById('filterHasEmail')?.checked;
+    if (hasEmail) body.hasEmail = 'true';
+    const blob = await API.download('/api/export/contractors', body);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'contractors.xlsx'; a.click();
+    URL.revokeObjectURL(url);
+    showToast('✅ تم التصدير', 'success');
+  } catch(e) { showToast('❌ فشل التصدير', 'error'); }
+}
+async function exportProjects() {
+  try {
+    const body = {};
+    const search = document.getElementById('projectSearch')?.value;
+    if (search) body.search = search;
+    const sector = document.getElementById('filterSector')?.value;
+    if (sector) body.sector = sector;
+    const hc = document.getElementById('filterHasContractor')?.value;
+    if (hc) body.hasContractor = hc;
+    const blob = await API.download('/api/export/projects', body);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'projects.xlsx'; a.click();
+    URL.revokeObjectURL(url);
+    showToast('✅ تم التصدير', 'success');
+  } catch(e) { showToast('❌ فشل التصدير', 'error'); }
+}
+async function exportAwards() {
+  try {
+    const body = {};
+    const search = document.getElementById('awardSearch')?.value;
+    if (search) body.search = search;
+    const blob = await API.download('/api/export/awards', body);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'awards.xlsx'; a.click();
+    URL.revokeObjectURL(url);
+    showToast('✅ تم التصدير', 'success');
+  } catch(e) { showToast('❌ فشل التصدير', 'error'); }
 }
 
 // ── Alerts ──
@@ -726,10 +821,10 @@ async function loadAlerts() {
         const days = t.remainingDays || 0;
         const urgent = days <= 3 ? 'style="color:#DC3545;font-weight:700;"' : '';
         return `<tr>
-          <td>${t.name || ''}</td>
-          <td>${t.agency || ''}</td>
-          <td>${t.activity || ''}</td>
-          <td>${t.lastDate || ''}</td>
+          <td>${esc(t.name)}</td>
+          <td>${esc(t.agency)}</td>
+          <td>${esc(t.activity)}</td>
+          <td>${esc(t.lastDate)}</td>
           <td ${urgent}>${days} يوم ${days <= 3 ? '🔥' : ''}</td>
         </tr>`;
       }).join('');
@@ -825,7 +920,7 @@ function setTheme(t) {
 }
 
 // ── Init ──
-checkAuth();
+checkAuth().catch(() => showToast('فشل الاتصال بالسيرفر', 'error'));
 </script>
 </body>
 </html>

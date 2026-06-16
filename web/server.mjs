@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
@@ -11,6 +12,7 @@ import { paymentsRouter } from './routes/payments.mjs';
 import { dashboardRouter } from './routes/dashboard.mjs';
 import { awardsRouter } from './routes/awards.mjs';
 import { projectsRouter } from './routes/projects.mjs';
+import { exportRouter } from './routes/export.mjs';
 import { startScheduler } from './scheduler.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -18,9 +20,18 @@ const PORT = process.env.PORT || 3000;
 
 const app = express();
 
+app.use(compression());
 app.use(cors({ origin: true, credentials: true }));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
+
+// HTTPS redirect (trust Render's proxy)
+app.use((req, res, next) => {
+  if (req.headers['x-forwarded-proto'] !== 'https' && process.env.NODE_ENV === 'production') {
+    return res.redirect('https://' + req.headers.host + req.url);
+  }
+  next();
+});
 
 // Rate limiting
 const limiter = rateLimit({
@@ -41,6 +52,7 @@ app.use('/api/payments', paymentsRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/awards', awardsRouter);
 app.use('/api/projects', projectsRouter);
+app.use('/api/export', exportRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {

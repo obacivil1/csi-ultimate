@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { authenticate, requireSubscription, getPlanLimits } from '../middleware/auth.mjs';
+import { getJSON } from '../cache.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const contractorsRouter = Router();
@@ -10,8 +10,7 @@ export const contractorsRouter = Router();
 const DATA_FILE = path.join(__dirname, '..', '..', 'data', 'muqawil_all_regions.json');
 
 function loadContractors() {
-  try { return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); }
-  catch { return []; }
+  return getJSON('contractors', DATA_FILE);
 }
 
 // GET /api/contractors - List with filters
@@ -37,6 +36,7 @@ contractorsRouter.get('/', authenticate, (req, res) => {
   const limits = getPlanLimits(req.user?.subscription || 'trial');
   if (limits.maxContractors > 0 && total > limits.maxContractors) {
     total = limits.maxContractors;
+    filtered = filtered.slice(0, total);
   }
   const totalPages = Math.ceil(total / Number(limit));
   const p = Number(page);

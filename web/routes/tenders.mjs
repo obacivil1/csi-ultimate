@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { authenticate, requireSubscription, getPlanLimits, applyPlanLimit } from '../middleware/auth.mjs';
+import { getJSON } from '../cache.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const tendersRouter = Router();
@@ -11,8 +11,7 @@ const DATA_FILE = path.join(__dirname, '..', '..', 'data', 'etimad_all_tenders.j
 const CONSTRUCTION_KW = ['مقاولات','تشييد','بناء','إنشاء','هدم','ترميم','صيانة','تشغيل','نظافة','كهرباء','سباكة','طرق','خرسانة','دهان','عزل','حفر','ردم','تسوية','أساسات','حديد'];
 
 function loadTenders() {
-  try { return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); }
-  catch { return []; }
+  return getJSON('tenders', DATA_FILE);
 }
 
 const STATUS_MAP = { 2: 'نشطة', 3: 'فتح العروض', 4: 'فحص العروض', 5: 'الترسية', 6: 'تم الترسية', 8: 'منتهية' };
@@ -79,6 +78,7 @@ tendersRouter.get('/', (req, res) => {
   const limits = getPlanLimits(req.user?.subscription || 'trial');
   if (limits.maxTenders > 0 && total > limits.maxTenders) {
     total = limits.maxTenders;
+    filtered = filtered.slice(0, total);
   }
   const totalPages = Math.ceil(total / Number(limit));
   const p = Number(page);

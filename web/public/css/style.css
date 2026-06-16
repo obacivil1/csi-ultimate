@@ -174,7 +174,8 @@ body { font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--tex
 .section-title { text-align: center; margin-bottom: 40px; }
 .section-title h2 { font-size: 2em; color: var(--accent-hover); font-weight: 900; }
 .section-title p { color: var(--text-secondary); font-size: 1.1em; max-width: 600px; margin: 10px auto 0; }
-.container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+.container { max-width: 100%; margin: 0 auto; padding: 0 30px; }
+@media (min-width: 1400px) { .container { padding: 0 40px; } }
 
 /* Features */
 .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; }
@@ -188,9 +189,15 @@ body { font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--tex
 .sample-section { background: var(--bg-sample); }
 .sample-table, .data-table { width: 100%; border-collapse: collapse; background: var(--bg-card); border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px var(--shadow); }
 .sample-table th, .data-table th { background: var(--th-bg); color: var(--th-text); padding: 12px 15px; font-weight: 600; text-align: right; font-size: 0.85em; }
-.sample-table td, .data-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-light); font-size: 0.9em; }
+.sample-table td, .data-table td { padding: 12px 16px; border-bottom: 1px solid var(--border-light); font-size: 0.95em; }
 .sample-table tr:nth-child(even), .data-table tr:nth-child(even) { background: var(--bg-stripe); }
-.data-table td { font-size: 0.85em; }
+.data-table td { font-size: 0.95em; }
+.data-table th, .data-table td { white-space: nowrap; }
+.data-table th:nth-child(1), .data-table td:nth-child(1) { min-width: 280px; white-space: normal; }
+.data-table th:nth-child(2), .data-table td:nth-child(2) { min-width: 200px; }
+.data-table th:nth-child(3), .data-table td:nth-child(3) { min-width: 160px; }
+.data-table th:nth-child(4), .data-table td:nth-child(4) { min-width: 100px; }
+.data-table th:nth-child(5), .data-table td:nth-child(5) { min-width: 120px; }
 
 /* Pricing */
 .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 25px; align-items: start; }
@@ -267,4 +274,7 @@ footer { background: var(--footer-bg); color: var(--footer-text); text-align: ce
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .dash-header .container { flex-direction: column; gap: 10px; }
   .modal { width: 95%; padding: 20px; }
+  .dash-header .container,
+  .dash-tabs .container,
+  .dash-content .container { max-width: 100%; }
 }

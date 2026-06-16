@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { authenticate, getPlanLimits } from '../middleware/auth.mjs';
+import { getJSON } from '../cache.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const awardsRouter = Router();
@@ -11,15 +11,11 @@ const AWARDS_FILE = path.join(__dirname, '..', '..', 'data', 'etimad_all_awards.
 const SAMPLE_FILE = path.join(__dirname, '..', '..', 'data', 'etimad_sample_awards.json');
 
 function loadAwards() {
-  try {
-    if (fs.existsSync(AWARDS_FILE)) {
-      return JSON.parse(fs.readFileSync(AWARDS_FILE, 'utf8'));
-    }
-    if (fs.existsSync(SAMPLE_FILE)) {
-      return JSON.parse(fs.readFileSync(SAMPLE_FILE, 'utf8'));
-    }
-  } catch {}
-  return [];
+  let data = getJSON('awards', AWARDS_FILE);
+  if (!data.length) {
+    data = getJSON('awards_sample', SAMPLE_FILE);
+  }
+  return data;
 }
 
 awardsRouter.get('/', authenticate, (req, res) => {
@@ -47,7 +43,10 @@ awardsRouter.get('/', authenticate, (req, res) => {
 
   let total = data.length;
   const limits = getPlanLimits(req.user?.subscription || 'trial');
-  if (limits.maxAwards > 0 && total > limits.maxAwards) total = limits.maxAwards;
+  if (limits.maxAwards > 0 && total > limits.maxAwards) {
+    total = limits.maxAwards;
+    data = data.slice(0, total);
+  }
   const totalPages = Math.ceil(total / Number(limit));
   const p = Number(page);
   const start = (p - 1) * Number(limit);

@@ -2,19 +2,23 @@ import jwt from 'jsonwebtoken';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { getJSON, invalidate } from '../cache.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const JWT_SECRET = process.env.JWT_SECRET || 'csi-gov-tenders-secret-2026';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error('JWT_SECRET environment variable is required');
+  process.exit(1);
+}
 const USERS_FILE = path.join(__dirname, '..', 'data', 'users.json');
 
 export function loadUsers() {
-  try {
-    return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
-  } catch { return []; }
+  return getJSON('users', USERS_FILE);
 }
 
 export function saveUsers(users) {
   fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf8');
+  invalidate('users');
 }
 
 export function authenticate(req, res, next) {
@@ -34,9 +38,9 @@ export function authenticate(req, res, next) {
       if (new Date() > trialEnd) {
         req.user.subscription = 'expired';
         saveUsers(users);
-        return res.status(403).json({ error: 'انتهت الفترة التجريبية', expired: true });
+      } else {
+        req.user.trialDaysLeft = Math.max(0, Math.ceil((trialEnd - new Date()) / (1000 * 60 * 60 * 24)));
       }
-      req.user.trialDaysLeft = Math.max(0, Math.ceil((trialEnd - new Date()) / (1000 * 60 * 60 * 24)));
     }
 
     next();
@@ -56,6 +60,7 @@ export function requireSubscription(...plans) {
 
 const PLAN_LIMITS = {
   trial: { maxTenders: 240, maxContractors: 100, maxAwards: 15, maxProjects: 20, exportRows: 0, canExport: false, canViewContractors: true, contractorAccess: true },
+  expired: { maxTenders: 0, maxContractors: 0, maxAwards: 0, maxProjects: 0, exportRows: 0, canExport: false, canViewContractors: false, contractorAccess: false },
   basic: { maxTenders: 360, maxContractors: 500, maxAwards: 50, maxProjects: 50, exportRows: 50, canExport: true, canViewContractors: true, contractorAccess: true },
   professional: { maxTenders: -1, maxContractors: -1, maxAwards: -1, maxProjects: -1, exportRows: 1000, canExport: true, canViewContractors: true, contractorAccess: true },
   enterprise: { maxTenders: -1, maxContractors: -1, maxAwards: -1, maxProjects: -1, exportRows: -1, canExport: true, canViewContractors: true, contractorAccess: true }
