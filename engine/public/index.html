@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSI-Ultimate — Validation Center</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<nav>
+  <span class="brand">CSI-Ultimate</span>
+  <a href="/">Validation Center</a>
+  <a href="/evidence.html">Evidence</a>
+  <a href="/audit.html">Audit</a>
+  <a href="/certification.html">Certifications</a>
+</nav>
+
+<div class="container">
+
+  <!-- Trust Score -->
+  <div class="card" id="trustScoreCard">
+    <h2>Trust Score</h2>
+    <div id="trustScoreContent"><div class="empty">Loading...</div></div>
+  </div>
+
+  <!-- Site Verification -->
+  <div class="card">
+    <h2>Site Verification Reports</h2>
+    <div id="siteVerificationContent"><div class="empty">Loading...</div></div>
+  </div>
+
+  <!-- Field Accuracy Detail -->
+  <div class="card" id="fieldAccuracyCard" style="display:none">
+    <h2 id="fieldAccuracyTitle">Field Accuracy</h2>
+    <div id="fieldAccuracyContent"></div>
+  </div>
+
+  <!-- Recent Crawls -->
+  <div class="card">
+    <h2>Recent Crawls</h2>
+    <div id="recentCrawls"><div class="empty">Loading...</div></div>
+  </div>
+
+</div>
+
+<script>
+async function loadAll() {
+  await loadTrustScore()
+  await loadSiteVerification()
+  await loadRecentCrawls()
+}
+
+async function loadTrustScore() {
+  const el = document.getElementById("trustScoreContent")
+  try {
+    const r = await fetch("/api/validation/trust")
+    const data = await r.json()
+    if (!data.scores?.length) { el.innerHTML = '<div class="empty"><h3>No crawl data</h3><p>Run a crawl first to generate trust scores.</p></div>'; return }
+
+    const s = data.scores[0]
+    const ts = s.trustScore
+    let html = `<div class="grid grid-4" style="margin-bottom:16px">
+      <div class="stat"><div class="value" style="color:${ts.color}">${ts.score}</div><div class="label">Trust Score</div><div class="sub">Grade ${ts.grade}</div></div>
+      <div class="stat"><div class="value">${s.records}</div><div class="label">Records</div></div>
+      <div class="stat"><div class="value">${ts.fieldAccuracy}%</div><div class="label">Field Accuracy</div></div>
+      <div class="stat"><div class="value">${ts.duplicateRate}%</div><div class="label">Duplicate Rate</div></div>
+    </div>`
+
+    html += `<div style="font-size:13px;color:var(--text2);margin-bottom:12px">
+      <strong>Formula:</strong> ${ts.formula}<br>
+      Field Component: ${ts.fieldComponent} | Non-Dup: ${ts.dupComponent} | Audit Pass: ${ts.auditComponent} | Non-Block: ${ts.blockComponent}
+    </div>`
+
+    html += `<div class="grid grid-3" style="margin-bottom:12px">
+      <div class="field-row"><span class="field-label">Title</span><div class="field-bar"><div class="field-fill fill-green" style="width:${s.fieldAccuracy.fields.title.accuracy}%">${s.fieldAccuracy.fields.title.present}/${s.fieldAccuracy.total}</div></div></div>
+      <div class="field-row"><span class="field-label">Phone</span><div class="field-bar"><div class="field-fill fill-green" style="width:${s.fieldAccuracy.fields.phone.accuracy}%">${s.fieldAccuracy.fields.phone.present}/${s.fieldAccuracy.total}</div></div></div>
+      <div class="field-row"><span class="field-label">Price</span><div class="field-bar"><div class="field-fill ${s.fieldAccuracy.fields.price.accuracy >= 50 ? 'fill-green' : s.fieldAccuracy.fields.price.accuracy >= 20 ? 'fill-yellow' : 'fill-red'}" style="width:${s.fieldAccuracy.fields.price.accuracy}%">${s.fieldAccuracy.fields.price.present}/${s.fieldAccuracy.total}</div></div></div>
+      <div class="field-row"><span class="field-label">Location</span><div class="field-bar"><div class="field-fill fill-green" style="width:${s.fieldAccuracy.fields.location.accuracy}%">${s.fieldAccuracy.fields.location.present}/${s.fieldAccuracy.total}</div></div></div>
+      <div class="field-row"><span class="field-label">Email</span><div class="field-bar"><div class="field-fill fill-red" style="width:${s.fieldAccuracy.fields.email.accuracy}%">0/${s.fieldAccuracy.total}</div></div></div>
+      <div class="field-row"><span class="field-label">Currency</span><div class="field-bar"><div class="field-fill fill-yellow" style="width:${s.fieldAccuracy.fields.currency.accuracy}%">${s.fieldAccuracy.fields.currency.present}/${s.fieldAccuracy.total}</div></div></div>
+    </div>`
+
+    html += `<p style="margin:0"><button class="btn btn-sm" onclick='showFieldDetail(${JSON.stringify(s.fieldAccuracy).replace(/'/g,"\\'")})'>View Evidence</button> Source: ${s.site} (${s.jobId})</p>`
+    el.innerHTML = html
+  } catch(e) { el.innerHTML = `<div class="empty"><h3>Error</h3><p>${e.message}</p></div>` }
+}
+
+async function loadSiteVerification() {
+  const el = document.getElementById("siteVerificationContent")
+  try {
+    const r = await fetch("/api/validation/sites")
+    const data = await r.json()
+    if (!data.sites?.length) { el.innerHTML = '<div class="empty"><h3>No verified sites</h3></div>'; return }
+
+    let html = '<table><thead><tr><th>Site</th><th>Status</th><th>Records</th><th>Accuracy</th><th>Duplicates</th><th>Block Rate</th><th>Trust</th><th></th></tr></thead><tbody>'
+    for (const s of data.sites) {
+      const certBadge = s.certification === "CERTIFIED" ? "badge-green" : s.certification === "PARTIALLY_VERIFIED" ? "badge-yellow" : s.certification === "BLOCKED" ? "badge-red" : "badge-gray"
+      html += `<tr>
+        <td><strong>${s.site}</strong><br><span style="font-size:12px;color:var(--text2)">${s.category}</span></td>
+        <td><span class="badge ${certBadge}">${s.certification}</span></td>
+        <td>${s.totalRecords}</td>
+        <td>${s.fieldAccuracy.overallAccuracy}%</td>
+        <td>${s.duplicates.duplicateRate}%</td>
+        <td>${s.blockRate}%</td>
+        <td><span style="font-weight:700;color:${s.trustScore.color}">${s.trustScore.score}</span></td>
+        <td><button class="btn btn-sm" onclick='showSiteDetail(${JSON.stringify(s).replace(/'/g,"\\'")})'>Details</button></td>
+      </tr>`
+    }
+    html += '</tbody></table>'
+    el.innerHTML = html
+  } catch(e) { el.innerHTML = `<div class="empty"><h3>Error</h3><p>${e.message}</p></div>` }
+}
+
+async function loadRecentCrawls() {
+  const el = document.getElementById("recentCrawls")
+  try {
+    const r = await fetch("/api/validation/sites")
+    const data = await r.json()
+    if (!data.sites?.length) { el.innerHTML = '<div class="empty"><h3>No recent crawls</h3></div>'; return }
+
+    let html = '<table><thead><tr><th>Site</th><th>Date</th><th>Records</th><th>Extraction</th><th>Dup Rate</th><th>Actions</th></tr></thead><tbody>'
+    for (const s of data.sites) {
+      const date = new Date(s.generatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+      html += `<tr>
+        <td><strong>${s.site}</strong></td>
+        <td>${date}</td>
+        <td>${s.totalRecords}</td>
+        <td>${s.extractionRate}%</td>
+        <td>${s.duplicates.duplicateRate}%</td>
+        <td>
+          <button class="btn btn-sm" onclick="location.href='/audit.html?jobId=${s.site}'">Audit</button>
+        </td>
+      </tr>`
+    }
+    html += '</tbody></table>'
+    el.innerHTML = html
+  } catch(e) { el.innerHTML = `<div class="empty"><h3>Error</h3><p>${e.message}</p></div>` }
+}
+
+function showSiteDetail(site) {
+  const card = document.getElementById("fieldAccuracyCard")
+  card.style.display = "block"
+  document.getElementById("fieldAccuracyTitle").textContent = `${site.site} — Field Accuracy`
+
+  let html = ''
+  for (const [key, f] of Object.entries(site.fieldAccuracy.fields)) {
+    const cls = f.accuracy >= 80 ? "fill-green" : f.accuracy >= 40 ? "fill-yellow" : "fill-red"
+    html += `<div class="field-row">
+      <span class="field-label">${f.label}</span>
+      <div class="field-bar"><div class="field-fill ${cls}" style="width:${f.accuracy}%">${f.present}/${site.fieldAccuracy.total}</div></div>
+      <span style="font-size:13px;font-weight:600;width:40px;text-align:right">${f.accuracy}%</span>
+    </div>`
+  }
+
+  html += `<h3 style="margin-top:16px">Duplicates</h3>`
+  html += `<p>${site.duplicates.exactDuplicates} exact duplicates, ${site.duplicates.nearDuplicates} near-duplicates, ${site.duplicates.uniqueRecords} unique</p>`
+  if (site.duplicates.groups?.length) {
+    html += `<div class="evidence-list">`
+    for (const g of site.duplicates.groups) {
+      html += `<div class="evidence-item"><strong>Phone ${g.phone}:</strong> ${g.count} listings</div>`
+    }
+    html += `</div>`
+  }
+
+  html += `<h3 style="margin-top:16px">Trust Score Breakdown</h3>`
+  html += `<div class="grid grid-4" style="margin-top:8px">`
+  html += `<div class="stat"><div class="value" style="color:${site.trustScore.color};font-size:24px">${site.trustScore.score}</div><div class="label">Trust Score</div></div>`
+  html += `<div class="stat"><div class="value" style="font-size:24px">${site.trustScore.fieldComponent}</div><div class="label">Field (40%)</div></div>`
+  html += `<div class="stat"><div class="value" style="font-size:24px">${site.trustScore.dupComponent}</div><div class="label">Non-Dup (20%)</div></div>`
+  html += `<div class="stat"><div class="value" style="font-size:24px">${site.trustScore.auditComponent}</div><div class="label">Audit (25%)</div></div>`
+  html += `</div>`
+
+  html += `<p style="margin-top:12px;font-size:12px;color:var(--text2)">Formula: ${site.trustScore.formula}</p>`
+
+  document.getElementById("fieldAccuracyContent").innerHTML = html
+}
+
+loadAll()
+</script>
+</body>
+</html>

@@ -1,0 +1,70 @@
+{
+  "reportId": "expatriates.com_2026-06-12_1781303612830",
+  "generatedAt": "2026-06-12T22:33:32.830Z",
+  "site": "expatriates.com",
+  "siteUrl": "https://www.expatriates.com",
+  "totalAds": 1,
+  "duration": 28460428,
+  "fields": {
+    "title": {
+      "present": 1,
+      "empty": 0,
+      "pct": 100
+    },
+    "description": {
+      "present": 1,
+      "empty": 0,
+      "pct": 100
+    },
+    "price": {
+      "present": 0,
+      "empty": 1,
+      "pct": 0
+    },
+    "location": {
+      "present": 0,
+      "empty": 1,
+      "pct": 0
+    },
+    "phones": {
+      "present": 1,
+      "empty": 0,
+      "pct": 100
+    },
+    "emails": {
+      "present": 1,
+      "empty": 0,
+      "pct": 100
+    }
+  },
+  "metrics": {
+    "dataQualityScore": 67,
+    "siteHealthScore": 54,
+    "withTitle": "1/1",
+    "withPrice": "0/1",
+    "withDescription": "1/1",
+    "withLocation": "0/1",
+    "withPhone": "1/1",
+    "withEmail": "1/1",
+    "blockedPages": 0,
+    "cloudflareDetections": 0,
+    "retries": 0,
+    "extractionRate": 3
+  },
+  "issues": [
+    "price: coverage below 50%",
+    "location: coverage below 50%"
+  ],
+  "configSuggestions": [
+    "Add more price selectors to extraction.selectors.price in site config"
+  ],
+  "rawStats": {
+    "adsScraped": 1,
+    "adsFailed": 39,
+    "bansDetected": 0,
+    "cloudflareDetections": 0,
+    "retries": 0,
+    "linksAttempted": 40,
+    "duration": 28460428
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "reportId": "gumtree.com_2026-06-13_1781309881187",
+  "generatedAt": "2026-06-13T00:18:01.187Z",
+  "site": "gumtree.com",
+  "siteUrl": "https://www.gumtree.com",
+  "totalAds": 10,
+  "duration": 245199,
+  "fields": {
+    "title": {
+      "present": 10,
+      "empty": 0,
+      "pct": 100
+    },
+    "description": {
+      "present": 10,
+      "empty": 0,
+      "pct": 100
+    },
+    "price": {
+      "present": 10,
+      "empty": 0,
+      "pct": 100
+    },
+    "location": {
+      "present": 10,
+      "empty": 0,
+      "pct": 100
+    },
+    "phones": {
+      "present": 0,
+      "empty": 10,
+      "pct": 0
+    },
+    "emails": {
+      "present": 0,
+      "empty": 10,
+      "pct": 0
+    }
+  },
+  "metrics": {
+    "dataQualityScore": 67,
+    "siteHealthScore": 84,
+    "withTitle": "10/10",
+    "withPrice": "10/10",
+    "withDescription": "10/10",
+    "withLocation": "10/10",
+    "withPhone": "0/10",
+    "withEmail": "0/10",
+    "blockedPages": 0,
+    "cloudflareDetections": 0,
+    "retries": 0,
+    "extractionRate": 100
+  },
+  "issues": [
+    "phone: coverage below 30%"
+  ],
+  "configSuggestions": [
+    "Phone regex may need adjustment for this site's format"
+  ],
+  "rawStats": {
+    "adsScraped": 10,
+    "adsFailed": 0,
+    "bansDetected": 0,
+    "cloudflareDetections": 0,
+    "retries": 0,
+    "linksAttempted": 10,
+    "duration": 245199
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "reportId": "bayt.com_2026-06-12_1781270462762",
+  "generatedAt": "2026-06-12T13:21:02.762Z",
+  "site": "bayt.com",
+  "siteUrl": "https://www.bayt.com",
+  "totalAds": 0,
+  "duration": 608,
+  "fields": {
+    "title": {
+      "present": 0,
+      "empty": 0,
+      "pct": 0
+    },
+    "description": {
+      "present": 0,
+      "empty": 0,
+      "pct": 0
+    },
+    "price": {
+      "present": 0,
+      "empty": 0,
+      "pct": 0
+    },
+    "location": {
+      "present": 0,
+      "empty": 0,
+      "pct": 0
+    },
+    "phones": {
+      "present": 0,
+      "empty": 0,
+      "pct": 0
+    },
+    "emails": {
+      "present": 0,
+      "empty": 0,
+      "pct": 0
+    }
+  },
+  "metrics": {
+    "dataQualityScore": 0,
+    "siteHealthScore": 0,
+    "withTitle": "0/0",
+    "withPrice": "0/0",
+    "withDescription": "0/0",
+    "withLocation": "0/0",
+    "withPhone": "0/0",
+    "withEmail": "0/0",
+    "blockedPages": 0,
+    "cloudflareDetections": 0,
+    "retries": 0,
+    "extractionRate": 0
+  },
+  "issues": [],
+  "configSuggestions": [],
+  "rawStats": {
+    "adsScraped": 0,
+    "adsFailed": 0,
+    "bansDetected": 0,
+    "cloudflareDetections": 0,
+    "retries": 0,
+    "linksAttempted": 0,
+    "duration": 608
+  }
+}

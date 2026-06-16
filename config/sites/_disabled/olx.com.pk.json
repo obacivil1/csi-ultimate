@@ -1,0 +1,32 @@
+{
+  "language": "en",
+  "search": {
+    "method": "GET",
+    "urlTemplate": "{baseUrl}/items/q-{keyword}"
+  },
+  "extraction": {
+    "adIdPattern": "-(\\d+)/?$",
+    "titleCleanup": ["olx.com.pk", "OLX"],
+    "phoneRegion": "PAKISTAN",
+    "countryCodes": [92],
+    "currencies": ["PKR", "USD"],
+    "selectors": {
+      "title": ["h1", "[class*='title']"],
+      "description": ["[class*='description']", "[class*='content']"],
+      "phone": ["a[href^='tel:']", "[class*='phone']"],
+      "email": ["a[href^='mailto:']"],
+      "whatsapp": ["a[href*='wa.me']", "a[href*='whatsapp.com/send']"],
+      "location": ["[class*='location']", "[class*='city']"],
+      "price": ["[class*='product-price']", "[class*='price']"],
+      "company": ["[class*='company']", "[class*='seller']"],
+      "breadcrumb": [".breadcrumb a", "[class*='breadcrumb']"],
+      "date": ["time", "[class*='date']"]
+    }
+  },
+  "pagination": {
+    "nextSelector": "a[rel='next'], a.next, [class*='next'] a"
+  },
+  "categories": {
+    "autoDiscover": false
+  }
+}

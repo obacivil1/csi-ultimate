@@ -1,0 +1,103 @@
+{
+  "name": "CSI Ultimate Pipeline",
+  "nodes": [
+    {
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "جدول زمني (كل 24 ساعة)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 300],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      "name": "تشغيل السكربتات + Pipeline",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1.1,
+      "position": [280, 300],
+      "parameters": {
+        "command": "node",
+        "arguments": "E:\\N8N\\scraper\\scraper2\\csi-ultimate\\n8n-workflow\\orchestrator.mjs --only expat",
+        "executeOnce": true
+      }
+    },
+    {
+      "id": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+      "name": "قراءة pending_emails.json",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1.1,
+      "position": [560, 300],
+      "parameters": {
+        "command": "cmd",
+        "arguments": "/c type \"E:\\N8N\\scraper\\scraper2\\csi-ultimate\\n8n-workflow\\pending_emails.json\"",
+        "executeOnce": true
+      }
+    },
+    {
+      "id": "d4e5f6a7-b8c9-0123-defa-234567890123",
+      "name": "تحويل JSON من stdout",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [840, 300],
+      "parameters": {
+        "functionCode": "const raw = $input.first().json.stdout;\nconst parsed = JSON.parse(raw);\nif (!parsed.pending || parsed.pending.length === 0) {\n  return [];\n}\nreturn parsed.pending.map(p => ({ json: p }));"
+      }
+    },
+    {
+      "id": "e5f6a7b8-c9d0-1234-efab-345678901234",
+      "name": "إرسال إيميل التنبيه",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1.1,
+      "position": [1120, 300],
+      "parameters": {
+        "fromEmail": "pipeline@csi-ultimate.com",
+        "toEmail": "={{ $json.email }}",
+        "subject": "=فرصة وظيفية: {{ $json.title }}",
+        "text": "=تم العثور على فرصة وظيفية جديدة:\n\nالمسمى: {{ $json.title }}\nالتقييم: {{ $json.score }}\nالبريد: {{ $json.email }}\nالجوال: {{ $json.phone || '—' }}\nالرابط: {{ $json.link }}\n\nالوصف:\n{{ $json.description }}",
+        "options": {}
+      },
+      "credentials": {
+        "smtp": {
+          "id": "1",
+          "name": "SMTP"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "جدول زمني (كل 24 ساعة)": {
+      "main": [[
+        { "node": "تشغيل السكربتات + Pipeline", "type": "main", "index": 0 }
+      ]]
+    },
+    "تشغيل السكربتات + Pipeline": {
+      "main": [[
+        { "node": "قراءة pending_emails.json", "type": "main", "index": 0 }
+      ]]
+    },
+    "قراءة pending_emails.json": {
+      "main": [[
+        { "node": "تحويل JSON من stdout", "type": "main", "index": 0 }
+      ]]
+    },
+    "تحويل JSON من stdout": {
+      "main": [[
+        { "node": "إرسال إيميل التنبيه", "type": "main", "index": 0 }
+      ]]
+    }
+  },
+  "staticData": null,
+  "settings": {},
+  "tags": [],
+  "pinData": {},
+  "versionId": "1.0.0"
+}

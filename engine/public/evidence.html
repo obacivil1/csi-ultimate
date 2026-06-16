@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSI-Ultimate — Evidence</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<nav>
+  <span class="brand">CSI-Ultimate</span>
+  <a href="/">Validation Center</a>
+  <a href="/evidence.html" class="active">Evidence</a>
+  <a href="/audit.html">Audit</a>
+  <a href="/certification.html">Certifications</a>
+</nav>
+
+<div class="container">
+
+  <div class="card">
+    <h2>Evidence Layer</h2>
+    <p>Every score and insight can be traced back to source records. Select a crawl to view raw extraction data and validation calculations.</p>
+
+    <div style="margin-bottom:16px">
+      <label style="font-size:13px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">Select Crawl</label>
+      <select id="crawlSelect" style="width:100%;max-width:400px;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:14px;background:var(--bg)">
+        <option value="">Loading crawls...</option>
+      </select>
+    </div>
+
+    <div id="insightsPanel"><div class="empty"><h3>Select a crawl to view insights</h3></div></div>
+  </div>
+
+  <div class="card" id="recordsPanel" style="display:none">
+    <h2>Raw Records <span id="recordCount" style="font-weight:400;font-size:14px;color:var(--text2)"></span></h2>
+    <div id="recordsContent"></div>
+  </div>
+
+</div>
+
+<script>
+let records = []
+
+async function init() {
+  const sel = document.getElementById("crawlSelect")
+  try {
+    const r = await fetch("/api/validation/sites")
+    const data = await r.json()
+    sel.innerHTML = '<option value="">Select a crawl...</option>'
+    if (data.sites?.length) {
+      for (const s of data.sites) {
+        const opt = document.createElement("option")
+        opt.value = s.site
+        opt.textContent = `${s.site} — ${s.totalRecords} records — ${s.certification}`
+        sel.appendChild(opt)
+      }
+    }
+    sel.addEventListener("change", () => { if (sel.value) loadEvidence(sel.value) })
+  } catch(e) { sel.innerHTML = '<option>Error loading</option>' }
+}
+
+async function loadEvidence(site) {
+  const insightsPanel = document.getElementById("insightsPanel")
+  const recordsPanel = document.getElementById("recordsPanel")
+  insightsPanel.innerHTML = '<div class="empty">Loading evidence...</div>'
+
+  try {
+    // Load insights
+    const r = await fetch("/api/insights")
+    const data = await r.json()
+
+    // Load records
+    const siteR = await fetch(`/api/validation/site/${site}`)
+    const siteData = await siteR.json()
+
+    records = []
+    const crawlIds = await fetch("/api/jobs").then(r => r.json())
+    for (const c of crawlIds) {
+      if (c.site === site || c.site?.startsWith(site)) {
+        const recR = await fetch(`/api/validation/records/${c.id}`)
+        if (recR.ok) {
+          const recData = await recR.json()
+          records = records.concat(recData.records || [])
+        }
+      }
+    }
+
+    // Show insights
+    let html = '<h3>Actionable Insights</h3>'
+    if (data.insights?.length) {
+      for (const ins of data.insights) {
+        const severityBadge = ins.severity === "high" ? "badge-red" : ins.severity === "medium" ? "badge-yellow" : ins.severity === "low" ? "badge-blue" : "badge-gray"
+        html += `<div class="card" style="border-left:4px solid ${ins.severity === "high" ? "var(--red)" : ins.severity === "medium" ? "var(--yellow)" : "var(--accent)"}">`
+        html += `<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">`
+        html += `<span class="badge ${severityBadge}">${ins.severity}</span>`
+        html += `<span style="font-size:12px;color:var(--text2)">${ins.type}</span>`
+        html += `</div>`
+        html += `<h3 style="margin-bottom:4px">${ins.title}</h3>`
+        if (ins.so_what) html += `<p style="font-size:13px;margin-bottom:8px">${ins.so_what}</p>`
+        if (ins.evidence?.length) {
+          html += `<details><summary style="cursor:pointer;font-size:13px;color:var(--accent)">View Evidence (${ins.evidence.length} URLs)</summary>`
+          html += `<div class="evidence-list" style="margin-top:8px">`
+          for (const url of ins.evidence) {
+            html += `<div class="evidence-item"><a href="${url}" target="_blank">${url}</a></div>`
+          }
+          html += `</div></details>`
+        }
+        html += `</div>`
+      }
+    } else {
+      html += '<div class="empty"><h3>No insights for this crawl</h3></div>'
+    }
+
+    // Add raw records section
+    if (records.length) {
+      html += '<h3 style="margin-top:24px">Raw Records</h3>'
+      html += `<p>${records.length} records extracted. Each record shows extracted fields and completeness.</p>`
+      html += '<div style="max-height:500px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius)">'
+      html += '<table><thead><tr><th>#</th><th>Title</th><th>Price</th><th>Phone</th><th>Location</th><th>Fields</th></tr></thead><tbody>'
+      for (let i = 0; i < records.length; i++) {
+        const r = records[i]
+        const fieldCount = [r.title, r.price, r.phone, r.email, r.location].filter(v => v && v.toString().trim()).length
+        html += `<tr>
+          <td>${i + 1}</td>
+          <td><a href="${r.url}" target="_blank" title="${r.title}">${r.title?.substring(0, 60)}${r.title?.length > 60 ? '...' : ''}</a></td>
+          <td>${r.price || '<span style="color:var(--text3)">—</span>'}</td>
+          <td>${r.phone || '<span style="color:var(--text3)">—</span>'}</td>
+          <td>${r.location ? r.location.substring(0, 30) + (r.location.length > 30 ? '...' : '') : '<span style="color:var(--text3)">—</span>'}</td>
+          <td>${fieldCount}/5</td>
+        </tr>`
+      }
+      html += '</tbody></table></div>'
+    }
+
+    insightsPanel.innerHTML = html
+    recordsPanel.style.display = "block"
+    document.getElementById("recordCount").textContent = `— ${records.length} total`
+
+  } catch(e) { insightsPanel.innerHTML = `<div class="empty"><h3>Error</h3><p>${e.message}</p></div>` }
+}
+
+init()
+</script>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSI-Ultimate — Crawl Audit</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<nav>
+  <span class="brand">CSI-Ultimate</span>
+  <a href="/">Validation Center</a>
+  <a href="/evidence.html">Evidence</a>
+  <a href="/audit.html" class="active">Audit</a>
+  <a href="/certification.html">Certifications</a>
+</nav>
+
+<div class="container">
+
+  <div class="card">
+    <h2>Random Audit Samples</h2>
+    <p>After every crawl, a random sample of records is selected for visual verification. Compare extracted data against original source URLs to verify extraction accuracy.</p>
+
+    <div style="margin-bottom:16px">
+      <label style="font-size:13px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">Select Crawl</label>
+      <select id="auditCrawlSelect" style="width:100%;max-width:400px;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:14px;background:var(--bg)">
+        <option value="">Loading...</option>
+      </select>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button class="btn btn-primary" onclick="runAudit()">Generate Random Audit</button>
+      <button class="btn" onclick="runAudit()">Resample</button>
+    </div>
+
+    <div id="auditStats"><div class="empty">Select a crawl and click "Generate Random Audit" to begin.</div></div>
+  </div>
+
+  <div id="auditSamples"></div>
+
+  <div class="card" id="auditSummary" style="display:none">
+    <h2>Audit Summary</h2>
+    <div id="auditSummaryContent"></div>
+  </div>
+
+</div>
+
+<script>
+let allRecords = []
+
+async function init() {
+  const sel = document.getElementById("auditCrawlSelect")
+  try {
+    const r = await fetch("/api/validation/sites")
+    const data = await r.json()
+    sel.innerHTML = '<option value="">Select a crawl...</option>'
+    if (data.sites?.length) {
+      for (const s of data.sites) {
+        const opt = document.createElement("option")
+        opt.value = s.site
+        opt.textContent = `${s.site} — ${s.totalRecords} records — ${s.certification}`
+        sel.appendChild(opt)
+      }
+    }
+  } catch(e) { sel.innerHTML = '<option>Error loading</option>' }
+}
+
+async function loadRecordsForSite(site) {
+  const jobsR = await fetch("/api/jobs")
+  const jobs = await jobsR.json()
+  allRecords = []
+  for (const c of jobs) {
+    if (c.site === site || c.site?.startsWith(site)) {
+      const recR = await fetch(`/api/crawl/${c.id}/records`)
+      if (recR.ok) {
+        const recData = await recR.json()
+        allRecords = allRecords.concat(recData.records || [])
+      }
+    }
+  }
+}
+
+async function runAudit() {
+  const sel = document.getElementById("auditCrawlSelect")
+  const site = sel.value
+  if (!site) { alert("Select a crawl first"); return }
+
+  const auditStats = document.getElementById("auditStats")
+  const auditSamples = document.getElementById("auditSamples")
+  const auditSummary = document.getElementById("auditSummary")
+  auditStats.innerHTML = '<div class="empty">Loading records...</div>'
+  auditSamples.innerHTML = ''
+  auditSummary.style.display = "none"
+
+  await loadRecordsForSite(site)
+
+  if (!allRecords.length) {
+    auditStats.innerHTML = '<div class="empty"><h3>No records found</h3><p>This crawl has no extracted records to audit.</p></div>'
+    return
+  }
+
+  // Generate random sample
+  const shuffled = [...allRecords].sort(() => Math.random() - 0.5)
+  const sample = shuffled.slice(0, Math.min(20, allRecords.length))
+
+  // Stats
+  const complete = sample.filter(r => [r.title, r.price, r.phone, r.email, r.location].filter(v => v && v.toString().trim()).length >= 3)
+  const avgFields = Math.round(sample.reduce((s, r) => s + [r.title, r.price, r.phone, r.email, r.location].filter(v => v && v.toString().trim()).length, 0) / sample.length * 10) / 10
+  const hasPrice = sample.filter(r => r.price).length
+  const hasPhone = sample.filter(r => r.phone).length
+  const hasEmail = sample.filter(r => r.email).length
+
+  auditStats.innerHTML = `<div class="grid grid-4">
+    <div class="stat"><div class="value">${sample.length}</div><div class="label">Sample Size</div></div>
+    <div class="stat"><div class="value" style="color:var(--green)">${complete.length}</div><div class="label">Complete (≥3 fields)</div></div>
+    <div class="stat"><div class="value">${avgFields}</div><div class="label">Avg Fields/Record</div></div>
+    <div class="stat"><div class="value">${hasPhone}/${sample.length}</div><div class="label">Phone Coverage</div></div>
+  </div>`
+
+  // Individual samples
+  let html = '<h2 style="margin-bottom:16px">Audit Samples — Source vs Extracted</h2>'
+  for (let i = 0; i < sample.length; i++) {
+    const r = sample[i]
+    const fields = [
+      { name: "Title", val: r.title },
+      { name: "Price", val: r.price },
+      { name: "Phone", val: r.phone },
+      { name: "Email", val: r.email },
+      { name: "Location", val: r.location },
+      { name: "Currency", val: r.currency },
+    ]
+    const fieldCount = fields.filter(f => f.val).length
+
+    const barColor = fieldCount >= 4 ? "var(--green)" : fieldCount >= 2 ? "var(--yellow)" : "var(--red)"
+    html += `<div class="card" style="border-left:4px solid ${barColor}">
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
+        <h3 style="margin:0;font-size:14px">Sample #${i + 1} — <a href="${r.url}" target="_blank">View Original Source</a></h3>
+        <span class="badge ${fieldCount >= 4 ? 'badge-green' : fieldCount >= 2 ? 'badge-yellow' : 'badge-red'}" style="flex-shrink:0">${fieldCount}/6 fields</span>
+      </div>
+      <table style="font-size:13px">
+        <thead><tr><th style="width:80px">Field</th><th>Extracted Value</th><th style="width:60px">Status</th></tr></thead>
+        <tbody>
+          ${fields.map(f => `<tr>
+            <td style="font-weight:500">${f.name}</td>
+            <td style="word-break:break-all;font-family:monospace;font-size:12px">${f.val || '<span style="color:var(--text3)">— empty —</span>'}</td>
+            <td>${f.val ? '<span style="color:var(--green)">✓</span>' : '<span style="color:var(--red)">✗</span>'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`
+  }
+  auditSamples.innerHTML = html
+
+  // Summary
+  auditSummary.style.display = "block"
+  const totalComplete = sample.filter(r => {
+    const c = [r.title, r.price, r.phone, r.email, r.location].filter(v => v && v.toString().trim()).length
+    return c >= 3
+  }).length
+  document.getElementById("auditSummaryContent").innerHTML = `<div class="grid grid-3">
+    <div class="stat"><div class="value">${Math.round(totalComplete / sample.length * 100)}%</div><div class="label">Sample Pass Rate (≥3 fields)</div></div>
+    <div class="stat"><div class="value">${hasPrice}/${sample.length}</div><div class="label">Price Coverage</div></div>
+    <div class="stat"><div class="value">${hasEmail}/${sample.length}</div><div class="label">Email Coverage</div></div>
+  </div>`
+}
+
+init()
+</script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+{
+  "language": "en",
+  "search": {
+    "method": "GET",
+    "endpoint": "/search/sss",
+    "param": "query"
+  },
+  "extraction": {
+    "titleCleanup": ["craigslist", "for sale by owner", "for sale"],
+    "phoneRegion": "UK",
+    "countryCodes": [44],
+    "currencies": ["GBP", "EUR", "USD"],
+    "selectors": {
+      "title": ["h1", ".postingtitle", ".tit"],
+      "description": ["#postingbody", ".postingbody"],
+      "phone": ["a[href^='tel:']"],
+      "email": ["a[href^='mailto:']"],
+      "location": [".location", ".postinglocation"],
+      "price": [".price"],
+      "company": [".seller", ".vendor"],
+      "breadcrumb": [".breadcrumbs a"],
+      "date": ["time", ".date", ".postingdate"]
+    }
+  },
+  "categories": {
+    "autoDiscover": false
+  },
+  "excludeUrlPatterns": ["/search/", "/d/", "/web/", "/gigs/", "/sale/"]
+}

@@ -1,0 +1,60 @@
+{
+  "en": {
+    "JOB_LISTING_PAGE": [
+      "job", "jobs", "vacancy", "vacancies", "hiring", "hire", "apply", "applicant", "employer", "salary", "required", "position", "opening", "career"
+    ],
+    "JOB_AD_PAGE": [
+      "apply now", "contact employer", "job details", "salary details", "responsibilities", "qualifications", "experience required", "full time"
+    ],
+    "REAL_ESTATE_LISTING_PAGE": [
+      "apartment", "villa", "room", "property", "rent", "rental", "furnished", "flat", "house", "studio"
+    ],
+    "REAL_ESTATE_AD_PAGE": [
+      "for rent", "for sale", "available now", "contact owner", "furnished apartment", "property details", "lease"
+    ],
+    "VEHICLE_LISTING_PAGE": [
+      "car", "cars", "vehicle", "vehicles", "mileage", "engine", "transmission", "model", "motor", "used car"
+    ],
+    "VEHICLE_AD_PAGE": [
+      "for sale", "contact seller", "price", "inspection", "owner", "km", "automatic", "manual"
+    ],
+    "DIRECTORY_PAGE": [
+      "directory", "business directory", "listings", "companies", "contacts", "directory page"
+    ],
+    "CATEGORY_PAGE": [
+      "categories", "category", "browse", "browse all", "all categories", "classification", "section"
+    ],
+    "BLOG_ARTICLE_PAGE": [
+      "blog", "article", "news", "guide", "tips", "latest", "opinion", "tutorial"
+    ]
+  },
+  "ar": {
+    "JOB_LISTING_PAGE": [
+      "وظيفة", "وظائف", "شاغر", "شغور", "توظيف", "توظيف", "تقدم", "متقدم", "صاحب العمل", "راتب", "مطلوب", "منصب", "فرصة"
+    ],
+    "JOB_AD_PAGE": [
+      "تقدم الآن", "تواصل مع صاحب العمل", "تفاصيل الوظيفة", "تفاصيل الراتب", "المهام", "المؤهلات", "مطلوب خبرة"
+    ],
+    "REAL_ESTATE_LISTING_PAGE": [
+      "شقة", "شقق", "فيلا", "غرفة", "عقار", "إيجار", "مفروشة", "منزل", "استديو"
+    ],
+    "REAL_ESTATE_AD_PAGE": [
+      "للإيجار", "للبيع", "متاح الآن", "اتصل بالمالك", "شقة مفروشة", "تفاصيل العقار", "عقد"
+    ],
+    "VEHICLE_LISTING_PAGE": [
+      "سيارة", "سيارات", "مركبة", "مركبات", "كم", "محرك", "ناقل", "موديل", "سيارة مستعملة"
+    ],
+    "VEHICLE_AD_PAGE": [
+      "للبيع", "تواصل مع البائع", "السعر", "الفحص", "المالك", "أوتوماتيك", "يدوي"
+    ],
+    "DIRECTORY_PAGE": [
+      "دليل", "دليل الأعمال", "قائمة", "شركات", "جهات", "صفحة دليل"
+    ],
+    "CATEGORY_PAGE": [
+      "أقسام", "قسم", "تصفح", "تصفح الكل", "جميع الأقسام", "تصنيف"
+    ],
+    "BLOG_ARTICLE_PAGE": [
+      "مدونة", "مقال", "أخبار", "دليل", "نصيحة", "الأحدث", "رأي", "درس"
+    ]
+  }
+}

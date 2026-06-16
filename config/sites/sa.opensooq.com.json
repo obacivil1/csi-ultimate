@@ -1,0 +1,33 @@
+{
+  "language": "en",
+  "search": {
+    "method": "GET",
+    "endpoint": "/en/search",
+    "param": "q"
+  },
+  "extraction": {
+    "adIdPattern": "/search/(\\d+)",
+    "titleCleanup": ["OpenSooq", "opensooq.com"],
+    "phoneRegion": "SA",
+    "countryCodes": [966],
+    "currencies": ["SAR"],
+    "selectors": {
+      "title": ["h1"],
+      "description": ["[class*='description']", "[class*='detail']"],
+      "phone": ["a[href^='tel:']"],
+      "email": ["a[href^='mailto:']"],
+      "location": ["[class*='breadcrumb']", "[class*='location']"],
+      "price": ["span.text-xl.font-bold", "[class*='price']"],
+      "company": ["[class*='seller']"],
+      "breadcrumb": ["[class*='breadcrumb'] a"],
+      "date": ["time", "[class*='date']"]
+    }
+  },
+  "pagination": {
+    "nextSelector": "a[rel='next'], .next a, a.next, [class*='next'] a"
+  },
+  "categories": {
+    "autoDiscover": true
+  },
+  "excludeUrlPatterns": []
+}

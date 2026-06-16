@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSI-Ultimate — Site Certifications</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<nav>
+  <span class="brand">CSI-Ultimate</span>
+  <a href="/">Validation Center</a>
+  <a href="/evidence.html">Evidence</a>
+  <a href="/audit.html">Audit</a>
+  <a href="/certification.html" class="active">Certifications</a>
+</nav>
+
+<div class="container">
+
+  <div class="card">
+    <h2>Site Certification Program</h2>
+    <p>Each supported site undergoes validation testing. Certification levels are based on real extraction data only.</p>
+
+    <div style="display:flex;gap:24px;margin-bottom:24px;flex-wrap:wrap">
+      <div><span class="badge badge-green" style="font-size:14px;padding:4px 16px">CERTIFIED</span> ≥5 records, accuracy ≥50%, block rate &lt;30%</div>
+      <div><span class="badge badge-yellow" style="font-size:14px;padding:4px 16px">PARTIALLY VERIFIED</span> Meets one but not all criteria</div>
+      <div><span class="badge badge-red" style="font-size:14px;padding:4px 16px">BLOCKED</span> Block rate ≥80%</div>
+      <div><span class="badge badge-gray" style="font-size:14px;padding:4px 16px">UNVERIFIED</span> &lt;5 records extracted</div>
+    </div>
+
+    <div id="certificationContent"><div class="empty">Loading...</div></div>
+  </div>
+
+  <div class="card" id="siteDetailCard" style="display:none">
+    <h2 id="siteDetailTitle">Site Detail</h2>
+    <div id="siteDetailContent"></div>
+  </div>
+
+  <div class="card">
+    <h2>Certification Summary</h2>
+    <p>Trust Score Formula: <code>TS = fieldAccuracy(40%) + nonDupRate(20%) + auditPassRate(25%) + nonBlockRate(15%)</code></p>
+    <p style="font-size:13px;color:var(--text2)">No heuristic scoring. No arbitrary weights. Every value is calculated from real extracted records, validated against crawl metadata.</p>
+  </div>
+
+</div>
+
+<script>
+async function init() {
+  const el = document.getElementById("certificationContent")
+  try {
+    const r = await fetch("/api/validation/sites")
+    const data = await r.json()
+    if (!data.sites?.length) { el.innerHTML = '<div class="empty"><h3>No sites verified yet</h3></div>'; return }
+
+    let html = '<table><thead><tr><th>Site</th><th>Certification</th><th>Records</th><th>Extraction</th><th>Accuracy</th><th>Block Rate</th><th>Duplicates</th><th>Trust Score</th><th></th></tr></thead><tbody>'
+    for (const s of data.sites) {
+      const certBadge = s.certification === "CERTIFIED" ? "badge-green" : s.certification === "PARTIALLY_VERIFIED" ? "badge-yellow" : s.certification === "BLOCKED" ? "badge-red" : "badge-gray"
+      html += `<tr>
+        <td><strong>${s.site}</strong></td>
+        <td><span class="badge ${certBadge}">${s.certification}</span></td>
+        <td>${s.totalRecords}</td>
+        <td>${s.extractionRate}%</td>
+        <td>${s.fieldAccuracy.overallAccuracy}%</td>
+        <td>${s.blockRate}%</td>
+        <td>${s.duplicates.duplicateRate}%</td>
+        <td><span style="font-weight:700;font-size:18px;color:${s.trustScore.color}">${s.trustScore.score}</span> <span style="font-size:12px;color:var(--text2)">${s.trustScore.grade}</span></td>
+        <td><button class="btn btn-sm" onclick='showCertDetail(${JSON.stringify(s).replace(/'/g,"\\'")})'>Report</button></td>
+      </tr>`
+    }
+    html += '</tbody></table>'
+    el.innerHTML = html
+  } catch(e) { el.innerHTML = `<div class="empty"><h3>Error</h3><p>${e.message}</p></div>` }
+}
+
+function showCertDetail(s) {
+  const card = document.getElementById("siteDetailCard")
+  const content = document.getElementById("siteDetailContent")
+  card.style.display = "block"
+  document.getElementById("siteDetailTitle").textContent = `${s.site} — Certification Report`
+
+  let html = '<div class="grid grid-2" style="margin-bottom:16px">'
+  html += `<div class="stat"><div class="value">${s.totalRecords}</div><div class="label">Records Verified</div></div>`
+  html += `<div class="stat"><div class="value">${s.extractionRate}%</div><div class="label">Extraction Rate</div></div>`
+  html += `<div class="stat"><div class="value">${s.fieldAccuracy.overallAccuracy}%</div><div class="label">Overall Accuracy</div></div>`
+  html += `<div class="stat"><div class="value">${s.blockRate}%</div><div class="label">Block Rate</div></div>`
+  html += `</div>`
+
+  html += '<h3>Field Accuracy</h3>'
+  for (const [key, f] of Object.entries(s.fieldAccuracy.fields)) {
+    const cls = f.accuracy >= 80 ? "fill-green" : f.accuracy >= 40 ? "fill-yellow" : "fill-red"
+    html += `<div class="field-row">
+      <span class="field-label">${f.label}</span>
+      <div class="field-bar"><div class="field-fill ${cls}" style="width:${f.accuracy}%">${f.present}/${s.fieldAccuracy.total}</div></div>
+      <span style="font-size:13px;font-weight:600;width:40px;text-align:right">${f.accuracy}%</span>
+    </div>`
+  }
+
+  html += '<h3 style="margin-top:16px">Duplicate Analysis</h3>'
+  html += `<p>Exact duplicates: ${s.duplicates.exactDuplicates} | Near-duplicates: ${s.duplicates.nearDuplicates} | Unique: ${s.duplicates.uniqueRecords} | Rate: ${s.duplicates.duplicateRate}%</p>`
+  if (s.duplicates.groups?.length) {
+    html += '<div class="evidence-list">'
+    for (const g of s.duplicates.groups) {
+      html += `<div class="evidence-item"><strong>Phone ${g.phone}:</strong> ${g.count} related listings</div>`
+    }
+    html += '</div>'
+  }
+
+  html += '<h3 style="margin-top:16px">Trust Score Calculation</h3>'
+  html += `<div class="grid grid-4">`
+  html += `<div class="stat"><div class="value" style="color:${s.trustScore.color};font-size:24px">${s.trustScore.score}</div><div class="label">Trust Score</div></div>`
+  html += `<div class="stat"><div class="value" style="font-size:24px">${s.trustScore.fieldComponent}/40</div><div class="label">Field Accuracy</div></div>`
+  html += `<div class="stat"><div class="value" style="font-size:24px">${s.trustScore.dupComponent}/20</div><div class="label">Non-Duplicate</div></div>`
+  html += `<div class="stat"><div class="value" style="font-size:24px">${s.trustScore.auditComponent}/25</div><div class="label">Audit Pass</div></div>`
+  html += `</div>`
+  html += `<p style="font-size:12px;color:var(--text2);margin-top:8px">Formula: ${s.trustScore.formula}</p>`
+
+  html += '<h3 style="margin-top:16px">Certification Criteria</h3>'
+  html += '<table><thead><tr><th>Criterion</th><th>Required</th><th>Actual</th><th>Status</th></tr></thead><tbody>'
+  const criteria = [
+    { label: "Minimum records", req: "≥5", actual: s.totalRecords, pass: s.totalRecords >= 5 },
+    { label: "Field accuracy", req: "≥50%", actual: `${s.fieldAccuracy.overallAccuracy}%`, pass: s.fieldAccuracy.overallAccuracy >= 50 },
+    { label: "Block rate", req: "<30%", actual: `${s.blockRate}%`, pass: s.blockRate < 30 },
+  ]
+  for (const c of criteria) {
+    html += `<tr><td>${c.label}</td><td>${c.req}</td><td>${c.actual}</td><td>${c.pass ? '<span style="color:var(--green)">✓ Pass</span>' : '<span style="color:var(--red)">✗ Fail</span>'}</td></tr>`
+  }
+  html += '<tr><td colspan="4" style="font-weight:600">Result: <span class="badge ' + (s.certification === "CERTIFIED" ? 'badge-green' : s.certification === "PARTIALLY_VERIFIED" ? 'badge-yellow' : s.certification === "BLOCKED" ? 'badge-red' : 'badge-gray') + '">' + s.certification + '</span></td></tr>'
+  html += '</tbody></table>'
+
+  content.innerHTML = html
+}
+
+init()
+</script>
+</body>
+</html>

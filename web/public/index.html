@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>منصة المنافسات والمقاولين</title>
+<link rel="stylesheet" href="/css/style.css">
+<style>
+  /* Anti-copy */
+  .sample-table { -webkit-user-select: none; user-select: none; }
+  .sample-table td::after { content: ''; position: absolute; inset: 0; pointer-events: none; }
+</style>
+<script>
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey && ['c','C','x','X','a','A','s','S','u','U','p','P'].includes(e.key)) || e.key === 'F12') {
+      e.preventDefault(); return false;
+    }
+  });
+  document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('selectstart', e => {
+      if (e.target.closest('.sample-table')) e.preventDefault();
+    });
+  });
+</script>
+</head>
+<body>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Auth Modals -->
+<div class="modal-overlay" id="loginModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('loginModal')">✕</button>
+    <h2>تسجيل الدخول</h2>
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label>البريد الإلكتروني</label>
+        <input type="email" id="loginEmail" required placeholder="your@email.com">
+      </div>
+      <div class="form-group">
+        <label>كلمة المرور</label>
+        <input type="password" id="loginPassword" required placeholder="********">
+      </div>
+      <button type="submit" class="btn" id="loginBtn">تسجيل الدخول</button>
+    </form>
+    <div class="switch-link">ما عندك حساب؟ <a onclick="switchModal('register')">سجّل الآن مجاناً</a></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="registerModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('registerModal')">✕</button>
+    <h2>اشتراك جديد — 7 أيام مجاناً</h2>
+    <form id="registerForm" onsubmit="handleRegister(event)">
+      <div class="form-group">
+        <label>الاسم الكامل</label>
+        <input type="text" id="regName" required placeholder="محمد أحمد">
+      </div>
+      <div class="form-group">
+        <label>البريد الإلكتروني</label>
+        <input type="email" id="regEmail" required placeholder="your@email.com">
+      </div>
+      <div class="form-group">
+        <label>رقم الجوال (اختياري)</label>
+        <input type="tel" id="regPhone" placeholder="+966 5X XXX XXXX">
+      </div>
+      <div class="form-group">
+        <label>الشركة (اختياري)</label>
+        <input type="text" id="regCompany" placeholder="مؤسسة...">
+      </div>
+      <div class="form-group">
+        <label>كلمة المرور</label>
+        <input type="password" id="regPassword" required minlength="6" placeholder="6 أحرف على الأقل">
+      </div>
+      <button type="submit" class="btn" id="registerBtn">ابدأ الفترة المجانية</button>
+    </form>
+    <div class="switch-link">عندك حساب؟ <a onclick="switchModal('login')">تسجيل دخول</a></div>
+    <p style="text-align:center;color:#888;font-size:0.8em;margin-top:10px;">✅ 7 أيام مجاناً — بدون بطاقة ائتمان</p>
+  </div>
+</div>
+
+<!-- Auth Buttons -->
+<div class="auth-buttons" id="authButtons">
+  <button onclick="showModal('loginModal')">تسجيل دخول</button>
+  <button onclick="showModal('registerModal')" style="background:#FFD700;color:#1F3864;border-color:#FFD700;font-weight:700;">اشتراك مجاني</button>
+</div>
+<div class="auth-buttons" id="userMenu" style="display:none;">
+  <button onclick="window.location.href='/dashboard.html'">لوحة التحكم</button>
+  <button onclick="handleLogout()">تسجيل خروج</button>
+</div>
+
+<!-- Header -->
+<div class="landing-header">
+  <div class="badge">🇸🇦 بيانات حكومية رسمية — محدثة يومياً</div>
+  <h1>🏗️ منتج المنافسات الحكومية والمقاولين</h1>
+  <p class="subtitle">Government Tenders & Contractors Database 2026</p>
+  <p style="font-size:1.1em;max-width:650px;margin:15px auto 0;opacity:0.85;">
+    أقوى قاعدة بيانات للمنافسات الحكومية السعودية وبيانات المقاولين المعتمدين<br>
+    كل ما تحتاج لتطوير أعمالك في قطاع المشتريات الحكومية
+  </p>
+  <button class="cta-btn" onclick="showModal('registerModal')">🚀 ابدأ الفترة المجانية — 7 أيام</button>
+</div>
+
+<!-- Live Stats -->
+<div class="stats-bar">
+  <div class="stats-grid" id="liveStats">
+    <div class="stat-item"><h3 id="statTotal">...</h3><p>منافسة حكومية</p></div>
+    <div class="stat-item"><h3 id="statActive">...</h3><p>منافسة نشطة</p></div>
+    <div class="stat-item"><h3 id="statConstruction">...</h3><p>منافسة تشييد 🔥</p></div>
+    <div class="stat-item"><h3 id="statExpiring">...</h3><p>تنتهي خلال 7 أيام</p></div>
+    <div class="stat-item"><h3 id="statContractors">...</h3><p>مقاول مصنّف</p></div>
+  </div>
+</div>
+
+<!-- Features -->
+<div class="section">
+  <div class="container">
+    <div class="section-title">
+      <h2>✨ ماذا يقدم لك المنتج؟</h2>
+      <p>كل ما تحتاجه لتنمية أعمالك في قطاع المقاولات والمشتريات الحكومية</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="icon">📋</div>
+        <h3>جميع المنافسات النشطة</h3>
+        <p>أكثر من 8,000 منافسة حكومية محدثة من منصة اعتماد — مع فلترة حسب النشاط والجهة والمنطقة</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🏢</div>
+        <h3>دليل المقاولين المعتمدين</h3>
+        <p>13,514 مقاول مصنّف عبر 13 منطقة سعودية مع بيانات التواصل (جوال + بريد إلكتروني)</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🔥</div>
+        <h3>تنبيهات المنافسات العاجلة</h3>
+        <p>منافسات تنتهي خلال 7 أيام — نوّه باللي ينتهي قريباً عشان لا تفوّت الفرصة</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🏗️</div>
+        <h3>تركيز على التشييد والمقاولات</h3>
+        <p>أكثر من 3,000 منافسة في قطاع التشييد والبناء — مصفاة خصيصاً للمقاولين</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">📊</div>
+        <h3>تحليلات وتقارير</h3>
+        <p>إحصائيات عن أكبر الجهات الحكومية، توزيع المناطق، أشهر الأنشطة واتجاهات السوق</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🔔</div>
+        <h3>تحديث دوري</h3>
+        <p>تحديث أسبوعي/يومي حسب الباقة — تضمن أحدث الفرص أول بأول</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Sample Data -->
+<div class="section sample-section">
+  <div class="container">
+    <div class="section-title">
+      <h2>📊 نموذج من البيانات الحية</h2>
+      <p>أحدث 5 منافسات منصة اعتماد — يتم تحديثها تلقائياً</p>
+    </div>
+    <div class="filter-bar" style="justify-content:center;margin-bottom:20px;">
+      <select id="lpMaxDays" onchange="loadSampleTenders()" style="padding:10px;border:2px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9em;">
+        <option value="">أحدث المنافسات</option>
+        <option value="3">تنتهي خلال 3 أيام 🔥</option>
+        <option value="7">تنتهي خلال 7 أيام</option>
+        <option value="14">تنتهي خلال 14 يوم</option>
+        <option value="30">تنتهي خلال 30 يوم</option>
+      </select>
+      <label style="display:flex;align-items:center;gap:5px;font-size:0.9em;">
+        <input type="checkbox" id="lpConstruction" onchange="loadSampleTenders()"> تشييد فقط
+      </label>
+    </div>
+    <table class="sample-table">
+      <thead><tr>
+        <th>اسم المنافسة</th><th>الجهة الحكومية</th><th>النشاط</th><th>آخر موعد</th><th>المدة</th>
+      </tr></thead>
+      <tbody id="sampleTenders">
+        <tr><td colspan="5" style="text-align:center;color:#999;">جاري التحميل...</td></tr>
+      </tbody>
+    </table>
+    <p style="text-align:center;margin-top:15px;color:#666;">
+      <a href="#" onclick="event.preventDefault();showModal('registerModal');" style="color:#2E75B6;font-weight:600;">
+        📥 سجّل مجاناً لعرض جميع المنافسات (8,160+) ←
+      </a>
+    </p>
+  </div>
+</div>
+
+<!-- Pricing -->
+<div class="section">
+  <div class="container">
+    <div class="section-title">
+      <h2>💎 الباقات والأسعار</h2>
+      <p>اختر الباقة المناسبة لاحتياجاتك — ابدأ بتجربة مجانية 7 أيام</p>
+    </div>
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <h3>🎁 تجربة مجانية</h3>
+        <div class="price">0 <span>ريال</span></div>
+        <ul>
+          <li>50 منافسة حكومية</li>
+          <li>100 مقاول مع بيانات التواصل</li>
+          <li>ملف Excel مجاني</li>
+          <li>7 أيام صلاحية</li>
+          <li>تقييم الجودة قبل الشراء</li>
+        </ul>
+        <button class="btn" onclick="showModal('registerModal')">ابدأ التجربة</button>
+      </div>
+      <div class="pricing-card featured">
+        <div class="popular">الأكثر طلباً</div>
+        <h3>🚀 الباقة الاحترافية</h3>
+        <div class="price">1,199 <span>ريال/شهر</span></div>
+        <ul>
+          <li>جميع المنافسات النشطة (8,160+)</li>
+          <li>جميع المقاولين (13,514)</li>
+          <li>أرقام جوالات وإيميلات</li>
+          <li>فلترة التشييد والمقاولات</li>
+          <li>تحديث أسبوعي</li>
+          <li>تنبيهات المنافسات العاجلة</li>
+          <li>دعم فني مباشر</li>
+        </ul>
+        <button class="btn" onclick="showModal('registerModal')">اشترك الآن</button>
+      </div>
+      <div class="pricing-card">
+        <h3>🏢 الباقة الشاملة</h3>
+        <div class="price">2,999 <span>ريال/شهر</span></div>
+        <ul>
+          <li>كل مزايا الباقة الاحترافية</li>
+          <li>تحديث يومي</li>
+          <li>API للتكامل مع أنظمتك</li>
+          <li>تقارير مخصصة حسب الطلب</li>
+          <li>استشارات تحليل بيانات</li>
+          <li>أولوية الدعم الفني</li>
+        </ul>
+        <button class="btn" onclick="showModal('registerModal')">تواصل معنا</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="cta-section">
+  <h2>🚀 ابدأ الآن — جرب 7 أيام مجاناً</h2>
+  <p style="font-size:1.1em;opacity:0.9;margin-top:10px;">بدون بطاقة ائتمان — جرب واحكم بنفسك</p>
+  <button class="btn" onclick="showModal('registerModal')">📥 ابدأ الفترة المجانية</button>
+  <div class="contact-row">
+    <span>📧 البريد: sales@example.com</span>
+    <span>🌐 example.com/tenders</span>
+  </div>
+</div>
+
+<footer>
+  <p>© 2026 منتج المنافسات الحكومية والمقاولين — جميع الحقوق محفوظة</p>
+  <p style="margin-top:5px;">مصادر البيانات: منصة اعتماد (tenders.etimad.sa) | موقع مقاول (muqawil.org)</p>
+</footer>
+
+<script>
+// ── API Client ──
+const API = {
+  async get(path) {
+    const r = await fetch(path, { credentials: 'include' });
+    return r.json();
+  },
+  async post(path, data) {
+    const r = await fetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(data)
+    });
+    return r.json();
+  }
+};
+
+// ── Toast ──
+function showToast(msg, type = 'info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 4000);
+}
+
+// ── Modals ──
+function showModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function switchModal(type) {
+  closeModal('loginModal'); closeModal('registerModal');
+  showModal(type === 'login' ? 'loginModal' : 'registerModal');
+}
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); });
+});
+
+// ── Auth ──
+async function handleLogin(e) {
+  e.preventDefault();
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.innerHTML = 'جاري... <span class="spinner"></span>';
+  const res = await API.post('/api/auth/login', {
+    email: document.getElementById('loginEmail').value,
+    password: document.getElementById('loginPassword').value
+  });
+  if (res.error) { showToast(res.error, 'error'); btn.disabled = false; btn.textContent = 'تسجيل الدخول'; return; }
+  closeModal('loginModal');
+  showToast('مرحباً ' + res.user.name + '!', 'success');
+  updateAuthUI(res.user);
+  setTimeout(() => window.location.href = '/dashboard.html', 1000);
+}
+
+async function handleRegister(e) {
+  e.preventDefault();
+  const btn = document.getElementById('registerBtn');
+  btn.disabled = true; btn.innerHTML = 'جاري... <span class="spinner"></span>';
+  const res = await API.post('/api/auth/register', {
+    name: document.getElementById('regName').value,
+    email: document.getElementById('regEmail').value,
+    phone: document.getElementById('regPhone').value,
+    company: document.getElementById('regCompany').value,
+    password: document.getElementById('regPassword').value
+  });
+  if (res.error) { showToast(res.error, 'error'); btn.disabled = false; btn.textContent = 'ابدأ الفترة المجانية'; return; }
+  closeModal('registerModal');
+  showToast('✅ تم التسجيل! الفترة المجانية 7 أيام', 'success');
+  updateAuthUI(res.user);
+  setTimeout(() => window.location.href = '/dashboard.html', 1500);
+}
+
+async function handleLogout() {
+  await API.post('/api/auth/logout', {});
+  updateAuthUI(null);
+  showToast('تم تسجيل الخروج', 'info');
+}
+
+async function updateAuthUI(user) {
+  const authBtns = document.getElementById('authButtons');
+  const userMenu = document.getElementById('userMenu');
+  if (user) {
+    authBtns.style.display = 'none';
+    userMenu.style.display = 'block';
+  } else {
+    authBtns.style.display = 'block';
+    userMenu.style.display = 'none';
+  }
+}
+
+// Check auth on load
+(async function() {
+  const res = await API.get('/api/auth/me');
+  if (res.user) updateAuthUI(res.user);
+})();
+
+// ── Load Stats ──
+(async function() {
+  try {
+    const stats = await API.get('/api/tenders/stats');
+    document.getElementById('statTotal').textContent = (stats.total || 0).toLocaleString();
+    document.getElementById('statActive').textContent = (stats.active || 0).toLocaleString();
+    document.getElementById('statConstruction').textContent = (stats.construction || 0).toLocaleString();
+    document.getElementById('statExpiring').textContent = (stats.expiringSoon || 0).toLocaleString();
+
+    // Also load contractors stats
+    const contStats = await API.get('/api/contractors/stats');
+    document.getElementById('statContractors').textContent = (contStats.total || 0).toLocaleString();
+  } catch(e) {
+    document.querySelectorAll('.stat-item h3').forEach(el => el.textContent = '—');
+  }
+})();
+
+// ── Load Sample Tenders ──
+async function loadSampleTenders() {
+  try {
+    const maxDays = document.getElementById('lpMaxDays').value;
+    const construction = document.getElementById('lpConstruction').checked;
+    const params = new URLSearchParams({ limit: 5 });
+    if (maxDays) params.set('maxDays', maxDays);
+    if (construction) params.set('construction', 'true');
+    
+    const res = await API.get('/api/tenders?' + params.toString());
+    const tbody = document.getElementById('sampleTenders');
+    if (res.data && res.data.length) {
+      tbody.innerHTML = res.data.map(t => {
+        const urgent = t.remainingDays !== undefined && t.remainingDays <= 3;
+        return `<tr>
+          <td>${t.name || ''}</td>
+          <td>${t.agency || ''}</td>
+          <td>${t.activity || ''}</td>
+          <td>${t.lastDate || ''}</td>
+          <td${urgent ? ' style="color:#DC3545;font-weight:700;"' : ''}>${t.remainingDays !== undefined ? (t.remainingDays + ' يوم' + (urgent ? ' 🔥' : '')) : ''}</td>
+        </tr>`;
+      }).join('');
+    } else {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;">لا يوجد منافسات بهذه المعايير</td></tr>';
+    }
+  } catch(e) {
+    document.getElementById('sampleTenders').innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;">فشل التحميل</td></tr>';
+  }
+}
+loadSampleTenders();
+
+// ── Theme ──
+(function() {
+  const theme = localStorage.getItem('theme') || 'light';
+  document.documentElement.className = 'theme-' + theme;
+})();
+function setTheme(t) {
+  document.documentElement.className = 'theme-' + t;
+  localStorage.setItem('theme', t);
+  document.querySelectorAll('.theme-toggle button').forEach(b => {
+    b.classList.toggle('active', b.dataset.theme === t);
+  });
+}
+</script>
+<div class="theme-toggle">
+  <button data-theme="light" onclick="setTheme('light')" title="فاتح">☀️</button>
+  <button data-theme="dark" onclick="setTheme('dark')" title="داكن">🌙</button>
+  <button data-theme="nickel" onclick="setTheme('nickel')" title="نيكل">⚪</button>
+</div>
+</body>
+</html>

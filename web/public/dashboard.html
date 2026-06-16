@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة التحكم — المنافسات والمقاولين</title>
+<link rel="stylesheet" href="/css/style.css">
+<style>
+  /* Anti-copy protection */
+  .data-table, .sample-table, .dash-content table { -webkit-user-select: none; user-select: none; }
+  .data-table td, .sample-table td { position: relative; }
+  .data-table td::after, .sample-table td::after { content: ''; position: absolute; inset: 0; pointer-events: none; }
+  .data-table th, .sample-table th { -webkit-user-select: none; user-select: none; }
+  
+  /* Pricing plan features */
+  .plan-card { background:var(--bg-card);border-radius:12px;padding:20px;text-align:center;cursor:pointer;border:2px solid var(--border);transition:all 0.3s;color:var(--text); }
+  .plan-card:hover { transform:translateY(-2px);box-shadow:0 4px 12px var(--shadow); }
+  .plan-card.popular { border-color:var(--gold); }
+  .plan-card .features { text-align:right;margin:15px 0;padding:0;list-style:none;font-size:0.8em;color:var(--text-secondary); }
+  .plan-card .features li { padding:4px 0; border-bottom:1px solid var(--border-light); }
+  .plan-card .features li::before { content:'✓ '; color:var(--success);font-weight:700; }
+  .plan-card .features li.limited { color:var(--text-muted); }
+  .plan-card .features li.limited::before { content:'✗ '; color:var(--danger); }
+  .plan-card .price-tag { font-size:1.8em;font-weight:900;color:var(--accent-hover);margin:10px 0; }
+  .plan-card .price-tag small { font-size:0.5em;font-weight:400;color:var(--text-muted); }
+  .plan-card h4 { color:var(--accent-hover); }
+</style>
+<script>
+  // Anti-copy: disable right-click
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  // Anti-copy: disable keyboard shortcuts
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey && ['c','C','x','X','a','A','s','S','u','U','p','P'].includes(e.key)) || e.key === 'F12') {
+      e.preventDefault(); return false;
+    }
+  });
+  // Anti-copy: disable drag selection on tables
+  document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('selectstart', e => {
+      if (e.target.closest('.data-table') || e.target.closest('.sample-table')) e.preventDefault();
+    });
+  });
+</script>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- Header -->
+<div class="dash-header">
+  <div class="container">
+    <h2>🏗️ لوحة تحكم المنافسات والمقاولين</h2>
+    <div class="user-menu" id="userMenu">
+      <span id="userName">...</span>
+      <span class="sub-badge" id="subBadge">...</span>
+      <div class="theme-toggle" style="display:inline-flex;flex-direction:row;gap:3px;">
+        <button data-theme="light" onclick="setTheme('light')" title="فاتح" style="width:30px;height:30px;font-size:0.8em;border-radius:50%;border:1px solid var(--border);cursor:pointer;background:var(--bg-card);color:var(--text);">☀️</button>
+        <button data-theme="dark" onclick="setTheme('dark')" title="داكن" style="width:30px;height:30px;font-size:0.8em;border-radius:50%;border:1px solid var(--border);cursor:pointer;background:var(--bg-card);color:var(--text);">🌙</button>
+        <button data-theme="nickel" onclick="setTheme('nickel')" title="نيكل" style="width:30px;height:30px;font-size:0.8em;border-radius:50%;border:1px solid var(--border);cursor:pointer;background:var(--bg-card);color:var(--text);">⚪</button>
+      </div>
+      <button onclick="handleLogout()">تسجيل خروج</button>
+    </div>
+  </div>
+</div>
+
+<!-- Subscription Banner -->
+<div class="container" id="subBanner" style="display:none; margin-top: 20px;">
+  <div class="sub-banner" id="trialBanner">
+    <div class="text">
+      <strong>🎁 الفترة التجريبية</strong>
+      <p id="trialText">باقي <span id="trialDays">7</span> أيام من الفترة المجانية. اشترك الآن للاستمرار!</p>
+    </div>
+    <button class="btn" onclick="showUpgradeModal()">اشترك الآن</button>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="dash-tabs">
+  <div class="container">
+    <div class="dash-tab active" onclick="switchTab('tenders', this)" id="tabTenders">📋 المنافسات</div>
+    <div class="dash-tab" onclick="switchTab('contractors', this)" id="tabContractors">🏢 المقاولين</div>
+    <div class="dash-tab" onclick="switchTab('projects', this)" id="tabProjects">🏗️ المشاريع</div>
+    <div class="dash-tab" onclick="switchTab('awards', this)" id="tabAwards">🏆 الترسية</div>
+    <div class="dash-tab" onclick="switchTab('alerts', this)" id="tabAlerts">🔔 التنبيهات</div>
+    <div class="dash-tab" onclick="switchTab('account', this)" id="tabAccount">⚙️ الحساب</div>
+  </div>
+</div>
+
+<!-- Content -->
+<div class="dash-content">
+  <div class="container">
+
+    <!-- Panel: Tenders -->
+    <div class="dash-panel active" id="panelTenders">
+      <div id="planLimitTenders" style="display:none;background:#FFF3CD;color:#856404;padding:10px 15px;border-radius:8px;margin-bottom:15px;text-align:center;font-size:0.9em;">
+        ⚡ وصلت للحد المسموح في الفترة التجريبية. <a href="#" onclick="showUpgradeModal();return false;" style="color:#1F3864;font-weight:700;">اشترك الآن</a> للوصول لجميع البيانات
+      </div>
+      <div class="filter-bar" style="flex-wrap:wrap;">
+        <input type="text" id="tenderSearch" placeholder="🔍 بحث..." onkeyup="loadTenders()" style="flex:1;min-width:150px;">
+        <button onclick="loadTenders()">بحث</button>
+        <label style="display:flex;align-items:center;gap:5px;font-size:0.85em;">
+          <input type="checkbox" id="filterConstruction" onchange="loadTenders()"> تشييد
+        </label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:0.85em;">
+          <input type="checkbox" id="filterExpiring" onchange="loadTenders()"> عاجل
+        </label>
+        <select id="filterMaxDays" onchange="loadTenders()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;">
+          <option value="">المدة</option>
+          <option value="3">🔥 3 أيام</option>
+          <option value="7">7 أيام</option>
+          <option value="14">14 يوم</option>
+          <option value="30">30 يوم</option>
+        </select>
+        <select id="filterType" onchange="loadTenders()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;">
+          <option value="">النوع</option>
+          <option value="منافسة عامة">منافسة عامة</option>
+          <option value="شراء مباشر">شراء مباشر</option>
+        </select>
+        <select id="filterActivity" onchange="loadTenders()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;max-width:180px;">
+          <option value="">النشاط</option>
+        </select>
+        <select id="filterAgency" onchange="loadTenders()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;max-width:180px;">
+          <option value="">الجهة</option>
+        </select>
+        <input type="date" id="filterDateFrom" onchange="loadTenders()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;">
+        <input type="date" id="filterDateTo" onchange="loadTenders()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;">
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr>
+            <th>اسم المنافسة</th><th>الجهة</th><th>النشاط</th><th>النوع</th><th>آخر موعد</th><th>المتبقي</th><th>الحالة</th>
+          </tr></thead>
+          <tbody id="tendersBody">
+            <tr><td colspan="7" style="text-align:center;color:#999;">جاري التحميل...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination" id="tenderPagination"></div>
+    </div>
+
+    <!-- Panel: Contractors -->
+    <div class="dash-panel" id="panelContractors">
+      <div id="planLimitContractors" style="display:none;background:#FFF3CD;color:#856404;padding:10px 15px;border-radius:8px;margin-bottom:15px;text-align:center;font-size:0.9em;">
+        ⚡ وصلت للحد المسموح في الفترة التجريبية. <a href="#" onclick="showUpgradeModal();return false;" style="color:#1F3864;font-weight:700;">اشترك الآن</a> للوصول لجميع المقاولين
+      </div>
+      <div class="filter-bar">
+        <input type="text" id="contractorSearch" placeholder="🔍 بحث في المقاولين..." onkeyup="loadContractors()">
+        <button onclick="loadContractors()">بحث</button>
+        <select id="filterRegion" onchange="onRegionChange()">
+          <option value="">كل المناطق</option>
+        </select>
+        <select id="filterCity">
+          <option value="">كل المدن</option>
+        </select>
+        <label style="display:flex;align-items:center;gap:5px;font-size:0.9em;color:#555;">
+          <input type="checkbox" id="filterHasEmail" onchange="loadContractors()"> بإيميل فقط
+        </label>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr>
+            <th>اسم الشركة</th><th>المنطقة</th><th>المدينة</th><th>الجوال</th><th>البريد الإلكتروني</th>
+          </tr></thead>
+          <tbody id="contractorsBody">
+            <tr><td colspan="5" style="text-align:center;color:#999;">جاري التحميل...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination" id="contractorPagination"></div>
+    </div>
+
+    <!-- Panel: Projects -->
+    <div class="dash-panel" id="panelProjects">
+      <div id="planLimitProjects" style="display:none;background:#FFF3CD;color:#856404;padding:10px 15px;border-radius:8px;margin-bottom:15px;text-align:center;font-size:0.9em;">
+        ⚡ وصلت للحد المسموح في الفترة التجريبية. <a href="#" onclick="showUpgradeModal();return false;" style="color:#1F3864;font-weight:700;">اشترك الآن</a> للوصول لجميع المشاريع
+      </div>
+      <div style="display:flex;align-items:center;gap:15px;margin-bottom:20px;flex-wrap:wrap;">
+        <input type="text" id="projectSearch" placeholder="🔍 بحث في المشاريع، المقاول، المالك، الاستشاري..." onkeyup="loadProjects()" style="flex:1;min-width:200px;">
+        <button onclick="loadProjects()">بحث</button>
+        <select id="filterSector" onchange="loadProjects()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;">
+          <option value="">القطاع</option>
+        </select>
+        <select id="filterProjectLocation" onchange="loadProjects()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;">
+          <option value="">المنطقة</option>
+        </select>
+        <select id="filterHasContractor" onchange="loadProjects()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;">
+          <option value="">الكل</option>
+          <option value="yes">مع مقاول</option>
+          <option value="no">بدون مقاول</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr>
+            <th>المشروع</th><th>المالك</th><th>المقاول</th><th>الاستشاري</th><th>القيمة</th><th>الموقع</th><th>القطاع</th>
+          </tr></thead>
+          <tbody id="projectsBody">
+            <tr><td colspan="7" style="text-align:center;color:#999;">جاري التحميل...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination" id="projectPagination"></div>
+    </div>
+
+    <!-- Panel: Awards -->
+    <div class="dash-panel" id="panelAwards">
+      <div id="planLimitAwards" style="display:none;background:#FFF3CD;color:#856404;padding:10px 15px;border-radius:8px;margin-bottom:15px;text-align:center;font-size:0.9em;">
+        ⚡ وصلت للحد المسموح في الفترة التجريبية. <a href="#" onclick="showUpgradeModal();return false;" style="color:#1F3864;font-weight:700;">اشترك الآن</a> للوصول لجميع الترسيات
+      </div>
+      <div style="display:flex;align-items:center;gap:15px;margin-bottom:20px;flex-wrap:wrap;">
+        <input type="text" id="awardSearch" placeholder="🔍 بحث..." onkeyup="loadAwards()" style="flex:1;min-width:200px;">
+        <button onclick="loadAwards()">بحث</button>
+        <select id="awardMinValue" onchange="loadAwards()" style="padding:10px;border:2px solid #e0e0e0;border-radius:8px;">
+          <option value="">كل القيم</option>
+          <option value="0">أقل من 10,000</option>
+          <option value="10000">10,000 - 50,000</option>
+          <option value="50000">50,000 - 100,000</option>
+          <option value="100000">أكثر من 100,000</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr>
+            <th>المنافسة</th><th>الجهة</th><th>الفائز</th><th>قيمة الترسية</th><th>عدد المتنافسين</th><th>آخر موعد</th>
+          </tr></thead>
+          <tbody id="awardsBody">
+            <tr><td colspan="6" style="text-align:center;color:#999;">جاري التحميل...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination" id="awardPagination"></div>
+    </div>
+
+    <!-- Panel: Alerts -->
+    <div class="dash-panel" id="panelAlerts">
+      <h3 style="color:#1F3864;margin-bottom:15px;">🔔 منافسات تنتهي خلال 7 أيام</h3>
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr>
+            <th>اسم المنافسة</th><th>الجهة</th><th>النشاط</th><th>آخر موعد</th><th>الأيام المتبقية</th>
+          </tr></thead>
+          <tbody id="alertsBody">
+            <tr><td colspan="5" style="text-align:center;color:#999;">جاري التحميل...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Panel: Account -->
+    <div class="dash-panel" id="panelAccount">
+      <div style="background:white;border-radius:15px;padding:30px;box-shadow:0 4px 15px rgba(0,0,0,0.08);max-width:500px;">
+        <h3 style="color:#1F3864;margin-bottom:20px;">⚙️ معلومات الحساب</h3>
+        <p><strong>الاسم:</strong> <span id="accName">...</span></p>
+        <p><strong>البريد:</strong> <span id="accEmail">...</span></p>
+        <p><strong>الشركة:</strong> <span id="accCompany">...</span></p>
+        <p><strong>الباقة:</strong> <span id="accPlan">...</span></p>
+        <hr style="margin:20px 0;border-color:#eee;">
+        <button class="btn" id="upgradeBtn" onclick="showUpgradeModal()" style="width:100%;">⬆️ ترقية الباقة</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Upgrade Modal -->
+<div class="modal-overlay" id="upgradeModal">
+  <div class="modal" style="max-width:700px;">
+    <button class="modal-close" onclick="closeModal('upgradeModal')">✕</button>
+    <h2>⬆️ اختر باقتك</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin:20px 0;">
+      <div class="plan-card" onclick="selectPlan('basic',this)" id="planBasic">
+        <h4 style="color:#1F3864;">الباقة الأساسية</h4>
+        <div class="price-tag">500 <small>ريال/شهر</small></div>
+        <ul class="features">
+          <li>البحث في المنافسات الحكومية</li>
+          <li class="limited">عرض 15 منافسة يومياً فقط</li>
+          <li class="limited">تصدير Excel محدود (50 صف)</li>
+          <li>فلتر حسب النشاط والجهة</li>
+          <li class="limited">دليل المقاولين غير متاح</li>
+          <li class="limited">لا يوجد فلتر تشييد</li>
+          <li>دعم عبر البريد الإلكتروني</li>
+        </ul>
+      </div>
+      <div class="plan-card popular" onclick="selectPlan('professional',this)" id="planProfessional">
+        <div style="background:var(--gold);color:var(--gold-text);padding:2px 12px;border-radius:50px;font-size:0.75em;font-weight:700;display:inline-block;margin-bottom:5px;">✦ الأكثر طلباً</div>
+        <h4 style="color:#1F3864;">الباقة الاحترافية</h4>
+        <div class="price-tag">1,199 <small>ريال/شهر</small></div>
+        <ul class="features">
+          <li>جميع المنافسات (غير محدود)</li>
+          <li>فلتر التشييد والبناء</li>
+          <li>فلتر الأيام المتبقية</li>
+          <li>دليل المقاولين كامل (13,000+)</li>
+          <li>فلتر المقاولين بالمنطقة والمدينة</li>
+          <li>تصدير Excel حتى 1,000 صف</li>
+          <li>تنبيهات المنافسات المنتهية</li>
+          <li>دعم عبر البريد الإلكتروني</li>
+        </ul>
+      </div>
+      <div class="plan-card" onclick="selectPlan('enterprise',this)" id="planEnterprise">
+        <h4 style="color:#1F3864;">الباقة الشاملة</h4>
+        <div class="price-tag">2,999 <small>ريال/شهر</small></div>
+        <ul class="features">
+          <li>جميع مزايا الاحترافية</li>
+          <li>تصدير Excel + PDF غير محدود</li>
+          <li>API مباشرة للتكامل مع أنظمتك</li>
+          <li>تحديث يومي آلي للبيانات</li>
+          <li>إضافة 5 مستخدمين فرعيين لنفس الحساب</li>
+          <li>استخراج جوالات وإيميلات المقاولين</li>
+          <li>مدير حساب مخصص</li>
+          <li>تدريب الفريق عن بُعد</li>
+        </ul>
+      </div>
+    </div>
+    <p id="selectedPlan" style="text-align:center;color:#666;margin-bottom:15px;">اختر الباقة المناسبة</p>
+    <div id="paypalButton" style="text-align:center;"></div>
+    <p style="text-align:center;color:#888;font-size:0.8em;margin-top:10px;">🔒 الدفع عبر PayPal — معلوماتك آمنة</p>
+  </div>
+</div>
+
+<script>
+let selectedPlanId = 'professional';
+
+// ── API ──
+const API = {
+  async get(path) {
+    const r = await fetch(path, { credentials: 'include' });
+    return r.json();
+  },
+  async post(path, data) {
+    const r = await fetch(path, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', body: JSON.stringify(data)
+    });
+    return r.json();
+  }
+};
+
+function showToast(msg, type = 'info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 4000);
+}
+function showModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); });
+});
+
+// ── Tabs ──
+let currentTab = 'tenders';
+function switchTab(tab, el) {
+  currentTab = tab;
+  document.querySelectorAll('.dash-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.dash-panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+  if (tab === 'tenders') loadTenders();
+  if (tab === 'contractors') loadContractors();
+  if (tab === 'projects') loadProjects();
+  if (tab === 'awards') loadAwards();
+  if (tab === 'alerts') loadAlerts();
+}
+
+// ── Auth Check ──
+async function checkAuth() {
+  const res = await API.get('/api/auth/me');
+  if (!res.user) { window.location.href = '/'; return; }
+  
+  const u = res.user;
+  document.getElementById('userName').textContent = u.name + (u.company ? ' — ' + u.company : '');
+  
+  const badge = document.getElementById('subBadge');
+  if (u.subscription === 'trial') {
+    badge.textContent = `تجربة مجانية (${u.trialDaysLeft} أيام)`;
+    badge.className = 'sub-badge trial';
+    document.getElementById('subBanner').style.display = 'block';
+    document.getElementById('trialDays').textContent = u.trialDaysLeft;
+    document.getElementById('trialText').textContent = u.trialDaysLeft > 0
+      ? `باقي ${u.trialDaysLeft} أيام من الفترة المجانية. اشترك الآن للاستمرار!`
+      : 'انتهت الفترة التجريبية. اشترك الآن للاستمرار!';
+  } else if (u.subscription === 'expired') {
+    badge.textContent = 'منتهية';
+    badge.className = 'sub-badge expired';
+    document.getElementById('subBanner').style.display = 'block';
+    document.getElementById('trialText').textContent = 'انتهت الفترة التجريبية. اشترك الآن للاستمرار!';
+  } else {
+    badge.textContent = u.subscription === 'professional' ? 'احترافية' : u.subscription === 'basic' ? 'أساسية' : 'شاملة';
+    badge.className = 'sub-badge';
+  }
+
+  // Account panel
+  document.getElementById('accName').textContent = u.name;
+  document.getElementById('accEmail').textContent = u.email;
+  document.getElementById('accCompany').textContent = u.company || '—';
+  document.getElementById('accPlan').textContent = u.subscription === 'trial'
+    ? `تجربة مجانية (${u.trialDaysLeft} أيام متبقية)`
+    : u.subscription === 'basic' ? 'الباقة الأساسية'
+    : u.subscription === 'professional' ? 'الباقة الاحترافية'
+    : u.subscription === 'enterprise' ? 'الباقة الشاملة' : u.subscription;
+
+  if (['trial','expired','basic'].includes(u.subscription)) {
+    document.getElementById('upgradeBtn').style.display = 'block';
+  } else {
+    document.getElementById('upgradeBtn').style.display = 'none';
+  }
+
+  // Load initial data
+  loadFilterOptions();
+  loadProjectSectors();
+  loadTenders();
+  loadAlerts();
+  loadRegions();
+}
+
+// ── Filter Options ──
+async function loadFilterOptions() {
+  try {
+    const actRes = await fetch('/api/tenders/activities');
+    if (actRes.ok) {
+      const actData = await actRes.json();
+      const actSel = document.getElementById('filterActivity');
+      actData.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.name;
+        opt.textContent = a.name + ' (' + a.count + ')';
+        actSel.appendChild(opt);
+      });
+    }
+    const agRes = await fetch('/api/tenders/agencies');
+    if (agRes.ok) {
+      const agData = await agRes.json();
+      const agSel = document.getElementById('filterAgency');
+      agData.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.name;
+        opt.textContent = a.name + ' (' + a.count + ')';
+        agSel.appendChild(opt);
+      });
+    }
+  } catch (e) { /* ignore */ }
+}
+
+// ── Tenders ──
+let tenderPage = 1;
+async function loadTenders() {
+  try {
+    const search = document.getElementById('tenderSearch').value;
+    const construction = document.getElementById('filterConstruction').checked;
+    const expiring = document.getElementById('filterExpiring').checked;
+    const maxDays = document.getElementById('filterMaxDays').value;
+    const type = document.getElementById('filterType').value;
+    const activity = document.getElementById('filterActivity').value;
+    const agency = document.getElementById('filterAgency').value;
+    const dateFrom = document.getElementById('filterDateFrom').value;
+    const dateTo = document.getElementById('filterDateTo').value;
+    const params = new URLSearchParams({ limit: 15, page: tenderPage });
+    if (search) params.set('search', search);
+    if (construction) params.set('construction', 'true');
+    if (expiring) params.set('expiring', 'true');
+    if (maxDays) params.set('maxDays', maxDays);
+    if (type) params.set('type', type);
+    if (activity) params.set('activity', activity);
+    if (agency) params.set('agency', agency);
+    if (dateFrom) params.set('dateFrom', dateFrom);
+    if (dateTo) params.set('dateTo', dateTo);
+    
+    const res = await API.get('/api/tenders?' + params.toString());
+    const tbody = document.getElementById('tendersBody');
+    
+    if (res.data && res.data.length) {
+      tbody.innerHTML = res.data.map(t => `
+        <tr>
+          <td>${t.name || ''}</td>
+          <td>${t.agency || ''}</td>
+          <td>${t.activity || ''}</td>
+          <td>${t.type || ''}</td>
+          <td>${t.lastDate || ''}</td>
+          <td>${t.remainingDays !== undefined && t.remainingDays !== null ? (t.remainingDays + ' يوم') : ''}</td>
+          <td>${t.status || ''}</td>
+        </tr>
+      `).join('');
+    } else {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#999;">لا توجد نتائج</td></tr>';
+    }
+
+    // Pagination
+    const pag = document.getElementById('tenderPagination');
+    if (res.pagination) {
+      const { page, totalPages, total } = res.pagination;
+      let pagHtml = `<button ${page <= 1 ? 'disabled' : ''} onclick="tenderPage--;loadTenders()">‹</button>`;
+      for (let i = Math.max(1, page - 2); i <= Math.min(totalPages, page + 2); i++) {
+        pagHtml += `<button class="${i === page ? 'active' : ''}" onclick="tenderPage=${i};loadTenders()">${i}</button>`;
+      }
+      pagHtml += `<button ${page >= totalPages ? 'disabled' : ''} onclick="tenderPage++;loadTenders()">›</button>`;
+      pagHtml += `<span style="margin-right:10px;color:#888;font-size:0.85em;">${total} نتيجة</span>`;
+      pag.innerHTML = pagHtml;
+    }
+    // Check plan limit
+    const banner = document.getElementById('planLimitTenders');
+    if (res.plan && res.plan.limits && res.plan.limits.maxTenders > 0 && res.pagination.total >= res.plan.limits.maxTenders) {
+      banner.style.display = 'block';
+    } else {
+      banner.style.display = 'none';
+    }
+  } catch(e) {
+    document.getElementById('tendersBody').innerHTML = '<tr><td colspan="7" style="text-align:center;color:#999;">فشل التحميل</td></tr>';
+  }
+}
+
+// ── Contractors ──
+let contractorPage = 1;
+async function loadCities() {
+  try {
+    const region = document.getElementById('filterRegion').value;
+    const res = await API.get('/api/contractors/cities' + (region ? '?region=' + encodeURIComponent(region) : ''));
+    const select = document.getElementById('filterCity');
+    if (res && res.length) {
+      select.innerHTML = '<option value="">كل المدن</option>' +
+        res.map(c => `<option value="${c.name}">${c.name} (${c.count})</option>`).join('');
+    }
+  } catch(e) {}
+}
+
+function onRegionChange() {
+  loadCities();
+  loadContractors();
+}
+
+async function loadContractors() {
+  try {
+    const search = document.getElementById('contractorSearch').value;
+    const region = document.getElementById('filterRegion').value;
+    const city = document.getElementById('filterCity').value;
+    const hasEmail = document.getElementById('filterHasEmail').checked;
+    const params = new URLSearchParams({ limit: 20, page: contractorPage });
+    if (search) params.set('search', search);
+    if (region) params.set('region', region);
+    if (city) params.set('city', city);
+    if (hasEmail) params.set('hasEmail', 'true');
+
+    const res = await API.get('/api/contractors?' + params.toString());
+    const tbody = document.getElementById('contractorsBody');
+
+    if (res.data && res.data.length) {
+      tbody.innerHTML = res.data.map(c => `
+        <tr>
+          <td>${c.companyName || ''}</td>
+          <td>${c.region || ''}</td>
+          <td>${c.city || ''}</td>
+          <td style="direction:ltr;text-align:left;">${c.phone || ''}</td>
+          <td>${c.email || ''}</td>
+        </tr>
+      `).join('');
+    } else {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;">لا توجد نتائج</td></tr>';
+    }
+
+    const pag = document.getElementById('contractorPagination');
+    if (res.pagination) {
+      const { page, totalPages, total } = res.pagination;
+      let pagHtml = `<button ${page <= 1 ? 'disabled' : ''} onclick="contractorPage--;loadContractors()">‹</button>`;
+      for (let i = Math.max(1, page - 2); i <= Math.min(totalPages, page + 2); i++) {
+        pagHtml += `<button class="${i === page ? 'active' : ''}" onclick="contractorPage=${i};loadContractors()">${i}</button>`;
+      }
+      pagHtml += `<button ${page >= totalPages ? 'disabled' : ''} onclick="contractorPage++;loadContractors()">›</button>`;
+      pagHtml += `<span style="margin-right:10px;color:#888;font-size:0.85em;">${total} نتيجة</span>`;
+      pag.innerHTML = pagHtml;
+    }
+    // Check plan limit
+    const banner = document.getElementById('planLimitContractors');
+    if (res.plan && res.plan.limits && res.plan.limits.maxContractors > 0 && res.pagination.total >= res.plan.limits.maxContractors) {
+      banner.style.display = 'block';
+    } else {
+      banner.style.display = 'none';
+    }
+  } catch(e) {
+    document.getElementById('contractorsBody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;">فشل التحميل</td></tr>';
+  }
+}
+
+async function loadRegions() {
+  try {
+    const res = await API.get('/api/contractors/regions');
+    const select = document.getElementById('filterRegion');
+    if (res && res.length) {
+      select.innerHTML = '<option value="">كل المناطق</option>' +
+        res.map(r => `<option value="${r.name}">${r.name} (${r.count})</option>`).join('');
+    }
+  } catch(e) {}
+}
+
+// ── Projects ──
+let projectPage = 1;
+async function loadProjects() {
+  try {
+    const search = document.getElementById('projectSearch').value;
+    const sector = document.getElementById('filterSector').value;
+    const location = document.getElementById('filterProjectLocation').value;
+    const hasContractor = document.getElementById('filterHasContractor').value;
+    const params = new URLSearchParams({ limit: 15, page: projectPage });
+    if (search) params.set('search', search);
+    if (sector) params.set('sector', sector);
+    if (location) params.set('location', location);
+    if (hasContractor) params.set('hasContractor', hasContractor);
+    const res = await API.get('/api/projects?' + params.toString());
+    if (!res) return;
+    const tbody = document.getElementById('projectsBody');
+    if (!res.data || res.data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#999;">لا توجد مشاريع متاحة</td></tr>';
+      document.getElementById('projectPagination').innerHTML = '';
+      return;
+    }
+    tbody.innerHTML = res.data.map(p => `<tr>
+      <td><strong>${p.title || '—'}</strong></td>
+      <td>${p.owner || '—'}</td>
+      <td style="color:#1F3864;font-weight:600;">${p.contractor || '—'}</td>
+      <td>${p.consultant || '—'}</td>
+      <td style="direction:ltr;text-align:right;font-size:0.8em;">${p.value || '—'}</td>
+      <td>${p.location || '—'}</td>
+      <td>${p.sector || '—'}</td>
+    </tr>`).join('');
+    // Pagination
+    const pg = res.pagination;
+    let pages = '';
+    for (let i = 1; i <= pg.totalPages; i++) {
+      pages += `<span class="page-num${i === pg.page ? ' active' : ''}" onclick="projectPage=${i};loadProjects()">${i}</span>`;
+    }
+    document.getElementById('projectPagination').innerHTML = pages;
+    // Plan limit banner
+    const banner = document.getElementById('planLimitProjects');
+    if (res.plan && res.plan.limits && res.plan.limits.maxProjects > 0 && pg.total >= res.plan.limits.maxProjects) {
+      banner.style.display = 'block';
+    } else {
+      banner.style.display = 'none';
+    }
+  } catch(e) {
+    document.getElementById('projectsBody').innerHTML = '<tr><td colspan="7" style="text-align:center;color:#c00;">خطأ في تحميل المشاريع</td></tr>';
+  }
+}
+async function loadProjectSectors() {
+  try {
+    const res = await API.get('/api/projects/sectors');
+    if (res && res.length) {
+      const sel = document.getElementById('filterSector');
+      res.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.name;
+        opt.textContent = s.name + ' (' + s.count + ')';
+        sel.appendChild(opt);
+      });
+    }
+    const locRes = await API.get('/api/projects/locations');
+    if (locRes && locRes.length) {
+      const sel = document.getElementById('filterProjectLocation');
+      locRes.forEach(l => {
+        const opt = document.createElement('option');
+        opt.value = l.name;
+        opt.textContent = l.name + ' (' + l.count + ')';
+        sel.appendChild(opt);
+      });
+    }
+  } catch(e) {}
+}
+
+// ── Awards ──
+let awardPage = 1;
+async function loadAwards() {
+  try {
+    const search = document.getElementById('awardSearch').value;
+    const minValue = document.getElementById('awardMinValue').value;
+    const params = new URLSearchParams({ limit: 15, page: awardPage });
+    if (search) params.set('search', search);
+    if (minValue) params.set('minValue', minValue);
+
+    const res = await API.get('/api/awards?' + params.toString());
+    const tbody = document.getElementById('awardsBody');
+
+    if (res.data && res.data.length) {
+      tbody.innerHTML = res.data.map(a => {
+        const val = a.winner ? parseFloat(a.winner.value) : 0;
+        return `<tr>
+          <td>${a.tenderName || ''}</td>
+          <td>${a.agency || ''}</td>
+          <td style="color:#1F3864;font-weight:700;">${a.winner ? a.winner.name : '—'}</td>
+          <td style="direction:ltr;text-align:left;">${val ? val.toLocaleString() + ' ريال' : '—'}</td>
+          <td>${a.biddersCount || 0}</td>
+          <td>${a.lastDate || ''}</td>
+        </tr>`;
+      }).join('');
+    } else {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;">لا توجد نتائج</td></tr>';
+    }
+
+    const pag = document.getElementById('awardPagination');
+    if (res.pagination) {
+      const { page, totalPages, total } = res.pagination;
+      let pagHtml = `<button ${page <= 1 ? 'disabled' : ''} onclick="awardPage--;loadAwards()">‹</button>`;
+      for (let i = Math.max(1, page - 2); i <= Math.min(totalPages, page + 2); i++) {
+        pagHtml += `<button class="${i === page ? 'active' : ''}" onclick="awardPage=${i};loadAwards()">${i}</button>`;
+      }
+      pagHtml += `<button ${page >= totalPages ? 'disabled' : ''} onclick="awardPage++;loadAwards()">›</button>`;
+      pagHtml += `<span style="margin-right:10px;color:#888;font-size:0.85em;">${total} نتيجة</span>`;
+      pag.innerHTML = pagHtml;
+    }
+    // Check plan limit
+    const banner = document.getElementById('planLimitAwards');
+    if (res.plan && res.plan.limits && res.plan.limits.maxAwards > 0 && res.pagination.total >= res.plan.limits.maxAwards) {
+      banner.style.display = 'block';
+    } else {
+      banner.style.display = 'none';
+    }
+  } catch(e) {
+    document.getElementById('awardsBody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;">فشل التحميل</td></tr>';
+  }
+}
+
+// ── Alerts ──
+async function loadAlerts() {
+  try {
+    const res = await API.get('/api/tenders?expiring=true&limit=20');
+    const tbody = document.getElementById('alertsBody');
+    if (res.data && res.data.length) {
+      tbody.innerHTML = res.data.map(t => {
+        const days = t.remainingDays || 0;
+        const urgent = days <= 3 ? 'style="color:#DC3545;font-weight:700;"' : '';
+        return `<tr>
+          <td>${t.name || ''}</td>
+          <td>${t.agency || ''}</td>
+          <td>${t.activity || ''}</td>
+          <td>${t.lastDate || ''}</td>
+          <td ${urgent}>${days} يوم ${days <= 3 ? '🔥' : ''}</td>
+        </tr>`;
+      }).join('');
+    } else {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;">مافي منافسات تنتهي قريباً</td></tr>';
+    }
+  } catch(e) {}
+}
+
+// ── Handle Logout ──
+async function handleLogout() {
+  await API.post('/api/auth/logout', {});
+  window.location.href = '/';
+}
+
+// ── Upgrade ──
+function selectPlan(planId, el) {
+  selectedPlanId = planId;
+  document.querySelectorAll('#upgradeModal [id^=plan]').forEach(p => p.style.borderColor = 'transparent');
+  el.style.borderColor = '#2E75B6';
+  
+  const prices = { basic: '500 ريال/شهر', professional: '1,199 ريال/شهر', enterprise: '2,999 ريال/شهر' };
+  const names = { basic: 'الباقة الأساسية', professional: 'الباقة الاحترافية', enterprise: 'الباقة الشاملة' };
+  document.getElementById('selectedPlan').textContent = `✅ اخترت: ${names[planId]} — ${prices[planId]}`;
+  
+  document.getElementById('paypalButton').innerHTML = `
+    <p style="color:#666;margin:10px 0;">💰 سيتم تحويلك إلى PayPal لإتمام الدفع</p>
+    <button class="btn" onclick="processPayment('${planId}')" style="background:#0070BA;">
+      <span style="display:flex;align-items:center;justify-content:center;gap:8px;">
+        <span>الدفع عبر</span>
+        <span style="font-weight:900;font-style:italic;font-size:1.2em;">PayPal</span>
+      </span>
+    </button>
+  `;
+}
+
+async function processPayment(planId) {
+  const btn = document.querySelector('#paypalButton .btn');
+  btn.disabled = true; btn.innerHTML = 'جاري تحويلك إلى PayPal... <span class="spinner"></span>';
+  
+  const res = await API.post('/api/payments/create-order', { planId });
+  if (res.paypalLink) {
+    // فعلياً: افتح PayPal في نافذة جديدة
+    showToast('تم فتح PayPal للدفع. بعد الدفع، ارجع للوحة التحكم', 'info');
+    
+    // افتح PayPal في تاب جديد
+    const paypalWindow = window.open(res.paypalLink, '_blank');
+    
+    // للمستقبل: هنا webhook يرجع يؤكد الدفع
+    // حالياً: نافذة منبثقة تخلي المستخدم يضغط "تم الدفع"
+    const confirmed = confirm('✅ بعد إتمام الدفع في PayPal، اضغط OK لتأكيد الاشتراك');
+    
+    if (confirmed) {
+      const verify = await API.post('/api/payments/verify', { 
+        planId, 
+        paypalOrderId: 'pp-' + Date.now() 
+      });
+      if (verify.success) {
+        closeModal('upgradeModal');
+        showToast('✅ تم تفعيل الاشتراك! شكراً لك', 'success');
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        showToast('فشل تأكيد الدفع. تواصل مع الدعم', 'error');
+        btn.disabled = false; btn.innerHTML = '💰 الدفع عبر PayPal';
+      }
+    } else {
+      btn.disabled = false; btn.innerHTML = '💰 الدفع عبر PayPal';
+      showToast('تم إلغاء الدفع. تقدر تجرب مرة ثانية', 'info');
+    }
+  } else {
+    showToast('فشل إنشاء الدفع', 'error');
+    btn.disabled = false; btn.textContent = '💰 الدفع عبر PayPal';
+  }
+}
+
+function showUpgradeModal() {
+  selectPlan('professional', document.getElementById('planProfessional'));
+  showModal('upgradeModal');
+}
+
+// ── Theme ──
+(function() {
+  const theme = localStorage.getItem('theme') || 'light';
+  document.documentElement.className = 'theme-' + theme;
+})();
+function setTheme(t) {
+  document.documentElement.className = 'theme-' + t;
+  localStorage.setItem('theme', t);
+  document.querySelectorAll('.theme-toggle button').forEach(b => {
+    b.classList.toggle('active', b.dataset.theme === t);
+  });
+}
+
+// ── Init ──
+checkAuth();
+</script>
+</body>
+</html>

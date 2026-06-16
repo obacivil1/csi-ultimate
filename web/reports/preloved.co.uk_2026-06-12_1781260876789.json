@@ -1,0 +1,63 @@
+{
+  "reportId": "preloved.co.uk_2026-06-12_1781260876789",
+  "generatedAt": "2026-06-12T10:41:16.787Z",
+  "site": "preloved.co.uk",
+  "siteUrl": "https://www.preloved.co.uk",
+  "totalAds": 3,
+  "duration": 45000,
+  "fields": {
+    "title": {
+      "present": 3,
+      "empty": 0,
+      "pct": 100
+    },
+    "description": {
+      "present": 3,
+      "empty": 0,
+      "pct": 100
+    },
+    "price": {
+      "present": 2,
+      "empty": 1,
+      "pct": 67
+    },
+    "location": {
+      "present": 2,
+      "empty": 1,
+      "pct": 67
+    },
+    "phones": {
+      "present": 1,
+      "empty": 2,
+      "pct": 33
+    },
+    "emails": {
+      "present": 1,
+      "empty": 2,
+      "pct": 33
+    }
+  },
+  "metrics": {
+    "dataQualityScore": 56,
+    "siteHealthScore": 57,
+    "withTitle": "3/3",
+    "withPrice": "2/3",
+    "withDescription": "1/3",
+    "withLocation": "2/3",
+    "withPhone": "1/3",
+    "withEmail": "1/3",
+    "blockedPages": 0,
+    "cloudflareDetections": 0,
+    "retries": 0,
+    "extractionRate": 30
+  },
+  "issues": [
+    "description: coverage below 50%"
+  ],
+  "configSuggestions": [],
+  "rawStats": {
+    "duration": 45000,
+    "adsScraped": 3,
+    "linksAttempted": 10
+  }
+}

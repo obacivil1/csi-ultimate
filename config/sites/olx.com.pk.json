@@ -1,0 +1,33 @@
+{
+  "language": "en",
+  "search": {
+    "method": "GET",
+    "endpoint": "/search",
+    "param": "q"
+  },
+  "extraction": {
+    "adIdPattern": "-iid-(\\d+)$",
+    "titleCleanup": ["olx.com.pk", "OLX"],
+    "phoneRegion": "PK",
+    "countryCodes": [92],
+    "currencies": ["PKR", "USD"],
+    "selectors": {
+      "title": ["h1"],
+      "description": ["[class*='description']"],
+      "phone": ["a[href^='tel:']"],
+      "email": ["a[href^='mailto:']"],
+      "location": ["span._8206696c:not(.b7af14b4)"],
+      "price": ["span._24469da7"],
+      "company": ["[class*='seller']"],
+      "breadcrumb": [".breadcrumb a", "[class*='breadcrumb']"],
+      "date": ["time", "[class*='date']"]
+    }
+  },
+  "pagination": {
+    "nextSelector": "a[rel='next'], a.next, [class*='next'] a"
+  },
+  "categories": {
+    "autoDiscover": false
+  },
+  "excludeUrlPatterns": []
+}

@@ -1,0 +1,34 @@
+{
+  "language": "en",
+  "search": {
+    "method": "GET",
+    "endpoint": "/cls/search.epl",
+    "param": "q"
+  },
+  "extraction": {
+    "adIdPattern": "/cls/(\\d+)",
+    "titleCleanup": ["expatriates.com"],
+    "phoneRegion": "GCC",
+    "countryCodes": ["966", "971", "973", "974", "965", "968"],
+    "currencies": ["SAR", "AED", "KWD", "QAR"],
+    "selectors": {
+      "title": ["h1"],
+      "description": ["[class*='description']", "[class*='body']", "article .content"],
+      "phone": ["a[href^='tel:']"],
+      "email": ["a[href^='mailto:']"],
+      "whatsapp": ["a[href*='wa.me']", "a[href*='whatsapp.com/send']"],
+      "location": ["[class*='location']", "[class*='city']", ".breadcrumb"],
+      "price": ["[class*='salary']", "[class*='price']"],
+      "company": ["[class*='company']", "[class*='poster']"],
+      "breadcrumb": [".breadcrumb a", "[aria-label='breadcrumb'] a", "[class*='breadcrumb'] a"],
+      "date": ["time", "[class*='date']", "[class*='posted']"]
+    }
+  },
+  "pagination": {
+    "nextSelector": "a[rel='next'], .next a, a.next, [class*='next'] a"
+  },
+  "categories": {
+    "autoDiscover": true
+  },
+  "excludeUrlPatterns": ["/newadvert", "/scripts/"]
+}

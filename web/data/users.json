@@ -1,0 +1,28 @@
+[
+  {
+    "id": "e3503bed-d9ae-45cb-826f-16033343e48b",
+    "name": "test",
+    "email": "test@test.com",
+    "phone": "",
+    "company": "",
+    "password": "776f06853b37ba568ee8c6a872bd789617cfe017a250b5e2f0387bc2efeb4921",
+    "subscription": "trial",
+    "trialStart": "2026-06-16T16:05:18.714Z",
+    "createdAt": "2026-06-16T16:05:18.714Z",
+    "paypalSubscriptionId": null,
+    "status": "active"
+  },
+  {
+    "id": "b900a9ac-f8f5-4db7-ba05-ce4487aa0c1d",
+    "name": "obacivil",
+    "email": "obacivil@gmail.com",
+    "phone": "",
+    "company": "",
+    "password": "92f872288037ba0974673fb0f73b62d39fec2a7e035143d396675fc344325a1e",
+    "subscription": "trial",
+    "trialStart": "2026-06-16T16:07:06.735Z",
+    "createdAt": "2026-06-16T16:07:06.735Z",
+    "paypalSubscriptionId": null,
+    "status": "active"
+  }
+]

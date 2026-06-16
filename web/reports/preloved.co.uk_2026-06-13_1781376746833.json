@@ -1,0 +1,66 @@
+{
+  "reportId": "preloved.co.uk_2026-06-13_1781376746833",
+  "generatedAt": "2026-06-13T18:52:26.833Z",
+  "site": "preloved.co.uk",
+  "siteUrl": "https://www.preloved.co.uk",
+  "totalAds": 0,
+  "duration": 752,
+  "fields": {
+    "title": {
+      "present": 0,
+      "empty": 0,
+      "pct": 0
+    },
+    "description": {
+      "present": 0,
+      "empty": 0,
+      "pct": 0
+    },
+    "price": {
+      "present": 0,
+      "empty": 0,
+      "pct": 0
+    },
+    "location": {
+      "present": 0,
+      "empty": 0,
+      "pct": 0
+    },
+    "phones": {
+      "present": 0,
+      "empty": 0,
+      "pct": 0
+    },
+    "emails": {
+      "present": 0,
+      "empty": 0,
+      "pct": 0
+    }
+  },
+  "metrics": {
+    "dataQualityScore": 0,
+    "siteHealthScore": 0,
+    "withTitle": "0/0",
+    "withPrice": "0/0",
+    "withDescription": "0/0",
+    "withLocation": "0/0",
+    "withPhone": "0/0",
+    "withEmail": "0/0",
+    "blockedPages": 0,
+    "cloudflareDetections": 0,
+    "retries": 0,
+    "extractionRate": 0
+  },
+  "issues": [],
+  "configSuggestions": [],
+  "rawStats": {
+    "adsScraped": 0,
+    "adsFailed": 0,
+    "bansDetected": 0,
+    "cloudflareDetections": 0,
+    "retries": 0,
+    "linksAttempted": 0,
+    "duration": 752
+  },
+  "jobId": "job_1781376746079"
+}

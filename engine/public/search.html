@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSI Ultimate Search</title>
+<style>
+:root {
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --primary-light: #dbeafe;
+  --primary-transparent: rgba(37, 99, 235, 0.08);
+  --secondary: #f8fafc;
+  --bg: #ffffff;
+  --bg2: #f1f5f9;
+  --bg3: #e2e8f0;
+  --border: #cbd5e1;
+  --border-light: #e2e8f0;
+  --text: #0f172a;
+  --text2: #475569;
+  --text3: #94a3b8;
+  --green: #16a34a;
+  --green-light: #dcfce7;
+  --yellow: #ca8a04;
+  --yellow-light: #fef9c3;
+  --red: #dc2626;
+  --red-light: #fee2e2;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.05);
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --step-bg: var(--secondary);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--font);
+  background: var(--step-bg);
+  color: var(--text);
+  line-height: 1.6;
+  font-size: 15px;
+  min-height: 100vh;
+  direction: auto;
+}
+
+a { color: var(--primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Nav */
+nav {
+  background: var(--bg);
+  border-bottom: 1px solid var(--border-light);
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  height: 56px;
+  gap: 24px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+nav .brand { font-weight: 700; font-size: 18px; color: var(--primary); letter-spacing: -0.3px; }
+nav a { font-size: 14px; color: var(--text2); padding: 4px 0; border-bottom: 2px solid transparent; transition: all 0.15s; }
+nav a:hover { color: var(--text); text-decoration: none; border-bottom-color: var(--primary); }
+nav a.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+/* Header */
+.page-header {
+  background: var(--bg);
+  border-bottom: 1px solid var(--border-light);
+  padding: 28px 0 24px;
+}
+.page-header .inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+.page-header h1 {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+.page-header .subtitle {
+  font-size: 14px;
+  color: var(--text3);
+  margin-top: 2px;
+}
+
+/* Container */
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px 24px;
+}
+
+/* Steps indicator */
+.steps-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 32px;
+  padding: 0;
+}
+.step-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.step-dot {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  border: 2px solid var(--border);
+  background: var(--bg);
+  color: var(--text3);
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+.step-dot.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 0 0 4px var(--primary-transparent);
+}
+.step-dot.done {
+  border-color: var(--green);
+  background: var(--green);
+  color: white;
+}
+.step-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text3);
+  white-space: nowrap;
+  transition: var(--transition);
+}
+.step-label.active { color: var(--primary); }
+.step-label.done { color: var(--green); }
+.step-connector {
+  width: 60px;
+  height: 2px;
+  background: var(--border);
+  margin: 0 12px;
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+.step-connector.done { background: var(--green); }
+
+@media (max-width: 600px) {
+  .step-label { display: none; }
+  .step-connector { width: 24px; margin: 0 6px; }
+}
+
+/* Cards */
+.card {
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  transition: var(--transition);
+}
+
+/* Site Grid */
+.site-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+}
+.site-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 16px;
+  background: var(--bg);
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: var(--transition);
+  text-align: center;
+  user-select: none;
+}
+.site-card:hover {
+  border-color: var(--text3);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+.site-card.selected {
+  border-color: var(--primary);
+  background: var(--primary-transparent);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+.site-card .icon {
+  font-size: 36px;
+  line-height: 1;
+}
+.site-card .name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  word-break: break-word;
+}
+.site-card .hostname {
+  font-size: 11px;
+  color: var(--text3);
+  word-break: break-word;
+}
+
+/* Category Grid */
+.cat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+}
+.cat-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: var(--transition);
+  user-select: none;
+}
+.cat-card:hover {
+  border-color: var(--text3);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+.cat-card.selected {
+  border-color: var(--primary);
+  background: var(--primary-transparent);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+.cat-card .icon { font-size: 22px; flex-shrink: 0; }
+.cat-card .cat-name { font-size: 13px; font-weight: 500; line-height: 1.3; }
+
+/* Time Period */
+.time-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.time-btn {
+  padding: 8px 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  color: var(--text2);
+}
+.time-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.time-btn.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: white;
+}
+
+/* Input */
+.input-group {
+  margin-bottom: 20px;
+}
+.input-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+  margin-bottom: 6px;
+}
+.input-group input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  transition: var(--transition);
+  outline: none;
+}
+.input-group input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-transparent);
+}
+.input-group input::placeholder {
+  color: var(--text3);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: var(--font);
+}
+.btn:hover { background: var(--bg2); border-color: var(--text3); }
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn-success {
+  background: var(--green);
+  color: white;
+  border-color: var(--green);
+}
+.btn-success:hover { background: #15803d; }
+.btn-sm { padding: 5px 12px; font-size: 12px; }
+.btn-lg {
+  padding: 14px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: var(--radius);
+  min-width: 200px;
+}
+
+/* Search button area */
+.search-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+/* Progress / Log area */
+.log-area {
+  width: 100%;
+  max-height: 300px;
+  overflow-y: auto;
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 0;
+  font-size: 13px;
+  font-family: "SF Mono", "Cascadia Code", "Consolas", monospace;
+  margin-top: 12px;
+}
+.log-area::-webkit-scrollbar { width: 6px; }
+.log-area::-webkit-scrollbar-track { background: transparent; }
+.log-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.log-line {
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  animation: logFade 0.2s ease;
+}
+.log-line:last-child { border-bottom: none; }
+.log-line .log-time { color: var(--text3); font-size: 11px; flex-shrink: 0; }
+.log-line .log-msg { color: var(--text2); word-break: break-word; }
+.log-line.log-ad { background: var(--primary-transparent); }
+.log-line.log-ad .log-msg { color: var(--text); font-weight: 500; }
+.log-line.log-skip { background: rgba(202, 138, 4, 0.06); }
+.log-line.log-skip .log-msg { color: var(--yellow); }
+.log-line.log-error { background: var(--red-light); }
+.log-line.log-error .log-msg { color: var(--red); font-weight: 500; }
+.log-line.log-success .log-msg { color: var(--green); font-weight: 500; }
+
+@keyframes logFade {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Progress bar */
+.progress-container {
+  width: 100%;
+  margin-bottom: 8px;
+}
+.progress-bar-outer {
+  width: 100%;
+  height: 6px;
+  background: var(--bg3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-bar-inner {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), #60a5fa);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+  width: 0;
+}
+.progress-stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text2);
+  margin-top: 4px;
+}
+
+/* Steps visibility */
+.step-section { display: none; }
+.step-section.visible { display: block; }
+
+/* Results table */
+.results-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+th, td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-light);
+  white-space: nowrap;
+}
+th {
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text2);
+  background: var(--secondary);
+  position: sticky;
+  top: 0;
+}
+tr:hover td { background: var(--secondary); }
+tr:last-child td { border-bottom: none; }
+td.email { color: var(--primary); }
+td.phone { font-family: "SF Mono", "Cascadia Code", "Consolas", monospace; font-size: 12px; }
+
+/* Summary stats */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+.summary-stat {
+  text-align: center;
+  padding: 16px 12px;
+  background: var(--secondary);
+  border-radius: var(--radius);
+  border: 1px solid var(--border-light);
+}
+.summary-stat .value {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text);
+}
+.summary-stat .label {
+  font-size: 11px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+.summary-stat .sub {
+  font-size: 12px;
+  color: var(--text2);
+  margin-top: 2px;
+}
+
+/* Export bar */
+.export-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+.export-bar .label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+  margin-right: 4px;
+}
+
+/* Loading spinner */
+.spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+.spinner-lg { width: 28px; height: 28px; border-width: 3px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+  gap: 16px;
+  color: var(--text3);
+}
+
+/* Search running banner */
+.search-status-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--primary-transparent);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+}
+.search-status-banner .status-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--primary);
+}
+
+/* Section title */
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  letter-spacing: -0.3px;
+}
+.section-desc {
+  font-size: 13px;
+  color: var(--text3);
+  margin-bottom: 16px;
+}
+
+/* Selected info */
+.selected-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: var(--primary-transparent);
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--primary);
+  margin-bottom: 16px;
+}
+
+/* Empty state */
+.empty {
+  text-align: center;
+  padding: 40px 24px;
+  color: var(--text3);
+}
+.empty h3 { color: var(--text2); margin-bottom: 6px; font-size: 16px; }
+
+/* Pulse animation for waiting */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.pulse { animation: pulse 1.5s ease-in-out infinite; }
+
+/* Slide-in transitions */
+.step-section {
+  animation: slideIn 0.3s ease;
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  nav { padding: 0 16px; gap: 16px; }
+  .container { padding: 20px 16px; }
+  .page-header .inner { padding: 0 16px; }
+  .site-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .cat-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .summary-grid { grid-template-columns: repeat(2, 1fr); }
+  .btn-lg { width: 100%; min-width: 0; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="brand">CSI-Ultimate</span>
+  <a href="/">Validation Center</a>
+  <a href="/search.html" class="active">Search</a>
+  <a href="/evidence.html">Evidence</a>
+  <a href="/audit.html">Audit</a>
+  <a href="/certification.html">Certifications</a>
+</nav>
+
+<div class="page-header">
+  <div class="inner">
+    <h1>CSI Ultimate Search</h1>
+    <div class="subtitle">Classifieds search across multiple sites — real-time extraction with progress tracking</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Steps indicator -->
+  <div class="steps-bar">
+    <div class="step-indicator">
+      <div class="step-dot active" id="dot1">1</div>
+      <span class="step-label active" id="label1">Site</span>
+    </div>
+    <div class="step-connector" id="conn1"></div>
+    <div class="step-indicator">
+      <div class="step-dot" id="dot2">2</div>
+      <span class="step-label" id="label2">Category</span>
+    </div>
+    <div class="step-connector" id="conn2"></div>
+    <div class="step-indicator">
+      <div class="step-dot" id="dot3">3</div>
+      <span class="step-label" id="label3">Search</span>
+    </div>
+    <div class="step-connector" id="conn3"></div>
+    <div class="step-indicator">
+      <div class="step-dot" id="dot4">4</div>
+      <span class="step-label" id="label4">Results</span>
+    </div>
+  </div>
+
+  <!-- Step 1: Select Site -->
+  <div class="step-section visible" id="step1">
+    <h2 class="section-title">Select a Site</h2>
+    <p class="section-desc">Choose the classifieds site you want to search across.</p>
+    <div class="site-grid" id="siteGrid">
+      <div class="loading-center"><div class="spinner spinner-lg"></div><span>Loading sites...</span></div>
+    </div>
+  </div>
+
+  <!-- Step 2: Select Category -->
+  <div class="step-section" id="step2">
+    <div class="selected-info" id="selectedSiteInfo"></div>
+    <h2 class="section-title">Select a Category</h2>
+    <p class="section-desc">Choose a category to narrow your search.</p>
+    <div class="cat-grid" id="catGrid">
+      <div class="loading-center"><div class="spinner spinner-lg"></div><span>Loading categories...</span></div>
+    </div>
+  </div>
+
+  <!-- Step 3: Search Parameters -->
+  <div class="step-section" id="step3">
+    <div class="selected-info" id="selectedInfo3"></div>
+    <h2 class="section-title">Search Parameters</h2>
+
+    <div class="input-group">
+      <label>Time Period</label>
+      <div class="time-group" id="timeGroup">
+        <button class="time-btn active" data-value="24h">24h</button>
+        <button class="time-btn" data-value="3d">3d</button>
+        <button class="time-btn" data-value="1w">1w</button>
+        <button class="time-btn" data-value="2w">2w</button>
+        <button class="time-btn" data-value="1m">1m</button>
+        <button class="time-btn" data-value="3m">3m</button>
+        <button class="time-btn" data-value="">All</button>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label>Keyword</label>
+      <input type="text" id="keywordInput" placeholder="e.g. planning engineer, مهندس تخطيط" autocomplete="off">
+    </div>
+
+    <div class="search-action">
+      <button class="btn btn-primary btn-lg" id="startSearchBtn" onclick="startSearch()">
+        <span>🔍</span> Start Search
+      </button>
+      <div id="searchProgressArea" style="width:100%;display:none">
+        <div class="progress-container">
+          <div class="progress-bar-outer">
+            <div class="progress-bar-inner" id="progressBarFill"></div>
+          </div>
+          <div class="progress-stats">
+            <span id="progressLabel">Initializing...</span>
+            <span id="progressCount"></span>
+          </div>
+        </div>
+        <div class="log-area" id="logArea"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 4: Results -->
+  <div class="step-section" id="step4">
+    <div class="selected-info" id="selectedInfo4"></div>
+
+    <div id="resultsSummary"></div>
+
+    <div id="resultsContainer" style="display:none">
+      <h2 class="section-title" style="margin-top:24px">Results</h2>
+      <div class="results-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Title</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Location</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody id="resultsBody"></tbody>
+        </table>
+      </div>
+
+      <div class="export-bar">
+        <span class="label">Export:</span>
+        <button class="btn btn-sm btn-success" id="exportXlsx">📥 Excel (.xlsx)</button>
+        <button class="btn btn-sm" id="exportCsv">📥 CSV</button>
+        <button class="btn btn-sm" id="exportJson">📥 JSON</button>
+        <span style="flex:1"></span>
+        <button class="btn btn-sm" onclick="resetSearch()">🔄 New Search</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============ State ============
+const state = {
+  sites: [],
+  selectedSite: null,
+  selectedCategory: null,
+  timePeriod: '24h',
+  keyword: '',
+  jobId: null,
+  currentStep: 1,
+  eventSource: null,
+  results: [],
+  completedData: null,
+  exportJobId: null,
+};
+
+// ============ Icons ============
+const SITE_ICONS = {
+  'gumtree.com': '🛒',
+  'london.craigslist.org': '📋',
+  'preloved.co.uk': '💝',
+  'olx.com.pk': '🛍️',
+  'expatriates.com': '🌍',
+  'sa.opensooq.com': '🏪',
+};
+
+function getSiteIcon(hostname) {
+  for (const [key, icon] of Object.entries(SITE_ICONS)) {
+    if (hostname.includes(key)) return icon;
+  }
+  return '🌐';
+}
+
+// ============ Step Navigation ============
+function goToStep(step) {
+  state.currentStep = step;
+  document.querySelectorAll('.step-section').forEach((el, i) => {
+    el.classList.toggle('visible', i + 1 === step);
+  });
+
+  for (let i = 1; i <= 4; i++) {
+    const dot = document.getElementById('dot' + i);
+    const label = document.getElementById('label' + i);
+    dot.classList.toggle('active', i === step);
+    dot.classList.toggle('done', i < step);
+    label.classList.toggle('active', i === step);
+    label.classList.toggle('done', i < step);
+  }
+  for (let i = 1; i <= 3; i++) {
+    const conn = document.getElementById('conn' + i);
+    conn.classList.toggle('done', i < step);
+  }
+}
+
+// ============ Load Sites ============
+async function loadSites() {
+  const grid = document.getElementById('siteGrid');
+  try {
+    const res = await fetch('/api/sites');
+    const data = await res.json();
+    state.sites = Array.isArray(data) ? data : data.sites || [];
+    if (!state.sites.length) {
+      grid.innerHTML = '<div class="empty"><h3>No sites available</h3><p>The server returned no sites.</p></div>';
+      return;
+    }
+    let html = '';
+    for (const site of state.sites) {
+      const icon = getSiteIcon(site.hostname);
+      html += `
+        <div class="site-card" data-hostname="${escapeHtml(site.hostname)}" onclick="selectSite('${escapeHtml(site.hostname)}')">
+          <div class="icon">${icon}</div>
+          <div class="name">${escapeHtml(site.name || site.hostname)}</div>
+          <div class="hostname">${escapeHtml(site.hostname)}</div>
+        </div>`;
+    }
+    grid.innerHTML = html;
+  } catch (e) {
+    grid.innerHTML = `<div class="empty"><h3>Error loading sites</h3><p>${escapeHtml(e.message)}</p></div>`;
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ============ Select Site ============
+function selectSite(hostname) {
+  const site = state.sites.find(s => s.hostname === hostname);
+  if (!site) return;
+
+  state.selectedSite = site;
+  state.selectedCategory = null;
+
+  document.querySelectorAll('.site-card').forEach(c => {
+    c.classList.toggle('selected', c.dataset.hostname === hostname);
+  });
+
+  showCategories(site);
+  goToStep(2);
+}
+
+function showCategories(site) {
+  const info = document.getElementById('selectedSiteInfo');
+  const icon = getSiteIcon(site.hostname);
+  info.innerHTML = `${icon} ${escapeHtml(site.name || site.hostname)}`;
+
+  // Update step 3 and 4 info too
+  updateInfo3();
+  updateInfo4();
+
+  const grid = document.getElementById('catGrid');
+  const cats = site.categories || [];
+  if (!cats.length) {
+    grid.innerHTML = '<div class="empty"><h3>No categories available</h3></div>';
+    return;
+  }
+  let html = '';
+  for (const cat of cats) {
+    const catIcon = cat.icon || '📁';
+    html += `
+      <div class="cat-card" data-cat="${escapeHtml(cat.name)}" onclick="selectCategory('${escapeHtml(cat.name)}')">
+        <span class="icon">${catIcon}</span>
+        <span class="cat-name">${escapeHtml(cat.name)}</span>
+      </div>`;
+  }
+  grid.innerHTML = html;
+}
+
+// ============ Select Category ============
+function selectCategory(catName) {
+  const cat = state.selectedSite.categories.find(c => c.name === catName);
+  if (!cat) return;
+  state.selectedCategory = cat;
+
+  document.querySelectorAll('.cat-card').forEach(c => {
+    c.classList.toggle('selected', c.dataset.cat === catName);
+  });
+
+  updateInfo3();
+  updateInfo4();
+  goToStep(3);
+}
+
+function updateInfo3() {
+  const el = document.getElementById('selectedInfo3');
+  if (state.selectedSite && state.selectedCategory) {
+    const icon = getSiteIcon(state.selectedSite.hostname);
+    el.innerHTML = `${icon} ${escapeHtml(state.selectedSite.name || state.selectedSite.hostname)} &mdash; ${escapeHtml(state.selectedCategory.name)}`;
+  } else {
+    el.innerHTML = '';
+  }
+}
+
+function updateInfo4() {
+  const el = document.getElementById('selectedInfo4');
+  if (state.selectedSite && state.selectedCategory) {
+    const icon = getSiteIcon(state.selectedSite.hostname);
+    el.innerHTML = `${icon} ${escapeHtml(state.selectedSite.name || state.selectedSite.hostname)} &mdash; ${escapeHtml(state.selectedCategory.name)}`;
+  } else {
+    el.innerHTML = '';
+  }
+}
+
+// ============ Time Period ============
+document.getElementById('timeGroup').addEventListener('click', function(e) {
+  const btn = e.target.closest('.time-btn');
+  if (!btn) return;
+  this.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.timePeriod = btn.dataset.value;
+});
+
+// ============ Start Search ============
+async function startSearch() {
+  const keyword = document.getElementById('keywordInput').value.trim();
+  if (!keyword) {
+    document.getElementById('keywordInput').focus();
+    document.getElementById('keywordInput').style.borderColor = 'var(--red)';
+    setTimeout(() => document.getElementById('keywordInput').style.borderColor = '', 2000);
+    return;
+  }
+  state.keyword = keyword;
+
+  const btn = document.getElementById('startSearchBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Starting...';
+
+  const progressArea = document.getElementById('searchProgressArea');
+  progressArea.style.display = 'block';
+  const logArea = document.getElementById('logArea');
+  logArea.innerHTML = '';
+
+  try {
+    const res = await fetch('/api/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        siteHostname: state.selectedSite.hostname,
+        categoryName: state.selectedCategory.name,
+        keyword: state.keyword,
+        timePeriod: state.timePeriod,
+      }),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `HTTP ${res.status}`);
+    }
+    const job = await res.json();
+    state.jobId = job.jobId;
+    state.exportJobId = job.jobId;
+    state.results = [];
+    state.completedData = null;
+
+    goToStep(4);
+    document.getElementById('resultsContainer').style.display = 'none';
+    document.getElementById('resultsSummary').innerHTML = `
+      <div class="search-status-banner">
+        <span class="spinner"></span>
+        <span class="status-text">Search running for <strong>${escapeHtml(state.keyword)}</strong> on ${escapeHtml(state.selectedSite.name || state.selectedSite.hostname)}...</span>
+      </div>`;
+
+    addLog('info', `Search started — jobId: ${job.jobId}`);
+    addLog('info', `Site: ${state.selectedSite.name || state.selectedSite.hostname}, Category: ${state.selectedCategory.name}`);
+    addLog('info', `Keyword: "${keyword}", Time: ${state.timePeriod || 'All'}`);
+
+    connectSSE(job.jobId);
+  } catch (e) {
+    addLog('error', `Failed to start search: ${e.message}`);
+    btn.disabled = false;
+    btn.innerHTML = '<span>🔍</span> Start Search';
+    document.getElementById('searchProgressArea').style.display = 'none';
+    goToStep(3);
+  }
+}
+
+// ============ SSE Connection ============
+function connectSSE(jobId) {
+  if (state.eventSource) {
+    state.eventSource.close();
+  }
+
+  const es = new EventSource(`/api/search/${jobId}/stream`);
+  state.eventSource = es;
+
+  es.onmessage = function(e) {
+    try {
+      const data = JSON.parse(e.data);
+      handleSSEEvent(data);
+    } catch (err) {
+      // ignore parse errors
+    }
+  };
+
+  es.onerror = function() {
+    // SSE connection closed - could be done or error
+    es.close();
+    state.eventSource = null;
+    // If we haven't seen completed event, try to fetch results
+    if (!state.completedData) {
+      fetchResults(jobId);
+    }
+  };
+}
+
+function handleSSEEvent(data) {
+  switch (data.type) {
+    case 'status':
+      updateProgress(data.message || data.status);
+      addLog('info', data.message || data.status);
+      break;
+
+    case 'page':
+      updateProgressBar(data.page, data.total, `Page ${data.page}/${data.total}`);
+      break;
+
+    case 'linksFound':
+      addLog('info', `Page ${data.page}: found ${data.linksOnPage} links (${data.totalSoFar} total)`);
+      document.getElementById('progressCount').textContent = `${data.totalSoFar} links`;
+      break;
+
+    case 'pagesComplete':
+      addLog('success', `Scan complete — ${data.totalLinks} links across ${data.pages} pages`);
+      break;
+
+    case 'skip':
+      addLog('skip', `Skipped — ${data.url} (${data.reason}) [${data.checked}/${data.total}]`);
+      document.getElementById('progressCount').textContent = `Checked: ${data.checked}`;
+      break;
+
+    case 'ad':
+      state.results.push({
+        index: data.index,
+        url: data.url,
+        title: data.title,
+        email: data.email,
+        phone: data.phone,
+        date: data.date,
+      });
+      addLog('ad', `#${data.index} ${data.title}${data.email ? ' — ' + data.email : ''}${data.phone ? ' — ' + data.phone : ''}`);
+      document.getElementById('progressCount').textContent = `Ads: ${state.results.length}`;
+      break;
+
+    case 'completed':
+      state.completedData = data;
+      addLog('success', `Search complete! ${data.totalAds} ads found, ${data.totalChecked} checked, ${data.elapsed}s elapsed`);
+      finalizeResults(data);
+      break;
+
+    case 'failed':
+      addLog('error', `Search failed: ${data.error}`);
+      searchFailed(data.error);
+      break;
+  }
+}
+
+function updateProgress(msg) {
+  document.getElementById('progressLabel').textContent = msg;
+}
+
+function updateProgressBar(page, total, label) {
+  const fill = document.getElementById('progressBarFill');
+  const pct = total > 0 ? Math.round((page / total) * 100) : 0;
+  fill.style.width = Math.min(pct, 100) + '%';
+  document.getElementById('progressLabel').textContent = label;
+}
+
+// ============ Log ============
+function addLog(type, msg) {
+  const logArea = document.getElementById('logArea');
+  const time = new Date().toLocaleTimeString();
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  if (type === 'ad') line.classList.add('log-ad');
+  else if (type === 'skip') line.classList.add('log-skip');
+  else if (type === 'error') line.classList.add('log-error');
+  else if (type === 'success') line.classList.add('log-success');
+
+  line.innerHTML = `<span class="log-time">${time}</span><span class="log-msg">${escapeHtml(msg)}</span>`;
+  logArea.appendChild(line);
+  logArea.scrollTop = logArea.scrollHeight;
+}
+
+// ============ Finalize ============
+function finalizeResults(data) {
+  const btn = document.getElementById('startSearchBtn');
+  btn.disabled = false;
+  btn.innerHTML = '<span>🔍</span> Start Search';
+
+  document.getElementById('progressLabel').textContent = 'Complete!';
+
+  // Summary stats
+  const elapsed = data.elapsed || 0;
+  const minutes = Math.floor(elapsed / 60);
+  const seconds = Math.floor(elapsed % 60);
+  const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+
+  const summaryHtml = `
+    <div class="summary-grid">
+      <div class="summary-stat">
+        <div class="value" style="color:var(--green)">${data.totalAds || state.results.length}</div>
+        <div class="label">Ads Found</div>
+      </div>
+      <div class="summary-stat">
+        <div class="value">${data.totalChecked || 0}</div>
+        <div class="label">Checked</div>
+      </div>
+      <div class="summary-stat">
+        <div class="value" style="color:var(--yellow)">${(data.skippedKeyword || 0) + (data.skippedDate || 0)}</div>
+        <div class="label">Skipped</div>
+        <div class="sub">KW: ${data.skippedKeyword || 0} | Date: ${data.skippedDate || 0}</div>
+      </div>
+      <div class="summary-stat">
+        <div class="value" style="color:var(--text2)">${timeStr}</div>
+        <div class="label">Time Elapsed</div>
+      </div>
+    </div>`;
+
+  document.getElementById('resultsSummary').innerHTML = summaryHtml;
+
+  // Show results table
+  const container = document.getElementById('resultsContainer');
+  container.style.display = 'block';
+
+  renderResultsTable();
+
+  // Setup export buttons
+  setupExportButtons();
+}
+
+function renderResultsTable() {
+  const tbody = document.getElementById('resultsBody');
+  const records = state.results;
+
+  if (!records.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text3)">No results found</td></tr>';
+    return;
+  }
+
+  let html = '';
+  for (let i = 0; i < records.length; i++) {
+    const r = records[i];
+    let dateStr = r.date || '';
+    if (dateStr) {
+      try { dateStr = new Date(dateStr).toLocaleDateString(); } catch (_) {}
+    }
+    html += `<tr>
+      <td>${i + 1}</td>
+      <td><strong>${escapeHtml(r.title || '')}</strong></td>
+      <td class="email">${escapeHtml(r.email || '')}</td>
+      <td class="phone">${escapeHtml(r.phone || '')}</td>
+      <td>${escapeHtml(r.location || '')}</td>
+      <td>${dateStr}</td>
+    </tr>`;
+  }
+  tbody.innerHTML = html;
+}
+
+function searchFailed(error) {
+  document.getElementById('startSearchBtn').disabled = false;
+  document.getElementById('startSearchBtn').innerHTML = '<span>🔍</span> Start Search';
+  document.getElementById('resultsSummary').innerHTML = `
+    <div style="padding:20px;background:var(--red-light);border:1px solid var(--red);border-radius:var(--radius);color:var(--red);text-align:center">
+      <strong>Search failed:</strong> ${escapeHtml(error)}
+    </div>`;
+}
+
+// ============ Fetch Results (fallback) ============
+async function fetchResults(jobId) {
+  try {
+    const res = await fetch(`/api/search/${jobId}/results`);
+    if (!res.ok) {
+      searchFailed(`Server error: HTTP ${res.status}`);
+      return;
+    }
+    const data = await res.json();
+
+    if (data.records && data.records.length) {
+      state.results = data.records;
+      const summary = {
+        totalAds: data.total || data.records.length,
+        totalChecked: data.totalChecked || data.records.length,
+        skippedKeyword: data.skippedKeyword || 0,
+        skippedDate: data.skippedDate || 0,
+        elapsed: data.elapsed || 0,
+      };
+      state.completedData = summary;
+      finalizeResults(summary);
+    } else if (state.results.length) {
+      state.completedData = { totalAds: state.results.length, totalChecked: state.results.length, skippedKeyword: 0, skippedDate: 0, elapsed: 0 };
+      finalizeResults(state.completedData);
+    } else if (data.status === "completed" || data.status === "failed") {
+      // Completed with 0 results or failed — show summary
+      const summary = {
+        totalAds: 0,
+        totalChecked: data.totalChecked || 0,
+        skippedKeyword: data.skippedKeyword || 0,
+        skippedDate: data.skippedDate || 0,
+        elapsed: 0,
+      };
+      state.completedData = summary;
+      if (data.status === "failed") {
+        searchFailed(data.error || "Search completed with no results");
+      } else {
+        finalizeResults(summary);
+      }
+    }
+  } catch (_) {
+    searchFailed("Failed to fetch results");
+  }
+}
+
+// ============ Export ============
+function setupExportButtons() {
+  const base = `/api/search/${state.exportJobId}/export`;
+
+  document.getElementById('exportXlsx').onclick = () => downloadExport(base + '?format=xlsx');
+  document.getElementById('exportCsv').onclick = () => downloadExport(base + '?format=csv');
+  document.getElementById('exportJson').onclick = () => downloadExport(base + '?format=json');
+}
+
+function downloadExport(url) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.target = '_blank';
+  a.rel = 'noopener';
+  a.click();
+}
+
+// ============ Reset ============
+function resetSearch() {
+  if (state.eventSource) {
+    state.eventSource.close();
+    state.eventSource = null;
+  }
+  state.jobId = null;
+  state.exportJobId = null;
+  state.results = [];
+  state.completedData = null;
+  document.getElementById('searchProgressArea').style.display = 'none';
+  document.getElementById('logArea').innerHTML = '';
+  document.getElementById('progressBarFill').style.width = '0';
+  document.getElementById('resultsContainer').style.display = 'none';
+  document.getElementById('resultsSummary').innerHTML = '';
+  document.getElementById('startSearchBtn').disabled = false;
+  document.getElementById('startSearchBtn').innerHTML = '<span>🔍</span> Start Search';
+  goToStep(1);
+}
+
+// ============ Init ============
+loadSites();
+
+// Enter key to start search
+document.getElementById('keywordInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') startSearch();
+});
+</script>
+
+</body>
+</html>

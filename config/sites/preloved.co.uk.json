@@ -1,0 +1,28 @@
+{
+  "language": "en",
+  "search": {
+    "method": "GET",
+    "endpoint": "/search",
+    "param": "q"
+  },
+  "extraction": {
+    "adIdPattern": "/(\\d+)/",
+    "titleCleanup": ["Preloved", "preloved.co.uk"],
+    "phoneRegion": "UK",
+    "countryCodes": [44],
+    "currencies": ["GBP", "EUR"],
+    "selectors": {
+      "title": ["h1", "[class*='title']"],
+      "description": [".classified__description__container", ".classified__description", "#description", "[class*='description']"],
+      "phone": ["a[href^='tel:']", "[class*='phone']"],
+      "email": ["a[href^='mailto:']"],
+      "location": ["[class*='location']", "[class*='city']", ".classified__location"],
+      "price": [".classified__price", "[class*='price']", ".price"],
+      "company": ["[class*='seller']", "[class*='vendor']"],
+      "date": ["time", "[class*='date']"]
+    }
+  },
+  "categories": {
+    "autoDiscover": false
+  }
+}

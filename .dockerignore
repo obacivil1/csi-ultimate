@@ -1,0 +1,17 @@
+.git
+.gitignore
+node_modules
+logs
+data
+output
+state/records
+.scratch
+docs
+web
+CSI BOOK
+enterprise
+verification
+*.docx
+*.md
+*.bat
+test/

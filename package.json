@@ -1,0 +1,34 @@
+{
+  "name": "csi-ultimate",
+  "version": "9.0.0",
+  "description": "CSI-Ultimate Web Crawler — Multi-site classifieds scraper with adaptive discovery engine",
+  "type": "module",
+  "scripts": {
+    "start": "node run.mjs",
+    "start:legacy": "node scripts/legacy/crawlers/csi-crawler-v9.mjs",
+    "test:legacy": "node scripts/legacy/crawlers/csi-crawler-v9.mjs --test",
+    "test:live": "node scripts/legacy/crawlers/csi-crawler-v9.mjs --test-live",
+    "stage2a": "node scripts/stage-tests/test-stage2a.mjs",
+    "stage2b": "node scripts/stage-tests/test-stage2b.mjs",
+    "stage3": "node scripts/stage-tests/test-stage3.mjs",
+    "stage4": "node scripts/stage-tests/test-stage4.mjs",
+    "stage5": "node scripts/stage-tests/test-stage5.mjs",
+    "probe": "node scripts/diagnostics/_probe.mjs",
+    "lint": "node --check run.mjs"
+  },
+  "dependencies": {
+    "cloudscraper": "^4.6.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2",
+    "jsonwebtoken": "^9.0.3",
+    "node-cron": "^4.2.1",
+    "playwright": "^1.52.0",
+    "playwright-extra": "^4.3.0",
+    "pptxgenjs": "^4.0.1",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "xlsx": "^0.18.5",
+    "xml2js": "^0.6.2"
+  }
+}

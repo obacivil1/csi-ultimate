@@ -1,0 +1,33 @@
+{
+  "language": "en",
+  "search": {
+    "method": "GET",
+    "endpoint": "/en/jobs/",
+    "param": "q"
+  },
+  "extraction": {
+    "adIdPattern": "/(\\d+)/$",
+    "titleCleanup": ["bayt.com"],
+    "phoneRegion": "MIDDLE_EAST",
+    "countryCodes": [966, 971, 973, 974, 965, 968, 20, 962],
+    "currencies": ["SAR", "AED", "KWD", "QAR", "OMR", "BHD", "EGP", "JOD"],
+    "selectors": {
+      "title": ["h2#job_title", "h1", "[class*='job-title']"],
+      "description": ["[class*='job-description']", "[class*='description']"],
+      "phone": ["a[href^='tel:']"],
+      "email": ["a[href^='mailto:']"],
+      "whatsapp": ["a[href*='wa.me']", "a[href*='whatsapp.com/send']"],
+      "location": ["[class*='location']", "[class*='job-location']"],
+      "price": ["[class*='salary']"],
+      "company": ["[class*='company']", "[class*='employer']"],
+      "breadcrumb": [".breadcrumb a", "[class*='breadcrumb']"],
+      "date": ["time", "[class*='date']"]
+    }
+  },
+  "pagination": {
+    "nextSelector": "a[rel='next'], a.next, [class*='next'] a"
+  },
+  "categories": {
+    "autoDiscover": false
+  }
+}

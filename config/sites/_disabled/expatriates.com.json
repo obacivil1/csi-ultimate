@@ -1,0 +1,35 @@
+{
+  "language": "en",
+  "search": {
+    "method": "GET",
+    "endpoint": "/scripts/search/search.epl",
+    "param": "q",
+    "pageParam": "page"
+  },
+  "extraction": {
+    "adIdPattern": "/cls/(\\d+)",
+    "titleCleanup": ["expatriates.com"],
+    "phoneRegion": "GCC",
+    "countryCodes": ["966", "971", "973", "974", "965", "968"],
+    "currencies": ["SAR", "AED", "KWD", "QAR"],
+    "selectors": {
+      "title": ["h1", "h2", ".ad-title", "[class*='ad-title']", "[class*='posting-title']"],
+      "description": [".posting-body", ".ad-body", ".description", "#posting-body", "#description", "[class*='posting-body']", "[class*='ad-body']", "[class*='description']", "[class*='detail-body']", "[class*='content-body']", "article .content", ".main-content", "#main-content"],
+      "phone": ["a[href^='tel:']"],
+      "email": ["a[href^='mailto:']"],
+      "whatsapp": ["a[href*='wa.me']", "a[href*='whatsapp.com/send']"],
+      "location": ["[class*='location']", "[class*='city']", "[class*='area']", ".location", ".city"],
+      "price": ["[class*='price']", "[class*='salary']", ".price", ".salary"],
+      "company": ["[class*='company']", "[class*='employer']", "[class*='poster']"],
+      "breadcrumb": [".breadcrumb a", "[aria-label='breadcrumb'] a", "[class*='breadcrumb'] a"],
+      "date": ["time", "[class*='date']", "[class*='posted']"]
+    }
+  },
+  "pagination": {
+    "nextSelector": "a[rel='next'], .next a, a.next, [class*='next'] a"
+  },
+  "categories": {
+    "autoDiscover": true
+  },
+  "excludeUrlPatterns": ["/newadvert", "/scripts/"]
+}
