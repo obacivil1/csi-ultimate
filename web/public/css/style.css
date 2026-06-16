@@ -198,6 +198,7 @@ body { font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--tex
 .data-table th:nth-child(3), .data-table td:nth-child(3) { min-width: 160px; }
 .data-table th:nth-child(4), .data-table td:nth-child(4) { min-width: 100px; }
 .data-table th:nth-child(5), .data-table td:nth-child(5) { min-width: 120px; }
+.table-scroll { overflow-x: auto; overflow-y: clip; }
 
 /* Pricing */
 .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 25px; align-items: start; }

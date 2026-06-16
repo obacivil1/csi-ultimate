@@ -127,7 +127,7 @@
         <input type="date" id="filterDateTo" onchange="tenderPage=1;loadTenders()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;">
         <button onclick="exportTenders()" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 Excel</button>
       </div>
-      <div style="overflow-x:auto;">
+      <div class="table-scroll">
         <table class="data-table">
           <thead><tr>
             <th>اسم المنافسة</th><th>الجهة</th><th>النشاط</th><th>النوع</th><th>آخر موعد</th><th>المتبقي</th><th>الحالة</th>
@@ -159,7 +159,7 @@
         </label>
         <button onclick="exportContractors()" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 Excel</button>
       </div>
-      <div style="overflow-x:auto;">
+      <div class="table-scroll">
         <table class="data-table">
           <thead><tr>
             <th>اسم الشركة</th><th>المنطقة</th><th>المدينة</th><th>الجوال</th><th>البريد الإلكتروني</th>
@@ -193,7 +193,7 @@
         </select>
         <button onclick="exportProjects()" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 Excel</button>
       </div>
-      <div style="overflow-x:auto;">
+      <div class="table-scroll">
         <table class="data-table">
           <thead><tr>
             <th>المشروع</th><th>المالك</th><th>المقاول</th><th>الاستشاري</th><th>القيمة</th><th>الموقع</th><th>القطاع</th>
@@ -223,7 +223,7 @@
         </select>
         <button onclick="exportAwards()" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 Excel</button>
       </div>
-      <div style="overflow-x:auto;">
+      <div class="table-scroll">
         <table class="data-table">
           <thead><tr>
             <th>المنافسة</th><th>الجهة</th><th>الفائز</th><th>قيمة الترسية</th><th>عدد المتنافسين</th><th>آخر موعد</th>
@@ -239,7 +239,7 @@
     <!-- Panel: Alerts -->
     <div class="dash-panel" id="panelAlerts">
       <h3 style="color:#1F3864;margin-bottom:15px;">🔔 منافسات تنتهي خلال 7 أيام</h3>
-      <div style="overflow-x:auto;">
+      <div class="table-scroll">
         <table class="data-table">
           <thead><tr>
             <th>اسم المنافسة</th><th>الجهة</th><th>النشاط</th><th>آخر موعد</th><th>الأيام المتبقية</th>
