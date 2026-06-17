@@ -130,7 +130,7 @@ body { font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--tex
 /* Modal */
 .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--modal-overlay); z-index: 1000; display: none; align-items: center; justify-content: center; }
 .modal-overlay.show { display: flex; }
-.modal { background: var(--modal-bg); border-radius: 15px; padding: 30px; width: 90%; max-width: 450px; position: relative; box-shadow: 0 20px 60px var(--shadow-lg); }
+.modal { background: var(--modal-bg); border-radius: 15px; padding: 30px; width: 90%; max-width: 450px; position: relative; box-shadow: 0 20px 60px var(--shadow-lg); max-height: 85vh; overflow-y: auto; }
 .modal-close { position: absolute; top: 15px; left: 15px; background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted); }
 .modal h2 { text-align: center; color: var(--accent-hover); margin-bottom: 20px; }
 .modal .form-group { margin-bottom: 15px; }
