@@ -34,7 +34,7 @@ export function authenticate(req, res, next) {
     // Check subscription
     if (req.user.subscription === 'trial') {
       const trialEnd = new Date(req.user.trialStart);
-      trialEnd.setDate(trialEnd.getDate() + 7);
+      trialEnd.setDate(trialEnd.getDate() + 3);
       if (new Date() > trialEnd) {
         req.user.subscription = 'expired';
         saveUsers(users);

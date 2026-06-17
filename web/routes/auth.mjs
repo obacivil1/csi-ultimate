@@ -28,7 +28,7 @@ function generateId() {
   return crypto.randomUUID();
 }
 
-// Register with 7-day free trial
+// Register with 3-day free trial
 authRouter.post('/register', async (req, res) => {
   const { name, email, password, phone, company } = req.body;
   if (!email || !password || !name) {
@@ -56,7 +56,7 @@ authRouter.post('/register', async (req, res) => {
 
   const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
   const trialEnd = new Date();
-  trialEnd.setDate(trialEnd.getDate() + 7);
+  trialEnd.setDate(trialEnd.getDate() + 3);
 
   const cookieOpts = { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 30 * 24 * 60 * 60 * 1000 };
   if (process.env.NODE_ENV === 'production') cookieOpts.secure = true;
@@ -64,7 +64,7 @@ authRouter.post('/register', async (req, res) => {
   res.json({
     token, user: {
       id: user.id, name: user.name, email: user.email,
-      subscription: 'trial', trialDaysLeft: 7, trialEnd: trialEnd.toISOString()
+      subscription: 'trial', trialDaysLeft: 3, trialEnd: trialEnd.toISOString()
     }
   });
 });
@@ -91,7 +91,7 @@ authRouter.post('/login', async (req, res) => {
   let trialDaysLeft = 0;
   if (user.subscription === 'trial') {
     const trialEnd = new Date(user.trialStart);
-    trialEnd.setDate(trialEnd.getDate() + 7);
+    trialEnd.setDate(trialEnd.getDate() + 3);
     trialDaysLeft = Math.max(0, Math.ceil((trialEnd - new Date()) / (1000 * 60 * 60 * 24)));
   }
 
@@ -121,7 +121,7 @@ authRouter.get('/me', (req, res) => {
     let trialDaysLeft = 0;
     if (user.subscription === 'trial') {
       const trialEnd = new Date(user.trialStart);
-      trialEnd.setDate(trialEnd.getDate() + 7);
+      trialEnd.setDate(trialEnd.getDate() + 3);
       trialDaysLeft = Math.max(0, Math.ceil((trialEnd - new Date()) / (1000 * 60 * 60 * 24)));
     }
 

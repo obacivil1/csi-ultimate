@@ -41,7 +41,7 @@
 <div class="modal-overlay" id="registerModal">
   <div class="modal">
     <button class="modal-close" onclick="closeModal('registerModal')">✕</button>
-    <h2>اشتراك جديد — 7 أيام مجاناً</h2>
+    <h2>اشتراك جديد — 3 أيام مجاناً</h2>
     <form id="registerForm" onsubmit="handleRegister(event)">
       <div class="form-group">
         <label>الاسم الكامل</label>
@@ -66,7 +66,7 @@
       <button type="submit" class="btn" id="registerBtn">ابدأ الفترة المجانية</button>
     </form>
     <div class="switch-link">عندك حساب؟ <a onclick="switchModal('login')">تسجيل دخول</a></div>
-    <p style="text-align:center;color:#888;font-size:0.8em;margin-top:10px;">✅ 7 أيام مجاناً — بدون بطاقة ائتمان</p>
+    <p style="text-align:center;color:#888;font-size:0.8em;margin-top:10px;">✅ 3 أيام مجاناً — بدون بطاقة ائتمان</p>
   </div>
 </div>
 
@@ -93,7 +93,7 @@
     8,160+ منافسة حكومية • 13,514 مقاول معتمد • 611 مشروع كبرى<br>
     كل ما تحتاج لتطوير أعمالك في قطاع المشتريات الحكومية
   </p>
-  <button class="cta-btn" onclick="showModal('registerModal')">🚀 ابدأ الفترة المجانية — 7 أيام</button>
+  <button class="cta-btn" onclick="showModal('registerModal')">🚀 ابدأ الفترة المجانية — 3 أيام</button>
 </div>
 
 <!-- Live Stats -->
@@ -386,18 +386,27 @@ async function updateAuthUI(user) {
 (async function() {
   try {
     const stats = await API.get('/api/tenders/stats');
-    document.getElementById('statTotal').textContent = (stats.total || 0).toLocaleString();
-    document.getElementById('statActive').textContent = (stats.active || 0).toLocaleString();
-    document.getElementById('statConstruction').textContent = (stats.construction || 0).toLocaleString();
-    document.getElementById('statExpiring').textContent = (stats.expiringSoon || 0).toLocaleString();
+    animateNumber('statTotal', stats.total || 0);
+    animateNumber('statActive', stats.active || 0);
+    animateNumber('statConstruction', stats.construction || 0);
+    animateNumber('statExpiring', stats.expiringSoon || 0);
 
-    // Also load contractors stats
     const contStats = await API.get('/api/contractors/stats');
-    document.getElementById('statContractors').textContent = (contStats.total || 0).toLocaleString();
+    animateNumber('statContractors', contStats.total || 0);
   } catch(e) {
     document.querySelectorAll('.stat-item h3').forEach(el => el.textContent = '—');
   }
 })();
+function animateNumber(id, target) {
+  const el = document.getElementById(id);
+  let current = 0;
+  const step = Math.max(1, Math.floor(target / 40));
+  const interval = setInterval(() => {
+    current += step;
+    if (current >= target) { current = target; clearInterval(interval); }
+    el.textContent = current.toLocaleString();
+  }, 30);
+}
 
 // ── Load Sample Tenders ──
 async function loadSampleTenders() {
