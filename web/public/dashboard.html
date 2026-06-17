@@ -242,7 +242,13 @@
 
     <!-- Panel: Alerts -->
     <div class="dash-panel" id="panelAlerts">
-      <h3 style="color:#1F3864;margin-bottom:15px;">🔔 منافسات تنتهي خلال 7 أيام</h3>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:15px;">
+        <h3 style="color:#1F3864;">🔔 منافسات تنتهي خلال 7 أيام</h3>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span id="emailStatus" style="font-size:0.8em;color:var(--text-muted);"></span>
+          <button id="sendAlertBtn" onclick="sendEmailAlert()" style="padding:8px 16px;background:var(--accent);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;display:none;">📧 إرسال إشعار</button>
+        </div>
+      </div>
       <div class="data-table-wrapper"><table class="data-table">
           <thead><tr>
             <th>اسم المنافسة</th><th>الجهة</th><th>النشاط</th><th>آخر موعد</th><th>الأيام المتبقية</th>
@@ -833,7 +839,43 @@ async function loadAlerts() {
     } else {
       tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;">مافي منافسات تنتهي قريباً</td></tr>';
     }
+    // Check email config
+    try {
+      const cfg = await API.get('/api/alerts/config');
+      const statusEl = document.getElementById('emailStatus');
+      const btn = document.getElementById('sendAlertBtn');
+      if (cfg.emailConfigured && cfg.canSend) {
+        statusEl.textContent = '📧 البريد الإلكتروني جاهز';
+        btn.style.display = 'inline-block';
+      } else if (!cfg.emailConfigured) {
+        statusEl.textContent = '⚠️ البريد الإلكتروني غير مهيأ';
+        btn.style.display = 'none';
+      } else {
+        statusEl.textContent = '🔒 تتطلب الباقة الاحترافية أو الشاملة';
+        btn.style.display = 'none';
+      }
+    } catch(e) { /* ignore */ }
   } catch(e) {}
+}
+
+async function sendEmailAlert() {
+  try {
+    const btn = document.getElementById('sendAlertBtn');
+    btn.disabled = true;
+    btn.textContent = 'جاري الإرسال...';
+    const res = await API.post('/api/alerts/send-expiry', {});
+    if (res.error) {
+      showToast('❌ ' + res.error, 'error');
+    } else {
+      showToast(`✅ تم إرسال ${res.sent} تنبيه بنجاح`, 'success');
+    }
+    btn.disabled = false;
+    btn.innerHTML = '📧 إرسال إشعار';
+  } catch(e) {
+    showToast('❌ ' + e.message, 'error');
+    document.getElementById('sendAlertBtn').disabled = false;
+    document.getElementById('sendAlertBtn').innerHTML = '📧 إرسال إشعار';
+  }
 }
 
 // ── Handle Logout ──
