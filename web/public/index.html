@@ -298,13 +298,13 @@ const API = {
 // ── Riyadh Weather ──
 (async function() {
   const el = document.getElementById('liveWeather');
+  const codes = {0:'صافي',1:'غائم جزئياً',2:'غائم جزئياً',3:'غائم',45:'ضباب',48:'ضباب',51:'رذاذ',53:'رذاذ',55:'رذاذ',61:'مطر',63:'مطر',65:'مطر',71:'ثلج',73:'ثلج',75:'ثلج',80:'زخات مطر',81:'زخات مطر',82:'زخات مطر',95:'عاصفة',96:'عاصفة',99:'عاصفة'};
   try {
-    const r = await fetch('https://wttr.in/Riyadh?format=j1');
+    const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=24.7136&longitude=46.6753&current_weather=true');
     const data = await r.json();
-    const cc = data.current_condition[0];
-    const temp = cc.temp_C;
-    const desc = cc.weatherDesc[0].value;
-    el.textContent = `🌤️ ${temp}°C · ${desc}`;
+    const t = data.current_weather.temperature;
+    const c = data.current_weather.weathercode;
+    el.textContent = `${t}°C · ${codes[c]||'غائم'}`;
   } catch(e) {
     el.textContent = '🌤️ --°C';
   }
