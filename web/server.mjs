@@ -4,6 +4,7 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { authRouter } from './routes/auth.mjs';
 import { tendersRouter } from './routes/tenders.mjs';
@@ -45,8 +46,8 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Static files
-app.use(express.static(path.join(__dirname, 'public')));
+// Static files (except index which gets weather injection)
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
 // API routes
 app.use('/api/auth', authRouter);
@@ -59,29 +60,57 @@ app.use('/api/projects', projectsRouter);
 app.use('/api/export', exportRouter);
 app.use('/api/alerts', alertsRouter);
 
-// Weather proxy (avoids CORS on client side)
-app.get('/api/weather', async (req, res) => {
-  const lat = req.query.lat || 24.7136;
-  const lon = req.query.lon || 46.6753;
-  const url = `https://wttr.in/~${lat},${lon}?format=j1`;
-  https.get(url, (r) => {
+// Cached weather (refreshed every 10 min)
+let cachedWeather = { temperature: '--', desc: '' };
+let lastWeatherFetch = 0;
+function getWeatherHtml(cb) {
+  const now = Date.now();
+  if (now - lastWeatherFetch < 600000 && cachedWeather.temperature !== '--') { cb(cachedWeather); return; }
+  https.get('https://wttr.in/~24.7136,46.6753?format=j1', (r) => {
     let body = '';
     r.on('data', c => body += c);
     r.on('end', () => {
       try {
-        const data = JSON.parse(body);
-        const cc = data.current_condition && data.current_condition[0];
-        res.json({ temperature: cc ? cc.temp_C : '--', desc: cc ? (cc.weatherDesc[0].value || '').trim() : '' });
-      } catch(e) {
-        res.json({ temperature: '--', desc: '' });
-      }
+        const cc = JSON.parse(body).current_condition[0];
+        cachedWeather = { temperature: cc.temp_C, desc: (cc.weatherDesc[0].value || '').trim() };
+        lastWeatherFetch = now;
+      } catch(e) {}
+      cb(cachedWeather);
     });
-  }).on('error', () => res.json({ temperature: '--', weathercode: -1 }));
+  }).on('error', () => cb(cachedWeather));
+}
+
+// Weather proxy endpoint
+app.get('/api/weather', (req, res) => {
+  getWeatherHtml(w => res.json(w));
 });
 
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Serve index.html with weather injected
+const indexHtmlPath = path.join(__dirname, 'public', 'index.html');
+const dashHtmlPath = path.join(__dirname, 'public', 'dashboard.html');
+function injectWeather(html, w) {
+  return html.replace('🌡️ --°C', `${w.temperature}°C · ${w.desc}`);
+}
+app.get('/', (req, res) => {
+  getWeatherHtml(w => {
+    fs.readFile(indexHtmlPath, 'utf8', (err, html) => {
+      if (err) { res.sendFile(indexHtmlPath); return; }
+      res.send(injectWeather(html, w));
+    });
+  });
+});
+app.get('/dashboard.html', (req, res) => {
+  getWeatherHtml(w => {
+    fs.readFile(dashHtmlPath, 'utf8', (err, html) => {
+      if (err) { res.sendFile(dashHtmlPath); return; }
+      res.send(injectWeather(html, w));
+    });
+  });
 });
 
 // SPA fallback (must be last)

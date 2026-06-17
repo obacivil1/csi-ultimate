@@ -228,12 +228,14 @@ footer { background: var(--footer-bg); color: var(--footer-text); text-align: ce
 
 /* Dashboard */
 .dash-header { background: var(--bg-nav); color: var(--text-nav); padding: 15px 0; }
-.dash-header .container { display: flex; justify-content: space-between; align-items: center; }
+.dash-header .container { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 5px 15px; }
 .dash-header h2 { font-size: 1.3em; }
 .dash-header .user-menu { display: flex; align-items: center; gap: 15px; }
 .dash-header .user-menu span { font-size: 0.9em; }
 .dash-header .user-menu button { background: rgba(255,255,255,0.15); color: var(--text-nav); border: 1px solid rgba(255,255,255,0.3); padding: 6px 16px; border-radius: 50px; cursor: pointer; font-family: inherit; font-size: 0.85em; transition: background 0.3s; }
 .dash-header .user-menu button:hover { background: rgba(255,255,255,0.25); }
+.dash-header .header-widgets { display: flex; gap: 12px; }
+.dash-header .header-widgets span { background: rgba(255,255,255,0.12); padding: 4px 14px; border-radius: 50px; font-size: 0.85em; display: inline-flex; align-items: center; gap: 5px; }
 .sub-badge { background: var(--gold); color: var(--gold-text); padding: 3px 12px; border-radius: 50px; font-size: 0.75em; font-weight: 700; }
 .sub-badge.trial { background: var(--info); color: white; }
 .sub-badge.expired { background: var(--danger); color: white; }

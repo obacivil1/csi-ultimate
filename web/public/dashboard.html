@@ -51,6 +51,10 @@
 <div class="dash-header">
   <div class="container">
     <h2>🏗️ لوحة تحكم المنافسات والمقاولين</h2>
+    <div class="header-widgets" style="margin:8px 0;font-size:0.85em;gap:12px;">
+      <span class="hw-clock" id="liveClock">--:--:--</span>
+      <span class="hw-weather" id="liveWeather">🌡️ --°C</span>
+    </div>
     <div class="user-menu" id="userMenu">
       <span id="userName">...</span>
       <span class="sub-badge" id="subBadge">...</span>
@@ -345,6 +349,26 @@ const API = {
     return r.blob();
   }
 };
+
+// ── Live Clock (user's timezone) ──
+(function() {
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Riyadh';
+  function tick() {
+    const opts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: tz };
+    document.getElementById('liveClock').textContent = new Intl.DateTimeFormat('ar-SA', opts).format(new Date());
+  }
+  tick();
+  setInterval(tick, 1000);
+})();
+
+// ── Weather ──
+(async function() {
+  const el = document.getElementById('liveWeather');
+  try {
+    const w = await fetch('/api/weather').then(r=>r.json());
+    el.textContent = `${w.temperature}°C · ${w.desc} · الرياض`;
+  } catch(e) { el.textContent = '🌤️ --°C'; }
+})();
 
 function showToast(msg, type = 'info') {
   const t = document.getElementById('toast');
