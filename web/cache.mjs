@@ -1,7 +1,7 @@
 import fs from 'fs';
 
 const cache = {};
-const TTL = 60000;
+const TTL = parseInt(process.env.CACHE_TTL || '3600000');
 
 export function getJSON(key, filePath) {
   const now = Date.now();
