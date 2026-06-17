@@ -128,14 +128,14 @@
         <button onclick="exportTenders('csv')" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 CSV</button>
         <button onclick="exportTenders('pdf')" style="padding:8px 16px;background:#DC3545;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📄 PDF</button>
       </div>
-      <div class="data-table-wrapper"><table class="data-table">
+      <table class="data-table">
           <thead><tr>
             <th>اسم المنافسة</th><th>الجهة</th><th>النشاط</th><th>النوع</th><th>آخر موعد</th><th>المتبقي</th><th>الحالة</th>
           </tr></thead>
           <tbody id="tendersBody">
             <tr><td colspan="7" style="text-align:center;color:#999;">جاري التحميل...</td></tr>
           </tbody>
-        </table></div>
+        </table>
       <div class="pagination" id="tenderPagination"></div>
     </div>
 
@@ -159,14 +159,14 @@
         <button onclick="exportContractors('csv')" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 CSV</button>
         <button onclick="exportContractors('pdf')" style="padding:8px 16px;background:#DC3545;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📄 PDF</button>
       </div>
-      <div class="data-table-wrapper"><table class="data-table">
+      <table class="data-table">
           <thead><tr>
             <th>اسم الشركة</th><th>المنطقة</th><th>المدينة</th><th>الجوال</th><th>البريد الإلكتروني</th>
           </tr></thead>
           <tbody id="contractorsBody">
             <tr><td colspan="5" style="text-align:center;color:#999;">جاري التحميل...</td></tr>
           </tbody>
-        </table></div>
+        </table>
       <div class="pagination" id="contractorPagination"></div>
     </div>
 
@@ -192,14 +192,14 @@
         <button onclick="exportProjects('csv')" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 CSV</button>
         <button onclick="exportProjects('pdf')" style="padding:8px 16px;background:#DC3545;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📄 PDF</button>
       </div>
-      <div class="data-table-wrapper"><table class="data-table">
+      <table class="data-table">
           <thead><tr>
             <th>المشروع</th><th>المالك</th><th>المقاول</th><th>الاستشاري</th><th>القيمة</th><th>الموقع</th><th>القطاع</th>
           </tr></thead>
           <tbody id="projectsBody">
             <tr><td colspan="7" style="text-align:center;color:#999;">جاري التحميل...</td></tr>
           </tbody>
-        </table></div>
+        </table>
       <div class="pagination" id="projectPagination"></div>
     </div>
 
@@ -221,14 +221,14 @@
         <button onclick="exportAwards('csv')" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 CSV</button>
         <button onclick="exportAwards('pdf')" style="padding:8px 16px;background:#DC3545;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📄 PDF</button>
       </div>
-      <div class="data-table-wrapper"><table class="data-table">
+      <table class="data-table">
           <thead><tr>
             <th>المنافسة</th><th>الجهة</th><th>الفائز</th><th>قيمة الترسية</th><th>عدد المتنافسين</th><th>آخر موعد</th>
           </tr></thead>
           <tbody id="awardsBody">
             <tr><td colspan="6" style="text-align:center;color:#999;">جاري التحميل...</td></tr>
           </tbody>
-        </table></div>
+        </table>
       <div class="pagination" id="awardPagination"></div>
     </div>
 
@@ -239,14 +239,14 @@
         <span id="emailAlertStatus"></span>
         <button id="sendEmailAlertBtn" onclick="sendEmailAlert()" style="padding:8px 16px;background:#1F3864;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;margin-right:10px;">📧 أرسل التنبيهات للإيميل</button>
       </div>
-      <div class="data-table-wrapper"><table class="data-table">
+      <table class="data-table">
           <thead><tr>
             <th>اسم المنافسة</th><th>الجهة</th><th>النشاط</th><th>آخر موعد</th><th>الأيام المتبقية</th>
           </tr></thead>
           <tbody id="alertsBody">
             <tr><td colspan="5" style="text-align:center;color:#999;">جاري التحميل...</td></tr>
           </tbody>
-        </table></div>
+        </table>
     </div>
 
     <!-- Panel: Account -->
