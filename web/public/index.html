@@ -164,14 +164,14 @@
         <input type="checkbox" id="lpConstruction" onchange="loadSampleTenders()"> تشييد فقط
       </label>
     </div>
-    <table class="sample-table">
+    <div class="sample-wrapper"><table class="sample-table">
       <thead><tr>
         <th>اسم المنافسة</th><th>الجهة الحكومية</th><th>النشاط</th><th>آخر موعد</th><th>المدة</th>
       </tr></thead>
       <tbody id="sampleTenders">
         <tr><td colspan="5" style="text-align:center;color:#999;">جاري التحميل...</td></tr>
       </tbody>
-    </table>
+    </table></div>
     <p style="text-align:center;margin-top:15px;color:#666;">
       <a href="#" onclick="event.preventDefault();showModal('registerModal');" style="color:#2E75B6;font-weight:600;">
         📥 سجّل مجاناً لعرض جميع المنافسات (8,160+) ←
