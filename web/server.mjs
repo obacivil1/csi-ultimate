@@ -63,16 +63,17 @@ app.use('/api/alerts', alertsRouter);
 app.get('/api/weather', async (req, res) => {
   const lat = req.query.lat || 24.7136;
   const lon = req.query.lon || 46.6753;
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`;
+  const url = `https://wttr.in/~${lat},${lon}?format=j1`;
   https.get(url, (r) => {
     let body = '';
     r.on('data', c => body += c);
     r.on('end', () => {
       try {
         const data = JSON.parse(body);
-        res.json(data.current_weather || { temperature: '--', weathercode: -1 });
+        const cc = data.current_condition && data.current_condition[0];
+        res.json({ temperature: cc ? cc.temp_C : '--', desc: cc ? (cc.weatherDesc[0].value || '').trim() : '' });
       } catch(e) {
-        res.json({ temperature: '--', weathercode: -1 });
+        res.json({ temperature: '--', desc: '' });
       }
     });
   }).on('error', () => res.json({ temperature: '--', weathercode: -1 }));
