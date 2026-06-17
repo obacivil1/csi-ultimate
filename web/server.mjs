@@ -57,6 +57,19 @@ app.use('/api/projects', projectsRouter);
 app.use('/api/export', exportRouter);
 app.use('/api/alerts', alertsRouter);
 
+// Weather proxy (avoids CORS on client side)
+app.get('/api/weather', async (req, res) => {
+  try {
+    const lat = req.query.lat || 24.7136;
+    const lon = req.query.lon || 46.6753;
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+    const data = await r.json();
+    res.json(data.current_weather || { temperature: '--', weathercode: -1 });
+  } catch(e) {
+    res.json({ temperature: '--', weathercode: -1 });
+  }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

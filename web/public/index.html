@@ -295,15 +295,15 @@ const API = {
   setInterval(tick, 1000);
 })();
 
-// ── Weather by IP ──
+// ── Weather by IP (proxied through server) ──
 (async function() {
   const el = document.getElementById('liveWeather');
   const codes = {0:'صافي',1:'غائم جزئياً',2:'غائم جزئياً',3:'غائم',45:'ضباب',48:'ضباب',51:'رذاذ',53:'رذاذ',55:'رذاذ',61:'مطر',63:'مطر',65:'مطر',71:'ثلج',73:'ثلج',75:'ثلج',80:'زخات مطر',81:'زخات مطر',82:'زخات مطر',95:'عاصفة',96:'عاصفة',99:'عاصفة'};
   try {
-    const geo = await fetch('https://ip-api.com/json/?fields=lat,lon,city,country').then(r=>r.json());
+    const geo = await fetch('https://ip-api.com/json/?fields=lat,lon,city').then(r=>r.json());
     if (!geo.lat) throw Error();
-    const w = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${geo.lat}&longitude=${geo.lon}&current_weather=true`).then(r=>r.json());
-    el.textContent = `${w.current_weather.temperature}°C ${codes[w.current_weather.weathercode]||''} · ${geo.city}`;
+    const w = await fetch(`/api/weather?lat=${geo.lat}&lon=${geo.lon}`).then(r=>r.json());
+    el.textContent = `${w.temperature}°C · ${codes[w.weathercode]||''} · ${geo.city}`;
   } catch(e) {
     el.textContent = '🌤️ --°C';
   }
