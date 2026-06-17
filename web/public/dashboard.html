@@ -746,7 +746,7 @@ async function exportTenders() {
     const blob = await API.download('/api/export/tenders', body);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'tenders.xlsx'; a.click();
+    a.href = url; a.download = 'tenders.csv'; a.click();
     URL.revokeObjectURL(url);
     showToast('✅ جاري التصدير...', 'info');
   } catch(e) { showToast('❌ ' + e.message, 'error'); }
@@ -765,7 +765,7 @@ async function exportContractors() {
     const blob = await API.download('/api/export/contractors', body);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'contractors.xlsx'; a.click();
+    a.href = url; a.download = 'contractors.csv'; a.click();
     URL.revokeObjectURL(url);
     showToast('✅ تم التصدير', 'success');
   } catch(e) { showToast('❌ ' + e.message, 'error'); }
@@ -782,7 +782,7 @@ async function exportProjects() {
     const blob = await API.download('/api/export/projects', body);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'projects.xlsx'; a.click();
+    a.href = url; a.download = 'projects.csv'; a.click();
     URL.revokeObjectURL(url);
     showToast('✅ تم التصدير', 'success');
   } catch(e) { showToast('❌ ' + e.message, 'error'); }
@@ -795,7 +795,7 @@ async function exportAwards() {
     const blob = await API.download('/api/export/awards', body);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'awards.xlsx'; a.click();
+    a.href = url; a.download = 'awards.csv'; a.click();
     URL.revokeObjectURL(url);
     showToast('✅ تم التصدير', 'success');
   } catch(e) { showToast('❌ ' + e.message, 'error'); }
