@@ -415,6 +415,7 @@ function switchTab(tab, el) {
   if (tab === 'awards') loadAwards();
   if (tab === 'alerts') loadAlerts();
   if (tab === 'analytics') loadAnalytics();
+}
 
 function esc(s) { if (s == null) return ''; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
 
