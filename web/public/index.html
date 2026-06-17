@@ -295,17 +295,12 @@ const API = {
   setInterval(tick, 1000);
 })();
 
-// ── Weather by IP (proxied through server) ──
+// ── Weather (proxied through server) ──
 (async function() {
   const el = document.getElementById('liveWeather');
-  let lat = 24.7136, lon = 46.6753, city = 'الرياض';
   try {
-    const geo = await fetch('https://ip-api.com/json/?fields=lat,lon,city').then(r=>r.json());
-    if (geo.lat) { lat = geo.lat; lon = geo.lon; city = geo.city; }
-  } catch(e) {}
-  try {
-    const w = await fetch(`/api/weather?lat=${lat}&lon=${lon}`).then(r=>r.json());
-    el.textContent = `${w.temperature}°C · ${w.desc} · ${city}`;
+    const w = await fetch('/api/weather').then(r=>r.json());
+    el.textContent = `${w.temperature}°C · ${w.desc} · الرياض`;
   } catch(e) {
     el.textContent = '🌤️ --°C';
   }
