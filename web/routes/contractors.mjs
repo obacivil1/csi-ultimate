@@ -33,7 +33,7 @@ contractorsRouter.get('/', authenticate, (req, res) => {
   if (hasPhone === 'true') filtered = filtered.filter(c => c.phone);
 
   let total = filtered.length;
-  const limits = getPlanLimits(req.user?.subscription || 'trial');
+  const limits = getPlanLimits(req.user?.subscription || 'trial', req.user?.email);
   if (limits.maxContractors > 0 && total > limits.maxContractors) {
     total = limits.maxContractors;
     filtered = filtered.slice(0, total);

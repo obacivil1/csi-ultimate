@@ -39,7 +39,7 @@ function handleExport(req, res, file, cacheKey, filters, mapFn, filename) {
     const records = loadJSON(file, cacheKey);
     let filtered = [...records];
     if (filters) filters(req.body, filtered);
-    const limits = getPlanLimits(req.user?.subscription || 'trial');
+    const limits = getPlanLimits(req.user?.subscription || 'trial', req.user?.email);
     if (!limits.canExport) return res.status(403).json({ error: 'التصدير غير متاح في الخطتك' });
     let exportLimit = limits.exportRows;
     if (exportLimit < 0) exportLimit = filtered.length;

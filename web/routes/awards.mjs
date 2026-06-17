@@ -42,7 +42,7 @@ awardsRouter.get('/', authenticate, (req, res) => {
   });
 
   let total = data.length;
-  const limits = getPlanLimits(req.user?.subscription || 'trial');
+  const limits = getPlanLimits(req.user?.subscription || 'trial', req.user?.email);
   if (limits.maxAwards > 0 && total > limits.maxAwards) {
     total = limits.maxAwards;
     data = data.slice(0, total);
