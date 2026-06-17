@@ -1,7 +1,7 @@
 import fs from 'fs';
 
 const cache = {};
-const TTL = 60000;
+const TTL = parseInt(process.env.CACHE_TTL || '3600000');
 
 export function getJSON(key, filePath) {
   const now = Date.now();
@@ -20,4 +20,22 @@ export function getJSON(key, filePath) {
 
 export function invalidate(key) {
   delete cache[key];
+}
+
+export function preloadCache() {
+  const files = {
+    tenders: './data/etimad_all_tenders.json',
+    contractors: './data/muqawil_all_regions.json',
+    projects: './data/projects_database.json',
+    awards_sample: './data/etimad_sample_awards.json'
+  };
+  for (const [key, file] of Object.entries(files)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+      cache[key] = { data, time: Date.now() };
+      console.log(`  [cache] Preloaded ${key}: ${data.length} records`);
+    } catch (e) {
+      console.error(`  [cache] Failed to preload ${key}: ${e.message}`);
+    }
+  }
 }
