@@ -1,7 +1,7 @@
 import fs from 'fs';
 
 const cache = {};
-const TTL = 3600000;
+const TTL = 60000;
 
 export function getJSON(key, filePath) {
   const now = Date.now();
