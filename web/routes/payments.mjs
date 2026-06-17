@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
-import { loadUsers, saveUsers, JWT_SECRET } from '../middleware/auth.mjs';
+import { loadUsers, saveUsers, JWT_SECRET, isAdmin } from '../middleware/auth.mjs';
 
 export const paymentsRouter = Router();
 
@@ -53,6 +53,21 @@ paymentsRouter.post('/create-order', async (req, res) => {
   const plan = PLANS[planId];
   if (!plan) return res.status(400).json({ error: 'باقة غير صالحة' });
 
+  // Admin auto-activation (no payment needed)
+  const token = req.cookies?.token || req.headers?.authorization?.replace('Bearer ', '');
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      if (isAdmin(decoded.email)) {
+        return res.json({
+          mock: true, orderId: 'ADMIN-' + Date.now(), plan,
+          amount: 0, currency: 'USD',
+          message: 'تفعيل فوري للمشرف — بدون دفع'
+        });
+      }
+    } catch {}
+  }
+
   if (!PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET) {
     return res.json({
       mock: true,
@@ -93,8 +108,8 @@ paymentsRouter.post('/capture-order', async (req, res) => {
     const plan = PLANS[planId];
     if (!plan) return res.status(400).json({ error: 'باقة غير صالحة' });
 
-    // Mock mode (PayPal not configured)
-    if (!PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET || orderId?.startsWith('MOCK-')) {
+    // Mock mode (PayPal not configured OR admin)
+    if (!PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET || orderId?.startsWith('MOCK-') || orderId?.startsWith('ADMIN-')) {
       const users = loadUsers();
       const idx = users.findIndex(u => u.id === decoded.id);
       if (idx === -1) return res.status(404).json({ error: 'المستخدم غير موجود' });
