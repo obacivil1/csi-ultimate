@@ -9,6 +9,7 @@ const PAYPAL_API = process.env.PAYPAL_SANDBOX === 'true'
   : 'https://api-m.paypal.com';
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID || '';
 const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET || '';
+console.log('[payments] PAYPAL_CLIENT_ID set =', !!PAYPAL_CLIENT_ID, '| PAYPAL_CLIENT_SECRET set =', !!PAYPAL_CLIENT_SECRET, '| SANDBOX =', process.env.PAYPAL_SANDBOX);
 
 const PLANS = {
   basic: { id: 'basic', name: 'الباقة الأساسية', price: 500, priceUSD: 133,
