@@ -3,7 +3,6 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { PDFDocument } from 'pdf-lib';
-import fontkit from 'fontkit';
 import { authenticate, getPlanLimits } from '../middleware/auth.mjs';
 import { getJSON } from '../cache.mjs';
 
@@ -39,7 +38,6 @@ function sendCSV(res, data, filename) {
 
 async function sendPDF(res, data, filename) {
   if (!data.length) return res.status(400).json({ error: 'لا توجد بيانات للتصدير' });
-  PDFDocument.registerFontkit(fontkit);
   const headers = Object.keys(data[0]);
   const doc = await PDFDocument.create();
   let page = doc.addPage([550, 800]);
