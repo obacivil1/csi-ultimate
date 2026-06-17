@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { PDFDocument } from 'pdf-lib';
 import { authenticate, getPlanLimits } from '../middleware/auth.mjs';
 import { getJSON } from '../cache.mjs';
 
@@ -40,7 +41,8 @@ async function sendPDF(res, data, filename) {
   const headers = Object.keys(data[0]);
   const doc = await PDFDocument.create();
   let page = doc.addPage([550, 800]);
-  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const fontBytes = fs.readFileSync(path.join(__dirname, '..', 'fonts', 'Amiri-Regular.ttf'));
+  const font = await doc.embedFont(fontBytes);
   const title = filename.replace(/_/g, ' ');
   let y = 760;
 
@@ -50,7 +52,7 @@ async function sendPDF(res, data, filename) {
   y -= 10;
 
   const colW = Math.min(100, (530 - 40) / headers.length);
-  const rowH = 14;
+  const rowH = 16;
 
   for (let i = 0; i <= data.length; i++) {
     if (y < 40) {
@@ -61,7 +63,7 @@ async function sendPDF(res, data, filename) {
     const isHeader = i === 0;
     for (let j = 0; j < row.length; j++) {
       const x = 20 + j * colW;
-      page.drawText(row[j].substring(0, Math.floor(colW / 5)), { x, y, size: isHeader ? 8 : 7, font });
+      page.drawText(row[j].substring(0, Math.floor(colW / 6)), { x, y, size: isHeader ? 8 : 7, font });
     }
     y -= rowH + (isHeader ? 4 : 0);
   }
