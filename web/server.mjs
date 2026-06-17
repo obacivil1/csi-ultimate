@@ -15,6 +15,7 @@ import { projectsRouter } from './routes/projects.mjs';
 import { exportRouter } from './routes/export.mjs';
 import { alertsRouter } from './routes/alerts.mjs';
 import { startScheduler } from './scheduler.mjs';
+import { preloadWarmup } from './cache.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
@@ -76,4 +77,12 @@ app.listen(PORT, () => {
   console.log(`  📊  Dashboard: http://localhost:${PORT}/dashboard.html`);
   console.log(`  🔌  API: http://localhost:${PORT}/api/health\n`);
   startScheduler();
+  // Warmup cache in background (non-blocking)
+  const dataDir = path.join(__dirname, '..', 'data');
+  preloadWarmup({
+    tenders: path.join(dataDir, 'etimad_all_tenders.json'),
+    contractors: path.join(dataDir, 'muqawil_all_regions.json'),
+    projects: path.join(dataDir, 'projects_database.json'),
+    awards_sample: path.join(dataDir, 'etimad_sample_awards.json')
+  });
 });

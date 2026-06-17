@@ -21,3 +21,19 @@ export function getJSON(key, filePath) {
 export function invalidate(key) {
   delete cache[key];
 }
+
+// Warmup cache asynchronously (non-blocking) 
+// Called after server starts to preload data in background
+export async function preloadWarmup(files) {
+  for (const [key, filePath] of Object.entries(files)) {
+    try {
+      const data = JSON.parse(await fs.promises.readFile(filePath, 'utf8'));
+      cache[key] = { data, time: Date.now() };
+      console.log(`  [cache] Preloaded ${key}: ${data.length} records`);
+    } catch (e) {
+      console.error(`  [cache] Failed to preload ${key}: ${e.message}`);
+    }
+    // Yield to event loop between files
+    await new Promise(r => setTimeout(r, 10));
+  }
+}
