@@ -15,6 +15,7 @@ import { projectsRouter } from './routes/projects.mjs';
 import { exportRouter } from './routes/export.mjs';
 import { alertsRouter } from './routes/alerts.mjs';
 import { startScheduler } from './scheduler.mjs';
+import { preloadCache } from './cache.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
@@ -76,4 +77,8 @@ app.listen(PORT, () => {
   console.log(`  📊  Dashboard: http://localhost:${PORT}/dashboard.html`);
   console.log(`  🔌  API: http://localhost:${PORT}/api/health\n`);
   startScheduler();
+});
+
+// Preload cache after server starts (non-blocking)
+setTimeout(() => { preloadCache(); }, 100);
 });
