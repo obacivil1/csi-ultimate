@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>لوحة التحكم — المنافسات والمقاولين</title>
 <link rel="stylesheet" href="/css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <style>
   /* Anti-copy protection */
   .data-table, .sample-table, .dash-content table { -webkit-user-select: none; user-select: none; }
@@ -87,6 +88,7 @@
     <div class="dash-tab" onclick="switchTab('projects', this)" id="tabProjects">🏗️ المشاريع</div>
     <div class="dash-tab" onclick="switchTab('awards', this)" id="tabAwards">🏆 الترسية</div>
     <div class="dash-tab" onclick="switchTab('alerts', this)" id="tabAlerts">🔔 التنبيهات</div>
+    <div class="dash-tab" onclick="switchTab('analytics', this)" id="tabAnalytics">📊 تحليلات</div>
     <div class="dash-tab" onclick="switchTab('account', this)" id="tabAccount">⚙️ الحساب</div>
   </div>
 </div>
@@ -251,6 +253,24 @@
         </table></div>
     </div>
 
+    <!-- Panel: Analytics -->
+    <div class="dash-panel" id="panelAnalytics">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:20px;">
+        <div style="background:var(--bg-card);border-radius:12px;padding:20px;box-shadow:0 2px 8px var(--shadow);">
+          <h3 style="margin-bottom:15px;color:var(--accent-hover);">🏢 أكبر 10 جهات حكومية</h3>
+          <div id="chartAgencies" style="height:300px;"><p style="color:var(--text-muted);">جاري التحميل...</p></div>
+        </div>
+        <div style="background:var(--bg-card);border-radius:12px;padding:20px;box-shadow:0 2px 8px var(--shadow);">
+          <h3 style="margin-bottom:15px;color:var(--accent-hover);">📂 توزيع الأنشطة</h3>
+          <div id="chartActivities" style="height:300px;"><p style="color:var(--text-muted);">جاري التحميل...</p></div>
+        </div>
+        <div style="background:var(--bg-card);border-radius:12px;padding:20px;box-shadow:0 2px 8px var(--shadow);">
+          <h3 style="margin-bottom:15px;color:var(--accent-hover);">📈 المنافسات شهرياً</h3>
+          <div id="chartTrend" style="height:300px;"><p style="color:var(--text-muted);">جاري التحميل...</p></div>
+        </div>
+      </div>
+    </div>
+
     <!-- Panel: Account -->
     <div class="dash-panel" id="panelAccount">
       <div style="background:white;border-radius:15px;padding:30px;box-shadow:0 4px 15px rgba(0,0,0,0.08);max-width:500px;">
@@ -394,7 +414,7 @@ function switchTab(tab, el) {
   if (tab === 'projects') loadProjects();
   if (tab === 'awards') loadAwards();
   if (tab === 'alerts') loadAlerts();
-}
+  if (tab === 'analytics') loadAnalytics();
 
 function esc(s) { if (s == null) return ''; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
 
@@ -868,6 +888,65 @@ async function loadAlerts() {
       }
     } catch(e) { /* ignore */ }
   } catch(e) {}
+}
+
+// ── Analytics Charts ──
+let chartInstances = {};
+async function loadAnalytics() {
+  const colors = ['#2E75B6','#FF6B6B','#48BB78','#FFD93D','#6C63FF','#FF8C42','#2ED573','#FF4757','#1E90FF','#FFA502'];
+  try {
+    const d = await API.get('/api/dashboard/analytics');
+    // Cleanup old charts
+    Object.values(chartInstances).forEach(c => { try { c.destroy(); } catch(e) {} });
+    chartInstances = {};
+
+    // Agencies chart (bar)
+    const agEl = document.getElementById('chartAgencies');
+    agEl.innerHTML = '<canvas></canvas>';
+    chartInstances.agencies = new Chart(agEl.querySelector('canvas'), {
+      type: 'bar',
+      data: {
+        labels: d.topAgencies.map(a => a.name.length > 20 ? a.name.slice(0,20)+'…' : a.name),
+        datasets: [{ label: 'عدد المنافسات', data: d.topAgencies.map(a => a.count), backgroundColor: colors.slice(0,d.topAgencies.length) }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+    });
+
+    // Activities chart (doughnut)
+    const acEl = document.getElementById('chartActivities');
+    acEl.innerHTML = '<canvas></canvas>';
+    chartInstances.activities = new Chart(acEl.querySelector('canvas'), {
+      type: 'doughnut',
+      data: {
+        labels: d.activityDist.map(a => a.name),
+        datasets: [{ data: d.activityDist.map(a => a.count), backgroundColor: colors }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+    });
+
+    // Trend chart (line)
+    const trEl = document.getElementById('chartTrend');
+    trEl.innerHTML = '<canvas></canvas>';
+    const months = d.monthlyTrend.map(m => {
+      const [y, mo] = m.month.split('-');
+      const names = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+      return names[parseInt(mo)-1] + ' ' + y;
+    });
+    chartInstances.trend = new Chart(trEl.querySelector('canvas'), {
+      type: 'line',
+      data: {
+        labels: months,
+        datasets: [{ label: 'عدد المنافسات', data: d.monthlyTrend.map(m => m.count), borderColor: '#2E75B6', backgroundColor: 'rgba(46,117,182,0.1)', fill: true, tension: 0.3 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+    });
+  } catch(e) {
+    ['chartAgencies','chartActivities','chartTrend'].forEach(id => {
+      document.getElementById(id).innerHTML = '<p style="color:var(--danger);">⚠️ فشل تحميل التحليلات</p>';
+    });
+  }
 }
 
 async function sendEmailAlert() {
