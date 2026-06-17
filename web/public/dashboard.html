@@ -1057,58 +1057,66 @@ function selectPlan(planId, el) {
   document.querySelectorAll('#upgradeModal [id^=plan]').forEach(p => p.style.borderColor = 'transparent');
   el.style.borderColor = '#2E75B6';
   
-  const monthly = { basic: 500, professional: 1199, enterprise: 2999 };
-  const prices = { basic: '500 ريال/شهر', professional: '1,199 ريال/شهر', enterprise: '2,999 ريال/شهر' };
   const names = { basic: 'الباقة الأساسية', professional: 'الباقة الاحترافية', enterprise: 'الباقة الشاملة' };
+  const prices = { basic: '500 ريال/شهر', professional: '1,199 ريال/شهر', enterprise: '2,999 ريال/شهر' };
   document.getElementById('selectedPlan').textContent = `✅ اخترت: ${names[planId]} — ${prices[planId]}`;
   
-  document.getElementById('paypalButton').innerHTML = `
-    <p style="color:#666;margin:10px 0;">💰 سيتم تحويلك إلى PayPal لإتمام الدفع</p>
-    <button class="btn" onclick="processPayment('${planId}')" style="background:#0070BA;">
-      <span style="display:flex;align-items:center;justify-content:center;gap:8px;">
-        <span>الدفع عبر</span>
-        <span style="font-weight:900;font-style:italic;font-size:1.2em;">PayPal</span>
-      </span>
-    </button>
-  `;
+  const btn = document.getElementById('paypalButton');
+  btn.innerHTML = '<p style="color:#666;margin:10px 0;">⏳ جاري تجهيز الدفع...</p>';
+
+  API.post('/api/payments/create-order', { planId }).then(r => {
+    if (r.mock) {
+      btn.innerHTML = `
+        <p style="color:#FFA500;margin:10px 0;font-size:0.9em;">⚠️ PayPal غير مهيأ — للاختبار، اضغط تأكيد</p>
+        <button class="btn" onclick="mockPay('${planId}')" style="background:#28A745;">✅ تأكيد الاشتراك (وهمي)</button>
+      `;
+    } else if (typeof paypal !== 'undefined') {
+      btn.innerHTML = '<div id="paypalBtnContainer"></div>';
+      renderPayPalBtn(planId);
+    } else {
+      btn.innerHTML = '<div id="paypalBtnContainer"></div>';
+      API.get('/api/payments/config').then(cfg => {
+        const s = document.createElement('script');
+        s.src = 'https://www.paypal.com/sdk/js?client-id=' + cfg.clientId + '&currency=USD';
+        s.onload = () => renderPayPalBtn(planId);
+        document.head.appendChild(s);
+      });
+    }
+  }).catch(() => { btn.innerHTML = '<p style="color:var(--danger);">❌ فشل تحميل الدفع</p>'; });
 }
 
-async function processPayment(planId) {
-  const btn = document.querySelector('#paypalButton .btn');
-  btn.disabled = true; btn.innerHTML = 'جاري تحويلك إلى PayPal... <span class="spinner"></span>';
-  
-  const res = await API.post('/api/payments/create-order', { planId });
-  if (res.paypalLink) {
-    // فعلياً: افتح PayPal في نافذة جديدة
-    showToast('تم فتح PayPal للدفع. بعد الدفع، ارجع للوحة التحكم', 'info');
-    
-    // افتح PayPal في تاب جديد
-    const paypalWindow = window.open(res.paypalLink, '_blank');
-    
-    // للمستقبل: هنا webhook يرجع يؤكد الدفع
-    // حالياً: نافذة منبثقة تخلي المستخدم يضغط "تم الدفع"
-    const confirmed = confirm('✅ بعد إتمام الدفع في PayPal، اضغط OK لتأكيد الاشتراك');
-    
-    if (confirmed) {
-      const verify = await API.post('/api/payments/verify', { 
-        planId, 
-        paypalOrderId: 'pp-' + Date.now() 
-      });
-      if (verify.success) {
+function renderPayPalBtn(planId) {
+  paypal.Buttons({
+    createOrder: async () => {
+      const r = await API.post('/api/payments/create-order', { planId });
+      if (r.error) { showToast('❌ ' + r.error, 'error'); throw new Error(r.error); }
+      return r.orderId;
+    },
+    onApprove: async (data) => {
+      const r = await API.post('/api/payments/capture-order', { orderId: data.orderID, planId });
+      if (r.success) {
         closeModal('upgradeModal');
-        showToast('✅ تم تفعيل الاشتراك! شكراً لك', 'success');
+        showToast('✅ ' + r.message, 'success');
         setTimeout(() => location.reload(), 1500);
       } else {
-        showToast('فشل تأكيد الدفع. تواصل مع الدعم', 'error');
-        btn.disabled = false; btn.innerHTML = '💰 الدفع عبر PayPal';
+        showToast('❌ ' + (r.error || 'فشل الدفع'), 'error');
       }
-    } else {
-      btn.disabled = false; btn.innerHTML = '💰 الدفع عبر PayPal';
-      showToast('تم إلغاء الدفع. تقدر تجرب مرة ثانية', 'info');
-    }
+    },
+    onError: () => showToast('❌ حدث خطأ في PayPal', 'error')
+  }).render('#paypalBtnContainer');
+}
+
+async function mockPay(planId) {
+  const btn = document.querySelector('#paypalButton .btn');
+  btn.disabled = true; btn.innerHTML = 'جاري التفعيل... <span class="spinner"></span>';
+  const r = await API.post('/api/payments/capture-order', { orderId: 'MOCK-' + Date.now(), planId });
+  if (r.success) {
+    closeModal('upgradeModal');
+    showToast('✅ تم تفعيل الاشتراك (وهمي)', 'success');
+    setTimeout(() => location.reload(), 1500);
   } else {
-    showToast('فشل إنشاء الدفع', 'error');
-    btn.disabled = false; btn.textContent = '💰 الدفع عبر PayPal';
+    showToast('❌ ' + (r.error || 'فشل'), 'error');
+    btn.disabled = false; btn.textContent = '✅ تأكيد الاشتراك (وهمي)';
   }
 }
 
