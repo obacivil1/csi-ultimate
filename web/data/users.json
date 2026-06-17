@@ -5,7 +5,7 @@
     "email": "test@test.com",
     "phone": "",
     "company": "",
-    "password": "776f06853b37ba568ee8c6a872bd789617cfe017a250b5e2f0387bc2efeb4921",
+    "password": "$2b$10$lDOj7FbOIS2c1lBGFl3dyubrKkxAckYByg6UdiSjWODVX9TWlXpye",
     "subscription": "trial",
     "trialStart": "2026-06-16T16:05:18.714Z",
     "createdAt": "2026-06-16T16:05:18.714Z",

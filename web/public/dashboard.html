@@ -125,7 +125,10 @@
         </select>
         <input type="date" id="filterDateFrom" onchange="tenderPage=1;loadTenders()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;">
         <input type="date" id="filterDateTo" onchange="tenderPage=1;loadTenders()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;">
-        <button onclick="exportTenders()" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 Excel</button>
+        <div style="display:flex;gap:5px;">
+          <button onclick="exportTenders('csv')" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 Excel</button>
+          <button onclick="exportTenders('pdf')" style="padding:8px 16px;background:var(--danger);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📄 PDF</button>
+        </div>
       </div>
       <div class="data-table-wrapper"><table class="data-table">
           <thead><tr>
@@ -155,7 +158,10 @@
         <label style="display:flex;align-items:center;gap:5px;font-size:0.9em;color:var(--text-secondary);">
           <input type="checkbox" id="filterHasEmail" onchange="contractorPage=1;loadContractors()"> بإيميل فقط
         </label>
-        <button onclick="exportContractors()" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 Excel</button>
+        <div style="display:flex;gap:5px;">
+          <button onclick="exportContractors('csv')" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 Excel</button>
+          <button onclick="exportContractors('pdf')" style="padding:8px 16px;background:var(--danger);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📄 PDF</button>
+        </div>
       </div>
       <div class="data-table-wrapper"><table class="data-table">
           <thead><tr>
@@ -187,7 +193,10 @@
           <option value="yes">مع مقاول</option>
           <option value="no">بدون مقاول</option>
         </select>
-        <button onclick="exportProjects()" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 Excel</button>
+        <div style="display:flex;gap:5px;">
+          <button onclick="exportProjects('csv')" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 Excel</button>
+          <button onclick="exportProjects('pdf')" style="padding:8px 16px;background:var(--danger);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📄 PDF</button>
+        </div>
       </div>
       <div class="data-table-wrapper"><table class="data-table">
           <thead><tr>
@@ -215,7 +224,10 @@
           <option value="50000">50,000 - 100,000</option>
           <option value="100000">أكثر من 100,000</option>
         </select>
-        <button onclick="exportAwards()" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 Excel</button>
+        <div style="display:flex;gap:5px;">
+          <button onclick="exportAwards('csv')" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 Excel</button>
+          <button onclick="exportAwards('pdf')" style="padding:8px 16px;background:var(--danger);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📄 PDF</button>
+        </div>
       </div>
       <div class="data-table-wrapper"><table class="data-table">
           <thead><tr>
@@ -728,9 +740,9 @@ async function loadAwards() {
 }
 
 // ── Export ──
-async function exportTenders() {
+async function exportTenders(format = 'csv') {
   try {
-    const body = {};
+    const body = { format };
     const search = document.getElementById('tenderSearch')?.value;
     if (search) body.search = search;
     const activity = document.getElementById('filterActivity')?.value;
@@ -746,14 +758,14 @@ async function exportTenders() {
     const blob = await API.download('/api/export/tenders', body);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'tenders.csv'; a.click();
+    a.href = url; a.download = 'tenders.' + (format === 'pdf' ? 'pdf' : 'csv'); a.click();
     URL.revokeObjectURL(url);
     showToast('✅ جاري التصدير...', 'info');
   } catch(e) { showToast('❌ ' + e.message, 'error'); }
 }
-async function exportContractors() {
+async function exportContractors(format = 'csv') {
   try {
-    const body = {};
+    const body = { format };
     const search = document.getElementById('contractorSearch')?.value;
     if (search) body.search = search;
     const region = document.getElementById('filterRegion')?.value;
@@ -765,14 +777,14 @@ async function exportContractors() {
     const blob = await API.download('/api/export/contractors', body);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'contractors.csv'; a.click();
+    a.href = url; a.download = 'contractors.' + (format === 'pdf' ? 'pdf' : 'csv'); a.click();
     URL.revokeObjectURL(url);
     showToast('✅ تم التصدير', 'success');
   } catch(e) { showToast('❌ ' + e.message, 'error'); }
 }
-async function exportProjects() {
+async function exportProjects(format = 'csv') {
   try {
-    const body = {};
+    const body = { format };
     const search = document.getElementById('projectSearch')?.value;
     if (search) body.search = search;
     const sector = document.getElementById('filterSector')?.value;
@@ -782,20 +794,20 @@ async function exportProjects() {
     const blob = await API.download('/api/export/projects', body);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'projects.csv'; a.click();
+    a.href = url; a.download = 'projects.' + (format === 'pdf' ? 'pdf' : 'csv'); a.click();
     URL.revokeObjectURL(url);
     showToast('✅ تم التصدير', 'success');
   } catch(e) { showToast('❌ ' + e.message, 'error'); }
 }
-async function exportAwards() {
+async function exportAwards(format = 'csv') {
   try {
-    const body = {};
+    const body = { format };
     const search = document.getElementById('awardSearch')?.value;
     if (search) body.search = search;
     const blob = await API.download('/api/export/awards', body);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'awards.csv'; a.click();
+    a.href = url; a.download = 'awards.' + (format === 'pdf' ? 'pdf' : 'csv'); a.click();
     URL.revokeObjectURL(url);
     showToast('✅ تم التصدير', 'success');
   } catch(e) { showToast('❌ ' + e.message, 'error'); }
