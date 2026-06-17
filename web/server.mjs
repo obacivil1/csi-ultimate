@@ -48,6 +48,7 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // API routes (these MUST come before static files)
+app.get('/api/health', (req, res) => res.json({ ok: true, time: Date.now() }));
 app.use('/api/auth', authRouter);
 app.use('/api/tenders', tendersRouter);
 app.use('/api/contractors', contractorsRouter);
