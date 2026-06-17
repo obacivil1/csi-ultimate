@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { authenticate, getPlanLimits } from '../middleware/auth.mjs';
 import { getJSON } from '../cache.mjs';
 
@@ -35,59 +34,17 @@ function sendCSV(res, data, filename) {
   res.send(buf);
 }
 
-async function sendPDF(res, data, filename) {
-  if (!data.length) return res.status(400).json({ error: 'لا توجد بيانات للتصدير' });
-  const headers = Object.keys(data[0]);
-  const doc = await PDFDocument.create();
-  let page = doc.addPage([550, 800]);
-  const font = await doc.embedFont(StandardFonts.Helvetica);
-  const title = filename.replace(/_/g, ' ');
-  let y = 760;
-
-  page.drawText(title, { x: 20, y, size: 14, font });
-  y -= 20;
-  page.drawLine({ start: { x: 20, y }, end: { x: 530, y }, thickness: 1 });
-  y -= 10;
-
-  const colW = Math.min(100, (530 - 40) / headers.length);
-  const rowH = 14;
-
-  for (let i = 0; i <= data.length; i++) {
-    if (y < 40) {
-      page = doc.addPage([550, 800]);
-      y = 760;
-    }
-    const row = i === 0 ? headers : Object.values(data[i - 1]).map(v => String(v ?? ''));
-    const isHeader = i === 0;
-    for (let j = 0; j < row.length; j++) {
-      const x = 20 + j * colW;
-      page.drawText(row[j].substring(0, Math.floor(colW / 5)), { x, y, size: isHeader ? 8 : 7, font });
-    }
-    y -= rowH + (isHeader ? 4 : 0);
-  }
-
-  const buf = await doc.save();
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `attachment; filename="export.pdf"; filename*=UTF-8''${encodeURIComponent(filename)}.pdf`);
-  res.send(Buffer.from(buf));
-}
-
-async function handleExport(req, res, file, cacheKey, filters, mapFn, filename) {
+function handleExport(req, res, file, cacheKey, filters, mapFn, filename) {
   try {
     const records = loadJSON(file, cacheKey);
     let filtered = [...records];
     if (filters) filters(req.body, filtered);
-    const limits = getPlanLimits(req.user?.subscription || 'trial', req.user?.email);
+    const limits = getPlanLimits(req.user?.subscription || 'trial');
     if (!limits.canExport) return res.status(403).json({ error: 'التصدير غير متاح في الخطتك' });
     let exportLimit = limits.exportRows;
     if (exportLimit < 0) exportLimit = filtered.length;
     const data = filtered.slice(0, exportLimit).map(mapFn);
-    const format = req.body.format || 'csv';
-    if (format === 'pdf') {
-      await sendPDF(res, data, filename);
-    } else {
-      sendCSV(res, data, filename);
-    }
+    sendCSV(res, data, filename);
   } catch (e) {
     console.error('Export error:', e);
     res.status(500).json({ error: 'خطأ في التصدير: ' + e.message });

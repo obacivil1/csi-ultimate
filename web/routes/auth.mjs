@@ -130,7 +130,7 @@ authRouter.get('/me', (req, res) => {
         id: user.id, name: user.name, email: user.email,
         company: user.company, phone: user.phone,
         subscription: user.subscription, trialDaysLeft,
-        planLimits: getPlanLimits(user.subscription, user.email)
+        planLimits: getPlanLimits(user.subscription)
       }
     });
   } catch(e) {

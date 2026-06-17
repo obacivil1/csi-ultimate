@@ -13,7 +13,6 @@ import { dashboardRouter } from './routes/dashboard.mjs';
 import { awardsRouter } from './routes/awards.mjs';
 import { projectsRouter } from './routes/projects.mjs';
 import { exportRouter } from './routes/export.mjs';
-import { alertsRouter } from './routes/alerts.mjs';
 import { startScheduler } from './scheduler.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -54,7 +53,6 @@ app.use('/api/dashboard', dashboardRouter);
 app.use('/api/awards', awardsRouter);
 app.use('/api/projects', projectsRouter);
 app.use('/api/export', exportRouter);
-app.use('/api/alerts', alertsRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {

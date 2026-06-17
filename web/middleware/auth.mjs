@@ -58,26 +58,20 @@ export function requireSubscription(...plans) {
   };
 }
 
-const ADMIN_EMAILS = ['obacivil@gmail.com'];
-export function isAdmin(email) {
-  return ADMIN_EMAILS.includes(email);
-}
-
 const PLAN_LIMITS = {
   trial: { maxTenders: 240, maxContractors: 100, maxAwards: 15, maxProjects: 20, exportRows: 50, canExport: true, canViewContractors: true, contractorAccess: true },
   expired: { maxTenders: 0, maxContractors: 0, maxAwards: 0, maxProjects: 0, exportRows: 0, canExport: false, canViewContractors: false, contractorAccess: false },
   basic: { maxTenders: 360, maxContractors: 500, maxAwards: 50, maxProjects: 50, exportRows: 50, canExport: true, canViewContractors: true, contractorAccess: true },
-  professional: { maxTenders: 1500, maxContractors: 3000, maxAwards: 300, maxProjects: 300, exportRows: 1000, canExport: true, canViewContractors: true, contractorAccess: true },
+  professional: { maxTenders: -1, maxContractors: -1, maxAwards: -1, maxProjects: -1, exportRows: 1000, canExport: true, canViewContractors: true, contractorAccess: true },
   enterprise: { maxTenders: -1, maxContractors: -1, maxAwards: -1, maxProjects: -1, exportRows: -1, canExport: true, canViewContractors: true, contractorAccess: true }
 };
 
-export function getPlanLimits(subscription, userEmail) {
-  if (userEmail && isAdmin(userEmail)) return PLAN_LIMITS.enterprise;
+export function getPlanLimits(subscription) {
   return PLAN_LIMITS[subscription] || PLAN_LIMITS.trial;
 }
 
 export function applyPlanLimit(req, total) {
-  const limits = getPlanLimits(req.user?.subscription || 'trial', req.user?.email);
+  const limits = getPlanLimits(req.user?.subscription || 'trial');
   const max = limits.maxTenders;
   if (max > 0 && total > max) {
     return { limited: true, total: max };
