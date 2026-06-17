@@ -893,15 +893,16 @@ async function loadAlerts() {
 
 // ── Analytics Charts ──
 let chartInstances = {};
+let analyticsLoading = false;
 async function loadAnalytics() {
+  if (analyticsLoading) return;
+  analyticsLoading = true;
   const colors = ['#2E75B6','#FF6B6B','#48BB78','#FFD93D','#6C63FF','#FF8C42','#2ED573','#FF4757','#1E90FF','#FFA502'];
   try {
     const d = await API.get('/api/dashboard/analytics');
-    // Cleanup old charts
     Object.values(chartInstances).forEach(c => { try { c.destroy(); } catch(e) {} });
     chartInstances = {};
 
-    // Agencies chart (bar)
     const agEl = document.getElementById('chartAgencies');
     agEl.innerHTML = '<canvas></canvas>';
     chartInstances.agencies = new Chart(agEl.querySelector('canvas'), {
@@ -910,11 +911,10 @@ async function loadAnalytics() {
         labels: d.topAgencies.map(a => a.name.length > 20 ? a.name.slice(0,20)+'…' : a.name),
         datasets: [{ label: 'عدد المنافسات', data: d.topAgencies.map(a => a.count), backgroundColor: colors.slice(0,d.topAgencies.length) }]
       },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+      options: { responsive: true, maintainAspectRatio: false, animation: { duration: 300 }, plugins: { legend: { display: false } },
         scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
     });
 
-    // Activities chart (doughnut)
     const acEl = document.getElementById('chartActivities');
     acEl.innerHTML = '<canvas></canvas>';
     chartInstances.activities = new Chart(acEl.querySelector('canvas'), {
@@ -923,10 +923,9 @@ async function loadAnalytics() {
         labels: d.activityDist.map(a => a.name),
         datasets: [{ data: d.activityDist.map(a => a.count), backgroundColor: colors }]
       },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+      options: { responsive: true, maintainAspectRatio: false, animation: { duration: 300 }, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
     });
 
-    // Trend chart (line)
     const trEl = document.getElementById('chartTrend');
     trEl.innerHTML = '<canvas></canvas>';
     const months = d.monthlyTrend.map(m => {
@@ -940,13 +939,15 @@ async function loadAnalytics() {
         labels: months,
         datasets: [{ label: 'عدد المنافسات', data: d.monthlyTrend.map(m => m.count), borderColor: '#2E75B6', backgroundColor: 'rgba(46,117,182,0.1)', fill: true, tension: 0.3 }]
       },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+      options: { responsive: true, maintainAspectRatio: false, animation: { duration: 300 }, plugins: { legend: { display: false } },
         scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
     });
   } catch(e) {
     ['chartAgencies','chartActivities','chartTrend'].forEach(id => {
       document.getElementById(id).innerHTML = '<p style="color:var(--danger);">⚠️ فشل تحميل التحليلات</p>';
     });
+  } finally {
+    analyticsLoading = false;
   }
 }
 
