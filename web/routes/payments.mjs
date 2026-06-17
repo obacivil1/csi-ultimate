@@ -53,7 +53,7 @@ paymentsRouter.post('/create-order', async (req, res) => {
   const plan = PLANS[planId];
   if (!plan) return res.status(400).json({ error: 'باقة غير صالحة' });
 
-  // Admin auto-activation (no payment needed)
+  // Admin test mode — simulates full payment flow with $0
   const token = req.cookies?.token || req.headers?.authorization?.replace('Bearer ', '');
   if (token) {
     try {
@@ -62,7 +62,7 @@ paymentsRouter.post('/create-order', async (req, res) => {
         return res.json({
           mock: true, orderId: 'ADMIN-' + Date.now(), plan,
           amount: 0, currency: 'USD',
-          message: 'تفعيل فوري للمشرف — بدون دفع'
+          message: '🧪 اختبار عملية الدفع'
         });
       }
     } catch {}

@@ -1106,8 +1106,10 @@ function selectPlan(planId, el) {
     if (r.mock) {
       const isAdmin = r.orderId.startsWith('ADMIN-');
       btn.innerHTML = isAdmin ? `
-        <p style="color:#28A745;margin:10px 0;font-size:0.9em;">✅ أنت مشرف — تفعيل فوري بدون دفع</p>
-        <button class="btn" onclick="mockPay('${planId}')" style="background:#28A745;">✅ تفعيل الباقة</button>
+        <div style="text-align:center;">
+          <p style="margin:10px 0;font-size:0.9em;">🧪 اختبار عملية الدفع — سيتم محاكاة الدفع بدون خصم</p>
+          <button class="btn" onclick="mockPay('${planId}')" style="background:#0070BA;">🔁 تجربة الدفع</button>
+        </div>
       ` : `
         <p style="color:#FFA500;margin:10px 0;font-size:0.9em;">⚠️ PayPal غير مهيأ — للاختبار، اضغط تأكيد</p>
         <button class="btn" onclick="mockPay('${planId}')" style="background:#28A745;">✅ تأكيد الاشتراك (وهمي)</button>
