@@ -46,10 +46,7 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Static files (except index which gets weather injection)
-app.use(express.static(path.join(__dirname, 'public'), { index: false }));
-
-// API routes
+// API routes (these MUST come before static files)
 app.use('/api/auth', authRouter);
 app.use('/api/tenders', tendersRouter);
 app.use('/api/contractors', contractorsRouter);
@@ -90,7 +87,7 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Serve index.html with weather injected
+// Serve index.html & dashboard.html with weather injected
 const indexHtmlPath = path.join(__dirname, 'public', 'index.html');
 const dashHtmlPath = path.join(__dirname, 'public', 'dashboard.html');
 function injectWeather(html, w) {
@@ -113,10 +110,18 @@ app.get('/dashboard.html', (req, res) => {
   });
 });
 
+// Static files (css, js, images — not index/dashboard)
+app.use(express.static(path.join(__dirname, 'public')));
+
 // SPA fallback (must be last)
 app.use((req, res) => {
   if (!req.path.startsWith('/api/')) {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    getWeatherHtml(w => {
+      fs.readFile(indexHtmlPath, 'utf8', (err, html) => {
+        if (err) { res.sendFile(indexHtmlPath); return; }
+        res.send(injectWeather(html, w));
+      });
+    });
   } else {
     res.status(404).json({ error: 'المسار غير موجود' });
   }
