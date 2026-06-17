@@ -48,7 +48,18 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // API routes (these MUST come before static files)
-app.get('/api/health', (req, res) => res.json({ ok: true, time: Date.now() }));
+app.get('/api/health', (req, res) => {
+  res.json({
+    ok: true, time: Date.now(),
+    env: {
+      paypal_id: !!process.env.PAYPAL_CLIENT_ID,
+      paypal_secret: !!process.env.PAYPAL_CLIENT_SECRET,
+      sandbox: process.env.PAYPAL_SANDBOX,
+      jwt: !!process.env.JWT_SECRET,
+      node: process.version
+    }
+  });
+});
 app.use('/api/auth', authRouter);
 app.use('/api/tenders', tendersRouter);
 app.use('/api/contractors', contractorsRouter);
