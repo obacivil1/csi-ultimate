@@ -9,7 +9,8 @@ const PAYPAL_API = process.env.PAYPAL_SANDBOX === 'true'
   : 'https://api-m.paypal.com';
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID || '';
 const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET || '';
-console.log('[payments] PAYPAL_CLIENT_ID set =', !!PAYPAL_CLIENT_ID, '| PAYPAL_CLIENT_SECRET set =', !!PAYPAL_CLIENT_SECRET, '| SANDBOX =', process.env.PAYPAL_SANDBOX);
+console.log('[payments] PAYPAL_CLIENT_ID set =', !!process.env.PAYPAL_CLIENT_ID, '| PAYPAL_CLIENT_SECRET set =', !!process.env.PAYPAL_CLIENT_SECRET, '| SANDBOX =', process.env.PAYPAL_SANDBOX);
+console.log('[payments] All env keys:', Object.keys(process.env).filter(k => k.startsWith('PAYPAL') || k.startsWith('JWT') || k.startsWith('PORT')).join(', '));
 
 const PLANS = {
   basic: { id: 'basic', name: 'الباقة الأساسية', price: 500, priceUSD: 133,
@@ -42,7 +43,9 @@ paymentsRouter.get('/plans', (req, res) => {
 });
 
 paymentsRouter.get('/config', (req, res) => {
-  res.json({ configured: !!(PAYPAL_CLIENT_ID && PAYPAL_CLIENT_SECRET), clientId: PAYPAL_CLIENT_ID });
+  const id = process.env.PAYPAL_CLIENT_ID || '';
+  const secret = process.env.PAYPAL_CLIENT_SECRET || '';
+  res.json({ configured: !!(id && secret), clientId: id, keys: Object.keys(process.env).filter(k => k.startsWith('PAYPAL')).join(',') });
 });
 
 paymentsRouter.post('/create-order', async (req, res) => {
