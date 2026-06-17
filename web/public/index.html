@@ -284,27 +284,26 @@ const API = {
   }
 };
 
-// ── Live Clock (Riyadh UTC+3) ──
+// ── Live Clock (user's timezone) ──
 (function() {
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Riyadh';
   function tick() {
-    const now = new Date();
-    const opts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Asia/Riyadh' };
-    document.getElementById('liveClock').textContent = new Intl.DateTimeFormat('ar-SA', opts).format(now);
+    const opts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: tz };
+    document.getElementById('liveClock').textContent = new Intl.DateTimeFormat('ar-SA', opts).format(new Date());
   }
   tick();
   setInterval(tick, 1000);
 })();
 
-// ── Riyadh Weather ──
+// ── Weather by IP ──
 (async function() {
   const el = document.getElementById('liveWeather');
   const codes = {0:'صافي',1:'غائم جزئياً',2:'غائم جزئياً',3:'غائم',45:'ضباب',48:'ضباب',51:'رذاذ',53:'رذاذ',55:'رذاذ',61:'مطر',63:'مطر',65:'مطر',71:'ثلج',73:'ثلج',75:'ثلج',80:'زخات مطر',81:'زخات مطر',82:'زخات مطر',95:'عاصفة',96:'عاصفة',99:'عاصفة'};
   try {
-    const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=24.7136&longitude=46.6753&current_weather=true');
-    const data = await r.json();
-    const t = data.current_weather.temperature;
-    const c = data.current_weather.weathercode;
-    el.textContent = `${t}°C · ${codes[c]||'غائم'}`;
+    const geo = await fetch('https://ip-api.com/json/?fields=lat,lon,city,country').then(r=>r.json());
+    if (!geo.lat) throw Error();
+    const w = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${geo.lat}&longitude=${geo.lon}&current_weather=true`).then(r=>r.json());
+    el.textContent = `${w.current_weather.temperature}°C ${codes[w.current_weather.weathercode]||''} · ${geo.city}`;
   } catch(e) {
     el.textContent = '🌤️ --°C';
   }
