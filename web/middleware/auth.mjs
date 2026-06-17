@@ -59,7 +59,7 @@ export function requireSubscription(...plans) {
 }
 
 const PLAN_LIMITS = {
-  trial: { maxTenders: 240, maxContractors: 100, maxAwards: 15, maxProjects: 20, exportRows: 0, canExport: false, canViewContractors: true, contractorAccess: true },
+  trial: { maxTenders: 240, maxContractors: 100, maxAwards: 15, maxProjects: 20, exportRows: 50, canExport: true, canViewContractors: true, contractorAccess: true },
   expired: { maxTenders: 0, maxContractors: 0, maxAwards: 0, maxProjects: 0, exportRows: 0, canExport: false, canViewContractors: false, contractorAccess: false },
   basic: { maxTenders: 360, maxContractors: 500, maxAwards: 50, maxProjects: 50, exportRows: 50, canExport: true, canViewContractors: true, contractorAccess: true },
   professional: { maxTenders: -1, maxContractors: -1, maxAwards: -1, maxProjects: -1, exportRows: 1000, canExport: true, canViewContractors: true, contractorAccess: true },
