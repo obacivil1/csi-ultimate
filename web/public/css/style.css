@@ -193,6 +193,7 @@ body { font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--tex
 .sample-table th, .data-table th { background: var(--th-bg); color: var(--th-text); padding: 12px 15px; font-weight: 600; text-align: right; font-size: 0.85em; position: sticky; top: 0; z-index: 2; }
 .sample-table td, .data-table td { padding: 12px 16px; border-bottom: 1px solid var(--border-light); font-size: 0.95em; }
 .sample-table tr:nth-child(even), .data-table tr:nth-child(even) { background: var(--bg-stripe); }
+.sample-table mark, .data-table mark { background: #FFE066; color: #222; border-radius: 3px; padding: 0 2px; }
 .data-table td { font-size: 0.95em; }
 .data-table th, .data-table td { white-space: nowrap; }
 .data-table th:nth-child(1), .data-table td:nth-child(1) { min-width: 280px; white-space: normal; }
@@ -293,6 +294,12 @@ footer { background: var(--footer-bg); color: var(--footer-text); text-align: ce
   .auth-buttons { position: static; text-align: center; margin-top: 15px; }
   .contact-row { gap: 15px; font-size: 0.85em; }
   .section-title h2 { font-size: 1.4em; }
+  .theme-toggle { bottom: 10px; left: 10px; }
+  .theme-toggle button { width: 36px; height: 36px; font-size: 1em; }
+  .sample-table td, .sample-table th { padding: 8px 8px; font-size: 0.8em; }
+  .sample-section .filter-bar input { min-width: unset; }
+  .trust-cards { grid-template-columns: 1fr 1fr; gap: 15px; }
+  footer { font-size: 0.75em; padding: 15px; }
 }
 
 @media (max-width: 480px) {
@@ -306,4 +313,8 @@ footer { background: var(--footer-bg); color: var(--footer-text); text-align: ce
   .pricing-card { padding: 20px 15px; }
   .dash-tab { padding: 10px 10px; font-size: 0.75em; }
   .container { padding: 0 12px; }
+  .section { padding: 25px 0; }
+  .sample-section .filter-bar input { min-width: unset; }
+  .sample-table td, .sample-table th { font-size: 0.7em; padding: 5px 5px; }
+  .landing-header .badge { font-size: 0.7em; padding: 4px 14px; }
 }

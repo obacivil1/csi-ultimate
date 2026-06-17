@@ -166,9 +166,10 @@
   <div class="container">
     <div class="section-title">
       <h2>📊 نموذج من البيانات الحية</h2>
-      <p>أحدث 5 منافسات منصة اعتماد — يتم تحديثها تلقائياً</p>
+      <p>أحدث المنافسات من منصة اعتماد — ابحث، فلتر، وحمل مجاناً</p>
     </div>
-    <div class="filter-bar" style="justify-content:center;margin-bottom:20px;">
+    <div class="filter-bar" style="flex-wrap:wrap;justify-content:center;margin-bottom:20px;gap:8px;">
+      <input type="text" id="lpSearch" placeholder="🔍 بحث في المنافسات..." oninput="debounceSearch()" style="padding:10px 14px;border:2px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9em;min-width:220px;">
       <select id="lpMaxDays" onchange="loadSampleTenders()" style="padding:10px;border:2px solid #e0e0e0;border-radius:8px;font-family:inherit;font-size:0.9em;">
         <option value="">أحدث المنافسات</option>
         <option value="3">تنتهي خلال 3 أيام 🔥</option>
@@ -425,17 +426,20 @@ async function loadSampleTenders() {
   try {
     const maxDays = document.getElementById('lpMaxDays').value;
     const construction = document.getElementById('lpConstruction').checked;
-    const params = new URLSearchParams({ limit: 5 });
+    const search = document.getElementById('lpSearch').value.trim();
+    const params = new URLSearchParams({ limit: search ? 20 : 5 });
     if (maxDays) params.set('maxDays', maxDays);
     if (construction) params.set('construction', 'true');
+    if (search) params.set('search', search);
     
     const res = await API.get('/api/tenders?' + params.toString());
     const tbody = document.getElementById('sampleTenders');
     if (res.data && res.data.length) {
       tbody.innerHTML = res.data.map(t => {
         const urgent = t.remainingDays !== undefined && t.remainingDays <= 3;
+        const highlighted = search ? t.name.replace(new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'), m => `<mark>${m}</mark>`) : (t.name || '');
         return `<tr>
-          <td>${t.name || ''}</td>
+          <td>${highlighted}</td>
           <td>${t.agency || ''}</td>
           <td>${t.activity || ''}</td>
           <td>${t.lastDate || ''}</td>
@@ -448,6 +452,11 @@ async function loadSampleTenders() {
   } catch(e) {
     document.getElementById('sampleTenders').innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;">فشل التحميل</td></tr>';
   }
+}
+let _searchTimer;
+function debounceSearch() {
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(loadSampleTenders, 300);
 }
 loadSampleTenders();
 
@@ -469,5 +478,8 @@ function setTheme(t) {
   <button data-theme="dark" onclick="setTheme('dark')" title="داكن">🌙</button>
   <button data-theme="nickel" onclick="setTheme('nickel')" title="نيكل">⚪</button>
 </div>
+<footer style="text-align:center;padding:20px;color:var(--text-muted);font-size:0.8em;border-top:1px solid var(--border-light);margin-top:40px;">
+  © 2026 CSI Ultimate — <a href="/privacy" style="color:var(--accent);">سياسة الخصوصية</a>
+</footer>
 </body>
 </html>

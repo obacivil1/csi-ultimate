@@ -123,6 +123,9 @@ app.get('/dashboard.html', (req, res) => {
     });
   });
 });
+app.get('/privacy', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'privacy.html'));
+});
 
 // Static files (css, js, images — not index/dashboard)
 app.use(express.static(path.join(__dirname, 'public')));

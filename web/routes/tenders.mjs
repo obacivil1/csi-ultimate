@@ -10,14 +10,23 @@ export const tendersRouter = Router();
 const DATA_FILE = path.join(__dirname, '..', '..', 'data', 'etimad_all_tenders.json');
 const CONSTRUCTION_KW = ['مقاولات','تشييد','بناء','إنشاء','هدم','ترميم','صيانة','تشغيل','نظافة','كهرباء','سباكة','طرق','خرسانة','دهان','عزل','حفر','ردم','تسوية','أساسات','حديد'];
 
+let statsCache = null;
+let statsCacheTime = 0;
+const STATS_TTL = 600000; // 10 min
+
 function loadTenders() {
   return getJSON('tenders', DATA_FILE);
 }
 
 const STATUS_MAP = { 2: 'نشطة', 3: 'فتح العروض', 4: 'فحص العروض', 5: 'الترسية', 6: 'تم الترسية', 8: 'منتهية' };
 
+function setCache(res, ttl) {
+  res.setHeader('Cache-Control', `public, max-age=${ttl}, s-maxage=${ttl}`);
+}
+
 // GET /api/tenders - List with filters
 tendersRouter.get('/', (req, res) => {
+  setCache(res, 180); // 3 min browser cache
   const tenders = loadTenders();
   let filtered = [...tenders];
 
@@ -146,17 +155,22 @@ tendersRouter.get('/activities', (req, res) => {
   );
 });
 
-// GET /api/tenders/stats - Quick stats
+// GET /api/tenders/stats - Quick stats (cached)
 tendersRouter.get('/stats', (req, res) => {
+  setCache(res, 600); // 10 min browser cache
+  const now = Date.now();
+  if (statsCache && now - statsCacheTime < STATS_TTL) {
+    return res.json(statsCache);
+  }
   const tenders = loadTenders();
-  const now = new Date();
-  const weekLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const nowDate = new Date();
+  const weekLater = new Date(nowDate.getTime() + 7 * 24 * 60 * 60 * 1000);
 
   const expiring = tenders.filter(t => {
     const d = t.lastOfferPresentationDate;
     if (!d) return false;
     const dt = new Date(d);
-    return dt > now && dt < weekLater;
+    return dt > nowDate && dt < weekLater;
   });
 
   const construction = tenders.filter(t => {
@@ -166,7 +180,7 @@ tendersRouter.get('/stats', (req, res) => {
 
   const active = tenders.filter(t => [2, 3, 4, 5].includes(t.tenderStatusId));
 
-  res.json({
+  statsCache = {
     total: tenders.length,
     active: active.length,
     construction: construction.length,
@@ -175,5 +189,7 @@ tendersRouter.get('/stats', (req, res) => {
       'شراء مباشر': tenders.filter(t => t.tenderTypeName === 'شراء مباشر').length,
       'منافسة عامة': tenders.filter(t => t.tenderTypeName === 'منافسة عامة').length
     }
-  });
+  };
+  statsCacheTime = now;
+  res.json(statsCache);
 });
