@@ -298,11 +298,14 @@ const API = {
 // ── Weather by IP (proxied through server) ──
 (async function() {
   const el = document.getElementById('liveWeather');
+  let lat = 24.7136, lon = 46.6753, city = 'الرياض';
   try {
     const geo = await fetch('https://ip-api.com/json/?fields=lat,lon,city').then(r=>r.json());
-    if (!geo.lat) throw Error();
-    const w = await fetch(`/api/weather?lat=${geo.lat}&lon=${geo.lon}`).then(r=>r.json());
-    el.textContent = `${w.temperature}°C · ${w.desc} · ${geo.city}`;
+    if (geo.lat) { lat = geo.lat; lon = geo.lon; city = geo.city; }
+  } catch(e) {}
+  try {
+    const w = await fetch(`/api/weather?lat=${lat}&lon=${lon}`).then(r=>r.json());
+    el.textContent = `${w.temperature}°C · ${w.desc} · ${city}`;
   } catch(e) {
     el.textContent = '🌤️ --°C';
   }
