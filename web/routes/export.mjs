@@ -30,7 +30,7 @@ function sendCSV(res, data, filename) {
   }
   const buf = Buffer.from('\uFEFF' + csv, 'utf8');
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="${filename}.csv"`);
+  res.setHeader('Content-Disposition', `attachment; filename="export.csv"; filename*=UTF-8''${encodeURIComponent(filename)}.csv`);
   res.send(buf);
 }
 
