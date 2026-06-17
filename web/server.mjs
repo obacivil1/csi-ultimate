@@ -37,7 +37,7 @@ app.use((req, res, next) => {
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 200,
   message: { error: 'طلبات كثيرة. حاول بعد 15 دقيقة.' }
 });
 app.use('/api/', limiter);
