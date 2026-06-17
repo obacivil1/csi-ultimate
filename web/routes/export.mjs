@@ -39,9 +39,9 @@ function sendCSV(res, data, filename) {
 
 async function sendPDF(res, data, filename) {
   if (!data.length) return res.status(400).json({ error: 'لا توجد بيانات للتصدير' });
-  PDFDocument.registerFontkit(fontkit);
   const headers = Object.keys(data[0]);
   const doc = await PDFDocument.create();
+  doc.registerFontkit(fontkit);
   let page = doc.addPage([550, 800]);
   const fontBytes = fs.readFileSync(path.join(__dirname, '..', 'fonts', 'Amiri-Regular.ttf'));
   const font = await doc.embedFont(fontBytes);
