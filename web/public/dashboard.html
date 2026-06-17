@@ -78,8 +78,12 @@
         <button data-theme="nickel" onclick="setTheme('nickel')" title="نيكل" style="width:30px;height:30px;font-size:0.8em;border-radius:50%;border:1px solid var(--border);cursor:pointer;background:var(--bg-card);color:var(--text);">⚪</button>
       </div>
       <button onclick="handleLogout()">تسجيل خروج</button>
+      </div>
+      <div style="background:var(--bg-card);border-radius:12px;padding:20px;box-shadow:0 2px 8px var(--shadow);margin-top:20px;">
+        <h3 style="margin-bottom:15px;color:var(--accent-hover);">📧 رسائل التواصل</h3>
+        <div id="adminMessages"><p style="color:var(--text-muted);">جاري التحميل...</p></div>
+      </div>
     </div>
-  </div>
 </div>
 
 <!-- Subscription Banner -->
@@ -1016,12 +1020,44 @@ async function loadAdmin() {
   } catch(e) {
     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--danger);">⚠️ فشل التحميل</td></tr>';
   }
+
+  // Load messages
+  const msgsDiv = document.getElementById('adminMessages');
+  try {
+    const msgs = await API.get('/api/admin/messages');
+    if (!msgs.length) { msgsDiv.innerHTML = '<p style="color:var(--text-muted);">لا توجد رسائل</p>'; return; }
+    msgsDiv.innerHTML = msgs.map(m => {
+      const urgent = m.subject.toLowerCase().includes('مشكلة') || m.subject.toLowerCase().includes('bug') || m.subject.toLowerCase().includes('خطأ');
+      return '<div style="padding:12px 0;border-bottom:1px solid var(--border-light);' + (!m.read ? 'font-weight:600;' : '') + '">' +
+        '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">' +
+        '<span><strong>' + esc(m.name) + '</strong> <span style="color:var(--text-muted);font-size:0.85em;font-weight:normal;">&lt;' + esc(m.email) + '&gt;</span></span>' +
+        '<span style="color:var(--text-muted);font-size:0.8em;white-space:nowrap;">' + new Date(m.date).toLocaleDateString('ar-SA') + '</span>' +
+        '</div>' +
+        '<div style="margin:4px 0;font-size:0.9em;">' + (urgent ? '🔴 ' : '📧 ') + esc(m.subject) + '</div>' +
+        '<div style="color:var(--text-secondary);font-size:0.85em;margin-top:4px;">' + esc(m.message.substring(0, 200)) + (m.message.length > 200 ? '...' : '') + '</div>' +
+        (!m.read ? '<button onclick="markMsgRead(' + m.id + ', this)" style="margin-top:6px;padding:4px 12px;border:1px solid var(--accent);border-radius:6px;background:transparent;color:var(--accent);cursor:pointer;font-size:0.8em;">✓ تحديد مقروء</button>' : '') +
+        '</div>';
+    }).join('');
+  } catch(e) {
+    msgsDiv.innerHTML = '<p style="color:var(--text-muted);">⚠️ فشل تحميل الرسائل</p>';
+  }
 }
 
 async function setPlan(userId, sel) {
   try {
     await API.post('/api/admin/users/' + userId + '/plan', { plan: sel.value });
     showToast('✅ تم تغيير الباقة', 'success');
+  } catch(e) {
+    showToast('❌ ' + e.message, 'error');
+  }
+}
+
+async function markMsgRead(id, btn) {
+  try {
+    await API.put('/api/admin/messages/' + id + '/read');
+    btn.parentElement.style.fontWeight = 'normal';
+    btn.remove();
+    showToast('✅ تم', 'success');
   } catch(e) {
     showToast('❌ ' + e.message, 'error');
   }
@@ -1144,7 +1180,7 @@ function setTheme(t) {
 checkAuth().catch(() => showToast('فشل الاتصال بالسيرفر', 'error'));
 </script>
 <footer style="text-align:center;padding:15px 20px;color:var(--text-muted);font-size:0.75em;border-top:1px solid var(--border-light);">
-  <a href="/" style="color:var(--accent);">الرئيسية</a> — <a href="/privacy" style="color:var(--accent);">سياسة الخصوصية</a>
+  <a href="/" style="color:var(--accent);">الرئيسية</a> — <a href="/contact" style="color:var(--accent);">اتصل بنا</a> — <a href="/privacy" style="color:var(--accent);">سياسة الخصوصية</a>
 </footer>
 </body>
 </html>

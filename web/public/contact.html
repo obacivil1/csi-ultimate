@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تواصل معنا — CSI Ultimate</title>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+.contact-page { max-width:600px; margin:0 auto; padding:40px 20px; }
+.contact-page h1 { color:var(--accent-hover); margin-bottom:8px; }
+.contact-page p { color:var(--text-secondary); margin-bottom:30px; }
+.form-group { margin-bottom:20px; }
+.form-group label { display:block; margin-bottom:6px; font-weight:600; color:var(--text); font-size:0.9em; }
+.form-group input,.form-group textarea { width:100%; padding:12px 14px; border:2px solid var(--border); border-radius:8px; font-family:inherit; font-size:0.95em; background:var(--bg-card); color:var(--text); box-sizing:border-box; transition:border-color .2s; }
+.form-group input:focus,.form-group textarea:focus { outline:none; border-color:var(--accent); }
+.form-group textarea { resize:vertical; min-height:120px; }
+.btn-send { background:var(--accent); color:#fff; border:none; padding:14px 40px; border-radius:8px; font-size:1em; font-weight:600; cursor:pointer; transition:background .2s; width:100%; }
+.btn-send:hover { background:var(--accent-hover); }
+.btn-send:disabled { opacity:.6; cursor:not-allowed; }
+.toast { position:fixed; bottom:30px; left:50%; transform:translateX(-50%); padding:14px 28px; border-radius:8px; color:#fff; font-weight:600; z-index:1000; opacity:0; transition:opacity .4s; }
+.toast.show { opacity:1; }
+.toast.success { background:#28a745; }
+.toast.error { background:#DC3545; }
+.back-link { display:inline-block; margin-top:25px; color:var(--accent); font-weight:600; text-decoration:none; font-size:0.9em; }
+.back-link:hover { text-decoration:underline; }
+</style>
+</head>
+<body>
+<div class="contact-page">
+  <h1>📧 تواصل معنا</h1>
+  <p>عندك استفسار أو اقتراح؟ اكتب لنا وراح نردّ عليك بأسرع وقت</p>
+  <form id="contactForm">
+    <div class="form-group">
+      <label for="name">الاسم الكامل</label>
+      <input type="text" id="name" required placeholder="الاسم">
+    </div>
+    <div class="form-group">
+      <label for="email">البريد الإلكتروني (للمتابعة)</label>
+      <input type="email" id="email" required placeholder="بريدك الإلكتروني">
+    </div>
+    <div class="form-group">
+      <label for="subject">الموضوع</label>
+      <input type="text" id="subject" required placeholder="مثلاً: استفسار عن الباقات">
+    </div>
+    <div class="form-group">
+      <label for="message">الرسالة</label>
+      <textarea id="message" required placeholder="اكتب رسالتك هنا..."></textarea>
+    </div>
+    <button type="submit" class="btn-send" id="sendBtn">إرسال الرسالة</button>
+  </form>
+  <a href="/" class="back-link">← العودة للصفحة الرئيسية</a>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+const API = { base: '' };
+API.post = async (url, data) => {
+  const r = await fetch(API.base + url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || 'خطأ');
+  return j;
+};
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast ' + type + ' show';
+  setTimeout(() => t.classList.remove('show'), 4000);
+}
+
+document.getElementById('contactForm').onsubmit = async function(e) {
+  e.preventDefault();
+  const btn = document.getElementById('sendBtn');
+  btn.disabled = true; btn.textContent = 'جاري الإرسال...';
+  try {
+    await API.post('/api/contact', {
+      name: document.getElementById('name').value.trim(),
+      email: document.getElementById('email').value.trim(),
+      subject: document.getElementById('subject').value.trim(),
+      message: document.getElementById('message').value.trim()
+    });
+    showToast('✅ تم إرسال رسالتك بنجاح، سنتواصل معك قريباً', 'success');
+    this.reset();
+  } catch(e) {
+    showToast('❌ ' + e.message, 'error');
+  }
+  btn.disabled = false; btn.textContent = 'إرسال الرسالة';
+};
+</script>
+</body>
+</html>

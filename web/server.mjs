@@ -16,6 +16,7 @@ import { projectsRouter } from './routes/projects.mjs';
 import { exportRouter } from './routes/export.mjs';
 import { alertsRouter } from './routes/alerts.mjs';
 import { adminRouter } from './routes/admin.mjs';
+import { contactRouter } from './routes/contact.mjs';
 import { startScheduler } from './scheduler.mjs';
 import { preloadWarmup } from './cache.mjs';
 
@@ -70,6 +71,7 @@ app.use('/api/projects', projectsRouter);
 app.use('/api/export', exportRouter);
 app.use('/api/alerts', alertsRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/contact', contactRouter);
 
 // Cached weather (refreshed every 10 min)
 let cachedWeather = { temperature: '--', desc: '' };
@@ -125,6 +127,9 @@ app.get('/dashboard.html', (req, res) => {
 });
 app.get('/privacy', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'privacy.html'));
+});
+app.get('/contact', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'contact.html'));
 });
 
 // Static files (css, js, images — not index/dashboard)
