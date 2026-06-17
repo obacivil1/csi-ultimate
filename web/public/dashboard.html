@@ -409,12 +409,14 @@ function switchTab(tab, el) {
   document.querySelectorAll('.dash-panel').forEach(p => p.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('panel' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
-  if (tab === 'tenders') loadTenders();
-  if (tab === 'contractors') loadContractors();
-  if (tab === 'projects') loadProjects();
-  if (tab === 'awards') loadAwards();
-  if (tab === 'alerts') loadAlerts();
-  if (tab === 'analytics') loadAnalytics();
+  setTimeout(() => {
+    if (tab === 'tenders') loadTenders();
+    if (tab === 'contractors') loadContractors();
+    if (tab === 'projects') loadProjects();
+    if (tab === 'awards') loadAwards();
+    if (tab === 'alerts') loadAlerts();
+    if (tab === 'analytics') loadAnalytics();
+  }, 50);
 }
 
 function esc(s) { if (s == null) return ''; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
