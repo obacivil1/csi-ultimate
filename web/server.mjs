@@ -17,6 +17,8 @@ import { alertsRouter } from './routes/alerts.mjs';
 import { startScheduler } from './scheduler.mjs';
 import { preloadWarmup } from './cache.mjs';
 
+import https from 'https';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
 
@@ -59,15 +61,21 @@ app.use('/api/alerts', alertsRouter);
 
 // Weather proxy (avoids CORS on client side)
 app.get('/api/weather', async (req, res) => {
-  try {
-    const lat = req.query.lat || 24.7136;
-    const lon = req.query.lon || 46.6753;
-    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
-    const data = await r.json();
-    res.json(data.current_weather || { temperature: '--', weathercode: -1 });
-  } catch(e) {
-    res.json({ temperature: '--', weathercode: -1 });
-  }
+  const lat = req.query.lat || 24.7136;
+  const lon = req.query.lon || 46.6753;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`;
+  https.get(url, (r) => {
+    let body = '';
+    r.on('data', c => body += c);
+    r.on('end', () => {
+      try {
+        const data = JSON.parse(body);
+        res.json(data.current_weather || { temperature: '--', weathercode: -1 });
+      } catch(e) {
+        res.json({ temperature: '--', weathercode: -1 });
+      }
+    });
+  }).on('error', () => res.json({ temperature: '--', weathercode: -1 }));
 });
 
 // Health check
