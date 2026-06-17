@@ -83,6 +83,10 @@
 <!-- Header -->
 <div class="landing-header">
   <div class="badge">🇸🇦 بيانات حكومية رسمية — محدثة يومياً</div>
+  <div class="header-widgets">
+    <span class="hw-clock" id="liveClock">--:--:--</span>
+    <span class="hw-weather" id="liveWeather">🌡️ --°C</span>
+  </div>
   <h1>🏗️ منصة المنافسات والمقاولين السعودية</h1>
   <p class="subtitle">Saudi Tenders, Contractors & Projects Database 2026</p>
   <p style="font-size:1.1em;max-width:650px;margin:15px auto 0;opacity:0.85;">
@@ -279,6 +283,32 @@ const API = {
     return r.json();
   }
 };
+
+// ── Live Clock (Riyadh UTC+3) ──
+(function() {
+  function tick() {
+    const now = new Date();
+    const opts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Asia/Riyadh' };
+    document.getElementById('liveClock').textContent = new Intl.DateTimeFormat('ar-SA', opts).format(now);
+  }
+  tick();
+  setInterval(tick, 1000);
+})();
+
+// ── Riyadh Weather ──
+(async function() {
+  const el = document.getElementById('liveWeather');
+  try {
+    const r = await fetch('https://wttr.in/Riyadh?format=j1');
+    const data = await r.json();
+    const cc = data.current_condition[0];
+    const temp = cc.temp_C;
+    const desc = cc.weatherDesc[0].value;
+    el.textContent = `🌤️ ${temp}°C · ${desc}`;
+  } catch(e) {
+    el.textContent = '🌤️ --°C';
+  }
+})();
 
 // ── Toast ──
 function showToast(msg, type = 'info') {
