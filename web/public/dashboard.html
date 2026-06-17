@@ -284,6 +284,27 @@
       </div>
     </div>
 
+    <!-- Panel: Admin (hidden, shown via JS for admin) -->
+    <div class="dash-panel" id="panelAdmin">
+      <div style="background:var(--bg-card);border-radius:12px;padding:20px;box-shadow:0 2px 8px var(--shadow);">
+        <h3 style="margin-bottom:15px;color:var(--accent-hover);">👑 لوحة الأدمن</h3>
+        <div style="overflow-x:auto;">
+          <table class="data-table" style="width:100%;font-size:0.85em;">
+            <thead>
+              <tr>
+                <th>الاسم</th>
+                <th>البريد</th>
+                <th>الشركة</th>
+                <th>الباقة</th>
+                <th>التحكم</th>
+              </tr>
+            </thead>
+            <tbody id="adminUsersBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -416,6 +437,7 @@ function switchTab(tab, el) {
     if (tab === 'awards') loadAwards();
     if (tab === 'alerts') loadAlerts();
     if (tab === 'analytics') loadAnalytics();
+    if (tab === 'admin') loadAdmin();
   }, 50);
 }
 
@@ -463,6 +485,21 @@ async function checkAuth() {
     document.getElementById('upgradeBtn').style.display = 'block';
   } else {
     document.getElementById('upgradeBtn').style.display = 'none';
+  }
+
+  // Admin panel
+  const isAdminUser = u.email === 'obacivil@gmail.com';
+  if (isAdminUser) {
+    const tabsEl = document.querySelector('.dash-tabs .container');
+    const adminTab = document.createElement('div');
+    adminTab.className = 'dash-tab';
+    adminTab.id = 'tabAdmin';
+    adminTab.textContent = '👑 أدمن';
+    adminTab.onclick = function() { switchTab('admin', this); };
+    tabsEl.appendChild(adminTab);
+    document.getElementById('panelAdmin').classList.remove('active');
+  } else {
+    document.getElementById('panelAdmin').style.display = 'none';
   }
 
   // Load initial data
@@ -950,6 +987,41 @@ async function loadAnalytics() {
     });
   } finally {
     analyticsLoading = false;
+  }
+}
+
+// ── Admin Panel ──
+async function loadAdmin() {
+  const tbody = document.getElementById('adminUsersBody');
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">جاري التحميل...</td></tr>';
+  try {
+    const users = await API.get('/api/admin/users');
+    if (users.error) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--danger);">⚠️ ' + users.error + '</td></tr>'; return; }
+    tbody.innerHTML = users.map(u => {
+      const planNames = { trial: 'تجربة', basic: 'أساسية', professional: 'احترافية', enterprise: 'شاملة', expired: 'منتهية' };
+      return '<tr>' +
+        '<td>' + esc(u.name) + '</td>' +
+        '<td>' + esc(u.email) + '</td>' +
+        '<td>' + esc(u.company || '—') + '</td>' +
+        '<td><span class="sub-badge' + (u.subscription === 'expired' ? ' expired' : u.subscription === 'trial' ? ' trial' : '') + '">' + (planNames[u.subscription] || u.subscription) + '</span></td>' +
+        '<td><select onchange="setPlan(\'' + u.id + '\', this)" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);font-family:inherit;font-size:0.85em;">' +
+          ['trial','basic','professional','enterprise','expired'].map(p =>
+            '<option value="' + p + '"' + (p === u.subscription ? ' selected' : '') + '>' + (planNames[p] || p) + '</option>'
+          ).join('') +
+        '</select></td>' +
+        '</tr>';
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--danger);">⚠️ فشل التحميل</td></tr>';
+  }
+}
+
+async function setPlan(userId, sel) {
+  try {
+    await API.post('/api/admin/users/' + userId + '/plan', { plan: sel.value });
+    showToast('✅ تم تغيير الباقة', 'success');
+  } catch(e) {
+    showToast('❌ ' + e.message, 'error');
   }
 }
 

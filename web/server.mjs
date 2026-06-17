@@ -15,6 +15,7 @@ import { awardsRouter } from './routes/awards.mjs';
 import { projectsRouter } from './routes/projects.mjs';
 import { exportRouter } from './routes/export.mjs';
 import { alertsRouter } from './routes/alerts.mjs';
+import { adminRouter } from './routes/admin.mjs';
 import { startScheduler } from './scheduler.mjs';
 import { preloadWarmup } from './cache.mjs';
 
@@ -56,6 +57,7 @@ app.use('/api/awards', awardsRouter);
 app.use('/api/projects', projectsRouter);
 app.use('/api/export', exportRouter);
 app.use('/api/alerts', alertsRouter);
+app.use('/api/admin', adminRouter);
 
 // Cached weather (refreshed every 10 min)
 let cachedWeather = { temperature: '--', desc: '' };
