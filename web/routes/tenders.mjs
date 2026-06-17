@@ -75,7 +75,7 @@ tendersRouter.get('/', (req, res) => {
 
   // Pagination
   let total = filtered.length;
-  const limits = getPlanLimits(req.user?.subscription || 'trial');
+  const limits = getPlanLimits(req.user?.subscription || 'trial', req.user?.email);
   if (limits.maxTenders > 0 && total > limits.maxTenders) {
     total = limits.maxTenders;
     filtered = filtered.slice(0, total);

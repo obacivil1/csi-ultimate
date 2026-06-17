@@ -125,7 +125,8 @@
         </select>
         <input type="date" id="filterDateFrom" onchange="tenderPage=1;loadTenders()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;">
         <input type="date" id="filterDateTo" onchange="tenderPage=1;loadTenders()" style="padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:0.85em;">
-        <button onclick="exportTenders()" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 Excel</button>
+        <button onclick="exportTenders('csv')" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 CSV</button>
+        <button onclick="exportTenders('pdf')" style="padding:8px 16px;background:#DC3545;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📄 PDF</button>
       </div>
       <table class="data-table">
           <thead><tr>
@@ -155,7 +156,8 @@
         <label style="display:flex;align-items:center;gap:5px;font-size:0.9em;color:var(--text-secondary);">
           <input type="checkbox" id="filterHasEmail" onchange="contractorPage=1;loadContractors()"> بإيميل فقط
         </label>
-        <button onclick="exportContractors()" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 Excel</button>
+        <button onclick="exportContractors('csv')" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 CSV</button>
+        <button onclick="exportContractors('pdf')" style="padding:8px 16px;background:#DC3545;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📄 PDF</button>
       </div>
       <table class="data-table">
           <thead><tr>
@@ -187,7 +189,8 @@
           <option value="yes">مع مقاول</option>
           <option value="no">بدون مقاول</option>
         </select>
-        <button onclick="exportProjects()" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 Excel</button>
+        <button onclick="exportProjects('csv')" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 CSV</button>
+        <button onclick="exportProjects('pdf')" style="padding:8px 16px;background:#DC3545;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📄 PDF</button>
       </div>
       <table class="data-table">
           <thead><tr>
@@ -215,7 +218,8 @@
           <option value="50000">50,000 - 100,000</option>
           <option value="100000">أكثر من 100,000</option>
         </select>
-        <button onclick="exportAwards()" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 Excel</button>
+        <button onclick="exportAwards('csv')" style="padding:8px 16px;background:var(--success);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📥 CSV</button>
+        <button onclick="exportAwards('pdf')" style="padding:8px 16px;background:#DC3545;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">📄 PDF</button>
       </div>
       <table class="data-table">
           <thead><tr>
@@ -231,6 +235,10 @@
     <!-- Panel: Alerts -->
     <div class="dash-panel" id="panelAlerts">
       <h3 style="color:#1F3864;margin-bottom:15px;">🔔 منافسات تنتهي خلال 7 أيام</h3>
+      <div id="emailAlertSection" style="display:none;margin-bottom:15px;padding:12px;background:#E8F5E9;border-radius:8px;text-align:center;">
+        <span id="emailAlertStatus"></span>
+        <button id="sendEmailAlertBtn" onclick="sendEmailAlert()" style="padding:8px 16px;background:#1F3864;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;margin-right:10px;">📧 أرسل التنبيهات للإيميل</button>
+      </div>
       <table class="data-table">
           <thead><tr>
             <th>اسم المنافسة</th><th>الجهة</th><th>النشاط</th><th>آخر موعد</th><th>الأيام المتبقية</th>
@@ -268,12 +276,12 @@
         <div class="price-tag">500 <small>ريال/شهر</small></div>
         <div style="font-size:0.75em;color:var(--text-muted);margin:-5px 0 5px;">السنوي: 4,999 ريال/سنة</div>
         <ul class="features">
-          <li>البحث في المنافسات الحكومية</li>
-          <li class="limited">عرض 15 منافسة يومياً فقط</li>
-          <li class="limited">تصدير Excel محدود (50 صف)</li>
-          <li>فلتر حسب النشاط والجهة</li>
-          <li class="limited">دليل المقاولين غير متاح</li>
-          <li class="limited">لا يوجد فلتر تشييد</li>
+          <li class="limited">360 منافسة</li>
+          <li class="limited">500 مقاول</li>
+          <li class="limited">50 مشروع</li>
+          <li class="limited">50 ترسية</li>
+          <li class="limited">تصدير CSV (50 صف)</li>
+          <li>فلتر حسب النشاط والجهة والنوع</li>
           <li>دعم عبر البريد الإلكتروني</li>
         </ul>
       </div>
@@ -283,13 +291,15 @@
         <div class="price-tag">1,199 <small>ريال/شهر</small></div>
         <div style="font-size:0.75em;color:var(--success);font-weight:700;margin:-5px 0 5px;">🔥 السنوي: 9,999 ريال (وفر 4,389)</div>
         <ul class="features">
-          <li>جميع المنافسات (غير محدود)</li>
+          <li>1,500 منافسة</li>
+          <li>3,000 مقاول</li>
+          <li>300 مشروع</li>
+          <li>300 ترسية</li>
+          <li>تصدير CSV + PDF (1,000 صف)</li>
+          <li>تنبيهات إيميل للمنافسات المنتهية قريباً</li>
           <li>فلتر التشييد والبناء</li>
           <li>فلتر الأيام المتبقية</li>
-          <li>دليل المقاولين كامل (13,000+)</li>
           <li>فلتر المقاولين بالمنطقة والمدينة</li>
-          <li>تصدير Excel حتى 1,000 صف</li>
-          <li>تنبيهات المنافسات المنتهية</li>
           <li>دعم عبر البريد الإلكتروني</li>
         </ul>
       </div>
@@ -297,14 +307,14 @@
         <h4 style="color:#1F3864;">الباقة الشاملة</h4>
         <div class="price-tag">2,999 <small>ريال/شهر</small></div>
         <ul class="features">
-          <li>جميع مزايا الاحترافية</li>
-          <li>تصدير Excel + PDF غير محدود</li>
-          <li>API مباشرة للتكامل مع أنظمتك</li>
-          <li>تحديث يومي آلي للبيانات</li>
-          <li>إضافة 5 مستخدمين فرعيين لنفس الحساب</li>
+          <li>جميع المزايا (غير محدود)</li>
+          <li>تصدير CSV + PDF غير محدود</li>
+          <li>API مباشرة للتكامل</li>
+          <li>تحديث يومي آلي</li>
+          <li>إضافة 5 مستخدمين فرعيين</li>
           <li>استخراج جوالات وإيميلات المقاولين</li>
+          <li>تنبيهات إيميل للمنافسات المنتهية</li>
           <li>مدير حساب مخصص</li>
-          <li>تدريب الفريق عن بُعد</li>
         </ul>
       </div>
     </div>
@@ -728,9 +738,9 @@ async function loadAwards() {
 }
 
 // ── Export ──
-async function exportTenders() {
+async function exportTenders(format) {
   try {
-    const body = {};
+    const body = { format };
     const search = document.getElementById('tenderSearch')?.value;
     if (search) body.search = search;
     const activity = document.getElementById('filterActivity')?.value;
@@ -746,14 +756,14 @@ async function exportTenders() {
     const blob = await API.download('/api/export/tenders', body);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'tenders.csv'; a.click();
+    a.href = url; a.download = `tenders.${format}`; a.click();
     URL.revokeObjectURL(url);
     showToast('✅ جاري التصدير...', 'info');
   } catch(e) { showToast('❌ ' + e.message, 'error'); }
 }
-async function exportContractors() {
+async function exportContractors(format) {
   try {
-    const body = {};
+    const body = { format };
     const search = document.getElementById('contractorSearch')?.value;
     if (search) body.search = search;
     const region = document.getElementById('filterRegion')?.value;
@@ -765,14 +775,14 @@ async function exportContractors() {
     const blob = await API.download('/api/export/contractors', body);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'contractors.csv'; a.click();
+    a.href = url; a.download = `contractors.${format}`; a.click();
     URL.revokeObjectURL(url);
     showToast('✅ تم التصدير', 'success');
   } catch(e) { showToast('❌ ' + e.message, 'error'); }
 }
-async function exportProjects() {
+async function exportProjects(format) {
   try {
-    const body = {};
+    const body = { format };
     const search = document.getElementById('projectSearch')?.value;
     if (search) body.search = search;
     const sector = document.getElementById('filterSector')?.value;
@@ -782,20 +792,20 @@ async function exportProjects() {
     const blob = await API.download('/api/export/projects', body);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'projects.csv'; a.click();
+    a.href = url; a.download = `projects.${format}`; a.click();
     URL.revokeObjectURL(url);
     showToast('✅ تم التصدير', 'success');
   } catch(e) { showToast('❌ ' + e.message, 'error'); }
 }
-async function exportAwards() {
+async function exportAwards(format) {
   try {
-    const body = {};
+    const body = { format };
     const search = document.getElementById('awardSearch')?.value;
     if (search) body.search = search;
     const blob = await API.download('/api/export/awards', body);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'awards.csv'; a.click();
+    a.href = url; a.download = `awards.${format}`; a.click();
     URL.revokeObjectURL(url);
     showToast('✅ تم التصدير', 'success');
   } catch(e) { showToast('❌ ' + e.message, 'error'); }
@@ -821,7 +831,38 @@ async function loadAlerts() {
     } else {
       tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;">مافي منافسات تنتهي قريباً</td></tr>';
     }
+    const cfg = await API.get('/api/alerts/config');
+    const section = document.getElementById('emailAlertSection');
+    const status = document.getElementById('emailAlertStatus');
+    if (cfg.canSendEmail) {
+      section.style.display = 'block';
+      if (cfg.emailConfigured) {
+        status.textContent = '📬 البريد الإلكتروني جاهز لإرسال التنبيهات';
+        document.getElementById('sendEmailAlertBtn').style.display = 'inline-block';
+      } else {
+        status.textContent = '⚠️ لم يتم إعداد البريد الإلكتروني بعد (يرجى ضبط SMTP)';
+        document.getElementById('sendEmailAlertBtn').style.display = 'none';
+      }
+    } else {
+      section.style.display = 'block';
+      status.innerHTML = '🔔 التنبيهات الإيميل متاحة للباقة الاحترافية والشاملة. <a href="#" onclick="showUpgradeModal();return false;" style="color:#1F3864;font-weight:700;">اشترك الآن</a>';
+      document.getElementById('sendEmailAlertBtn').style.display = 'none';
+    }
   } catch(e) {}
+}
+async function sendEmailAlert() {
+  try {
+    const btn = document.getElementById('sendEmailAlertBtn');
+    btn.disabled = true; btn.textContent = 'جاري الإرسال...';
+    const res = await API.post('/api/alerts/send-expiry', {});
+    if (res.error) throw new Error(res.error);
+    showToast(`✅ ${res.message}`, 'success');
+  } catch(e) {
+    showToast('❌ ' + e.message, 'error');
+  } finally {
+    const btn = document.getElementById('sendEmailAlertBtn');
+    btn.disabled = false; btn.textContent = '📧 أرسل التنبيهات للإيميل';
+  }
 }
 
 // ── Handle Logout ──

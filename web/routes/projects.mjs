@@ -38,7 +38,7 @@ projectsRouter.get('/', authenticate, (req, res) => {
   if (hasContractor === 'no') filtered = filtered.filter(p => !p.contractor);
 
   // Plan limits
-  const limits = getPlanLimits(req.user?.subscription || 'trial');
+  const limits = getPlanLimits(req.user?.subscription || 'trial', req.user?.email);
   let total = filtered.length;
   if (limits.maxProjects && total > limits.maxProjects) {
     total = limits.maxProjects;
