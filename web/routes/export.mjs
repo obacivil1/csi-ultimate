@@ -1,9 +1,6 @@
 import { Router } from 'express';
 import path from 'path';
-import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { PDFDocument, rgb } from 'pdf-lib';
-import * as fontkit from 'fontkit';
 import { authenticate, getPlanLimits } from '../middleware/auth.mjs';
 import { getJSON } from '../cache.mjs';
 
@@ -14,7 +11,6 @@ const TENDERS_FILE = path.join(__dirname, '..', '..', 'data', 'etimad_all_tender
 const CONTRACTORS_FILE = path.join(__dirname, '..', '..', 'data', 'muqawil_all_regions.json');
 const PROJECTS_FILE = path.join(__dirname, '..', '..', 'data', 'projects_database.json');
 const AWARDS_FILE = path.join(__dirname, '..', '..', 'data', 'etimad_sample_awards.json');
-const AMIRI_FONT = path.join(__dirname, '..', 'fonts', 'Amiri-Regular.ttf');
 
 function loadJSON(file, cacheKey) {
   return getJSON(cacheKey, file);
@@ -38,87 +34,6 @@ function sendCSV(res, data, filename) {
   res.send(buf);
 }
 
-function loadAmiriFont() {
-  return fs.readFileSync(AMIRI_FONT);
-}
-
-async function sendPDF(res, data, filename, headers) {
-  if (!data.length) return res.status(400).json({ error: 'لا توجد بيانات للتصدير' });
-  try {
-    const doc = await PDFDocument.create();
-    doc.registerFontkit(fontkit);
-    const fontBytes = loadAmiriFont();
-    const font = await doc.embedFont(fontBytes);
-
-    const page = doc.addPage([595, 842]);
-    const { width, height } = page.getSize();
-    const margin = 30;
-    const usableWidth = width - margin * 2;
-    const headerHeight = 40;
-    const rowHeight = 28;
-    const fontSize = 9;
-
-    const colCount = headers.length;
-    const colWidth = usableWidth / colCount;
-
-    function drawHeader(pg, y) {
-      pg.drawRectangle({
-        x: margin, y: y - headerHeight, width: usableWidth, height: headerHeight,
-        color: rgb(0.12, 0.22, 0.39)
-      });
-      let x = margin;
-      for (let i = 0; i < headers.length; i++) {
-        pg.drawText(headers[i], {
-          x: x + 4, y: y - 14, size: fontSize, font, color: rgb(1, 1, 1)
-        });
-        x += colWidth;
-      }
-    }
-
-    function drawRow(row, y) {
-      let x = margin;
-      for (let i = 0; i < headers.length; i++) {
-        const h = headers[i];
-        const val = row[h] != null ? String(row[h]) : '';
-        currentPage.drawText(val, {
-          x: x + 4, y: y - 14, size: fontSize - 1, font, color: rgb(0.2, 0.2, 0.2)
-        });
-        x += colWidth;
-      }
-    }
-
-    let currentPage = page;
-    let y = height - margin;
-    drawHeader(currentPage, y);
-    y -= headerHeight;
-
-    for (let i = 0; i < data.length; i++) {
-      if (y - rowHeight < margin) {
-        currentPage = doc.addPage([595, 842]);
-        y = height - margin;
-        drawHeader(currentPage, y);
-        y -= headerHeight;
-      }
-      if (i % 2 === 0) {
-        currentPage.drawRectangle({
-          x: margin, y: y - rowHeight, width: usableWidth, height: rowHeight,
-          color: rgb(0.95, 0.95, 0.95)
-        });
-      }
-      drawRow(data[i], y);
-      y -= rowHeight;
-    }
-
-    const pdfBytes = await doc.save();
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="export.pdf"; filename*=UTF-8''${encodeURIComponent(filename)}.pdf`);
-    res.send(Buffer.from(pdfBytes));
-  } catch (e) {
-    console.error('PDF error:', e);
-    res.status(500).json({ error: 'خطأ في تصدير PDF: ' + e.message });
-  }
-}
-
 function handleExport(req, res, file, cacheKey, filters, mapFn, filename) {
   try {
     const records = loadJSON(file, cacheKey);
@@ -129,11 +44,6 @@ function handleExport(req, res, file, cacheKey, filters, mapFn, filename) {
     let exportLimit = limits.exportRows;
     if (exportLimit < 0) exportLimit = filtered.length;
     const data = filtered.slice(0, exportLimit).map(mapFn);
-    const format = req.body.format || 'csv';
-    if (format === 'pdf') {
-      const pdfHeaders = Object.keys(data[0] || {});
-      return sendPDF(res, data, filename, pdfHeaders);
-    }
     sendCSV(res, data, filename);
   } catch (e) {
     console.error('Export error:', e);
