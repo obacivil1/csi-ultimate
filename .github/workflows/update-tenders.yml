@@ -1,0 +1,33 @@
+name: تحديث المنافسات
+
+on:
+  schedule:
+    - cron: '0 6,18 * * *'
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Playwright
+        run: |
+          npm install playwright
+          npx playwright install chromium
+
+      - name: تشغيل سكريبت التحديث
+        run: node scripts/lead-gen/etimad-tenders.mjs
+        env:
+          NODE_OPTIONS: '--tls-min-v1.0'
+
+      - name: رفع التحديثات
+        run: |
+          git config user.name 'CSI Bot'
+          git config user.email 'bot@csi-ultimate.com'
+          git add data/etimad_all_tenders.json data/etimad_progress.json
+          git diff --staged --quiet || (git commit -m 'تحديث تلقائي للمنافسات' && git push)
