@@ -6,13 +6,16 @@ const BASE = 'https://tenders.etimad.sa';
 const DATA_FILE = resolve('data/etimad_all_tenders.json');
 
 async function main() {
-  console.log('Etimad Quick Update — fetching newest pages only\n');
+  console.log('Etimad Quick Update\n');
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--single-process']
+  });
   const page = await browser.newPage();
 
   console.log('Loading main page...');
-  await page.goto(BASE + '/Tender/AllTendersForVisitor', { waitUntil: 'load', timeout: 60000 });
+  await page.goto(BASE + '/Tender/AllTendersForVisitor', { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.waitForTimeout(3000);
   console.log('Session established\n');
 
@@ -24,10 +27,12 @@ async function main() {
         return await r.text();
       }, url);
       return JSON.parse(resp);
-    } catch { return null; }
+    } catch (e) {
+      console.error(`  Page ${pageNum} fetch error: ${e.message}`);
+      return null;
+    }
   }
 
-  // Load existing data
   let allTenders = [];
   const existingIds = new Set();
   if (fs.existsSync(DATA_FILE)) {
@@ -36,10 +41,10 @@ async function main() {
     console.log(`Loaded existing: ${allTenders.length} tenders`);
   }
 
-  // Fetch first 3 pages (newest 72 tenders)
   let newCount = 0;
   for (let p = 1; p <= 3; p++) {
     await new Promise(r => setTimeout(r, 3000));
+    console.log(`Fetching page ${p}...`);
     const result = await fetchPage(p);
     if (result?.data) {
       for (const t of result.data) {
@@ -51,7 +56,7 @@ async function main() {
       }
       console.log(`  Page ${p}: ${result.data.length} items, ${newCount} new so far`);
     } else {
-      console.log(`  Page ${p}: FAILED`);
+      console.log(`  Page ${p}: FAILED - no data returned`);
     }
   }
 
@@ -66,4 +71,7 @@ async function main() {
   console.log('Done!');
 }
 
-main().catch(e => { console.error(e); process.exit(1); });
+main().catch(e => {
+  console.error('FATAL:', e.message, e.stack);
+  process.exit(1);
+});
