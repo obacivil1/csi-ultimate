@@ -18,7 +18,7 @@ jobs:
       - name: Install Playwright
         run: |
           npm install playwright
-          npx playwright install chromium
+          npx playwright install --with-deps chromium
 
       - name: تشغيل التحديث السريع
         run: node scripts/lead-gen/etimad-update.mjs

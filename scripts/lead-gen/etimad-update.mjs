@@ -12,8 +12,8 @@ async function main() {
   const page = await browser.newPage();
 
   console.log('Loading main page...');
-  await page.goto(BASE + '/Tender/AllTendersForVisitor', { waitUntil: 'networkidle', timeout: 30000 });
-  await page.waitForTimeout(2000);
+  await page.goto(BASE + '/Tender/AllTendersForVisitor', { waitUntil: 'load', timeout: 60000 });
+  await page.waitForTimeout(3000);
   console.log('Session established\n');
 
   async function fetchPage(pageNum) {
