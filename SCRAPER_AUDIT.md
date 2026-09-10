@@ -258,7 +258,7 @@ Progress applied in parallel after the audit. Verified via `npm run test` → **
 | 11 | Proxy rotation | NOT STARTED | `CSI_PROXY` exists; pool w/ health checks pending |
 | 12 | Bayt.com fix | NOT STARTED | CF challenge via FlareSolverr v2 evaluation |
 | 13 | New sites | NOT STARTED | — |
-| 14 | Monitoring dashboard | NOT STARTED | — |
+| 14 | Monitoring dashboard | **REDESIGNED → site profiles (2026-09-10)** | Instead of a generic metric dashboard the user asked for scraper *visibility*: how each site is entered, its discovery/extraction config, last live run, trust and maturity. Delivered as `core/site-profile.mjs` + `GET /api/profile` (+ `/:hostname`) + UI at `/visibility.html` |
 | 15 | API versioning | NOT STARTED | — |
 
 ### Regression-fix bonus findings (found via new tests)
@@ -297,4 +297,5 @@ Additional hardening during the same pass:
 1. ~~Consolidate extraction~~ **DONE** via `core/extractor.mjs` (single gateway, tests green).
 2. ~~Full route merge of `engine/server.mjs` into `web/server.mjs`~~ **DONE** (2026-09-10): single-source `web/routes/engine.mjs` mounted on `web/server.mjs`; stripped dup `/api/health` + removed permissive `Access-Control-Allow-Origin:*` on the SSE stream; verified live on both servers.
 3. ~~Playwright per-site adapter integration suite + GitHub Actions CI~~ **DONE** (2026-09-10): `tests/site-configs.test.mjs` (static config validation ×6 sites) + `tests/site-extraction.test.mjs` (jsdom per-site extraction against realistic fixtures, via the real `config/sites` + gateway; uncovered 3 real canonical gaps — see Regression-fix). Optional live Playwright smoke: `node scripts/smoke-live-sites.mjs [hostname] [query]` (opt-in, wired **out** of default CI to avoid flaky/ToS runs). CI: `.github/workflows/ci.yml` — test matrix Node 20/22 + syntax check of `core/`, `web/`, `config/`, `run.mjs` on push/PR.
-4. Job queue (BullMQ/Redis), proxy pool, monitoring dashboard, API versioning (Phase 3).
+4. ~~Monitoring dashboard~~ **REDESIGNED as site-visibility profiles (2026-09-10)** after user pushback (a generic metric dashboard is useless to the operator): per-site maturity cards — entry strategy from `state/strategy_ledger.json` (A-Standard/B-Proxy/C-HeadedHuman + success rate), extraction-config coverage, last live run (records/files/freshness), latest report quality + issues, trust score from `validation-engine`, linked insights. Backend `core/site-profile.mjs` (unit-tested `tests/site-profile.test.mjs`), API `GET /api/profile` + `/api/profile/:hostname`, UI `/visibility.html`. Live-verified on the actual repo state (6 sites, 5 with runs).
+5. Job queue (BullMQ/Redis), proxy pool, API versioning (Phase 3).

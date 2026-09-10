@@ -20,6 +20,7 @@ import { alertsRouter } from './routes/alerts.mjs';
 import { adminRouter } from './routes/admin.mjs';
 import { contactRouter } from './routes/contact.mjs';
 import { engineRouter, ENGINE_PUBLIC_DIR } from './routes/engine.mjs';
+import { siteProfileRouter } from './routes/site-profile.mjs';
 import { startScheduler } from './scheduler.mjs';
 import { preloadWarmup } from './cache.mjs';
 
@@ -103,6 +104,7 @@ app.use('/api/export', exportRouter);
 app.use('/api/alerts', alertsRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/contact', contactRouter);
+app.use('/api', siteProfileRouter);
 app.use('/api', engineRouter);
 app.use('/engine', express.static(ENGINE_PUBLIC_DIR));
 
