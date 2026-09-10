@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import { enqueueJob, getJob, listQueue, cancelJob } from "../../core/job-manager.mjs";
 import { classifyText } from "../../core/topic-classifier.mjs";
 import { crawlUrls, summarizeDocuments } from "../../core/general-crawl.mjs";
+import { runMission } from "../../core/general-mission.mjs";
 import { logger } from "../../core/logger.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -85,6 +86,56 @@ generalRouter.post("/jobs/:id/cancel", (req, res) => {
     writeJSON(STATE_FILE, jobs);
   }
   res.json({ ok: true });
+});
+
+generalRouter.post("/mission", (req, res) => {
+  const { urls = [], topics = [], title, description, opts = {} } = req.body || {};
+  if (!Array.isArray(urls) || urls.length === 0) {
+    return res.status(400).json({ error: "urls مطلوب (مصفوفة روابط واحدة على الأقل)" });
+  }
+  const depth = Math.max(0, Math.min(3, parseInt(opts.depth) || 0));
+  const maxPages = Math.max(1, Math.min(100, parseInt(opts.maxPages) || 20));
+  const fetchMode = opts.fetchMode === "browser" ? "browser" : "fetch";
+
+  const hostname = (() => { try { return new URL(urls[0]).hostname; } catch { return "general"; } })();
+  const enq = enqueueJob({
+    key: `mission:${hostname}:${depth}:${maxPages}:${urls.join("|")}:${(topics || []).join(",")}`,
+    hostname,
+    meta: { kind: "mission", count: urls.length, depth, maxPages, topics: topics || [] },
+    task: async (ctx) => {
+      ctx.update({ progress: 5 });
+      const result = await runMission({
+        urls, topics, title: title || `رحلة استقصاء ${hostname}`, description,
+        fetchMode, depth, maxPages, outputDir: path.resolve(__dirname, "../../output/reports/general"),
+      });
+      if (ctx.isCancelled()) return;
+      persistJob({ id: enq.jobId, status: "completed", output: result, endedAt: new Date().toISOString() });
+    },
+  });
+
+  if (!enq.deduped) {
+    persistJob({
+      id: enq.jobId, status: "queued", kind: "mission", hostname, depth, maxPages,
+      count: urls.length, topics: topics || [], enqueuedAt: new Date().toISOString(), output: null,
+    });
+  }
+
+  res.status(202).json({
+    jobId: enq.jobId, status: enq.status, deduped: enq.deduped, position: enq.position, hostname,
+  });
+});
+
+generalRouter.get("/jobs/:id/export", (req, res) => {
+  const job = loadJobs().find((j) => j.id === req.params.id);
+  if (!job || !job.output?.files) return res.status(404).json({ error: "Not found" });
+  const format = (req.query.format || "html").replace(/[^a-z].*/i, "");
+  const fileMap = { html: job.output.files.html, deck: job.output.files.deck, csv: job.output.files.csv, xlsx: job.output.files.xlsx, json: job.output.files.json };
+  const filePath = fileMap[format];
+  if (!filePath || !fs.existsSync(filePath)) return res.status(404).json({ error: "File not found" });
+  const mimeMap = { html: "text/html", deck: "text/html", csv: "text/csv", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", json: "application/json" };
+  res.setHeader("Content-Type", mimeMap[format] || "application/octet-stream");
+  res.setHeader("Content-Disposition", `attachment; filename="report_${req.params.id}.${format}"`);
+  res.sendFile(path.resolve(filePath));
 });
 
 generalRouter.post("/classify", (req, res) => {

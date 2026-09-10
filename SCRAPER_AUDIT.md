@@ -241,7 +241,7 @@ The project contains **33+ scraper modules** across 6 directories, targeting **1
 
 ## 10 — Implementation Status (updated 2026-09-11)
 
-Progress applied in parallel after the audit. Verified via `npm run test` → **87/87 tests pass**.
+Progress applied in parallel after the audit. Verified via `npm run test` → **95/95 tests pass**.
 
 | # | Audit Recommendation | Status | Evidence |
 |---|---|---|---|
@@ -260,7 +260,7 @@ Progress applied in parallel after the audit. Verified via `npm run test` → **
 | 13 | New sites | NOT STARTED | — |
 | 14 | Monitoring dashboard | **REDESIGNED → site profiles (2026-09-10)** | Instead of a generic metric dashboard the user asked for scraper *visibility*: how each site is entered, its discovery/extraction config, last live run, trust and maturity. Delivered as `core/site-profile.mjs` + `GET /api/profile` (+ `/:hostname`) + UI at `/visibility.html` |
 | 15 | API versioning | **DONE (2026-09-11)** | `web/routes/v1.mjs` يجمع كل المعالجات تحت `/api/v1/*` (مع `/api/v1/health` وإعادة تطبيق limiters على `/api/v1/auth/` و `/api/v1/payments/`)؛ المسارات القديمة `/api/*` بقيت شغّالة كأسماء بديلة — n8n قديم وجديد كلاهما يعمل. تحقق حي: `/api/v1/health` + `/api/v1/sites` + `/api/v1/profile` + `/api/v1/crawl` |
-| 16 | **وضع الاستقصاء العام (general mode)** | **STARTED (2026-09-11)** | تحويل المحرك الخاص بالليدز لمحرك بحث عام منهجي: (1) `core/topic-classifier.mjs` — تصنيف مواضيع (أعمال/أخبار/رياضة/تقنية/صحة/اقتصاد/وظائف/عقارات/سيارات/تعليم) عبر كلمات مفاتيح مرجّحة، ناتج النسب + التصنيف الغالب؛ (2) `core/general-crawl.mjs` — `parseHtmlDocument` (jsdom) يخرّج وثيقة منظمة (نص/عناوين/روابط داخلية وخارجية/صور/جداول) + `crawlUrls` (وضع fetch حي أو browser عبر anti-detect) + `summarizeDocuments` (توزيع مواضيع + تجميعات)؛ (3) `web/routes/general.mjs` — `/api/v1/general/crawl` (عبر الطابور نفسه) و `/general/jobs` و `/general/classify`. تحقق حي: زحف example.com أكمل وثيقة {title:"Example Domain"} والتصنيف عبر HTTP يعمل (عربي يُشوَّه فقط من PowerShell 5.1 على الإرسال — الكود سليم) |
+| 16 | **وضع الاستقصاء العام (general mode)** | **DONE (2026-09-11)** | تحويل المحرك الخاص بالليدز لمحرك بحث عام منهجي: (1) `core/topic-classifier.mjs` — تصنيف مواضيع (أعمال/أخبار/رياضة/تقنية/صحة/اقتصاد/وظائف/عقارات/سيارات/تعليم) عبر كلمات مفاتيح مرجّحة؛ (2) `core/general-crawl.mjs` — `parseHtmlDocument` (jsdom) يخرّج وثيقة منظمة (نص/عناوين/روابط داخلية وخارجية/صور/جداول) + `crawlUrls` (وضع fetch حي أو browser عبر anti-detect) + `summarizeDocuments`؛ (3) `core/report-factory.mjs` (**المرحلة C: مصنع التقارير**) — أي مجموعة وثائق ⟵ تقرير بصيغ json/csv/xlsx/html/deck (شرائح) مع بطاقات إحصائية وتوزيع مواضيع ومضيفين؛ (4) `core/general-mission.mjs` — رحلة واحدة تلتف: اسحب ⟵ صنّف ⟵ فلترة بالمواضيع ⟵ صدّر؛ (5) API `/api/v1/general/crawl|mission|jobs|classify` + `/jobs/:id/export?format=` (عبر الطابور نفسه) و CLI `scripts/general-mission.mjs --urls --topics --title --out`. تحقق حي: رحلة example.com أنتجت الملفات الخمس وتصدّرت بصيغها الصحيحة؛ CLI رحل لموقع حقيقي في ثوانٍ |
 
 ### Regression-fix bonus findings (found via new tests)
 - `core/db.mjs#query` ignored `params` (passed only limit/offset) — fixed, now interpolates `params` + limit/offset.
