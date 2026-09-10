@@ -21,6 +21,7 @@ import { adminRouter } from './routes/admin.mjs';
 import { contactRouter } from './routes/contact.mjs';
 import { engineRouter, ENGINE_PUBLIC_DIR } from './routes/engine.mjs';
 import { siteProfileRouter } from './routes/site-profile.mjs';
+import { v1Router } from './routes/v1.mjs';
 import { startScheduler } from './scheduler.mjs';
 import { preloadWarmup } from './cache.mjs';
 
@@ -106,6 +107,11 @@ app.use('/api/admin', adminRouter);
 app.use('/api/contact', contactRouter);
 app.use('/api', siteProfileRouter);
 app.use('/api', engineRouter);
+
+// Versioned contract: /api/v1/* — يُركَّب بنفس منطق المعالجات؛ /api/* يبقى كأسماء بديلة قديمة
+app.use('/api/v1/auth/', authLimiter);
+app.use('/api/v1/payments/', paymentLimiter);
+app.use('/api/v1', v1Router);
 app.use('/engine', express.static(ENGINE_PUBLIC_DIR));
 
 // Cached weather (refreshed every 10 min)

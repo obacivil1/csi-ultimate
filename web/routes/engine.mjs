@@ -11,6 +11,7 @@ import { exportAll as canonicalExport } from "../../core/canonical-extractor.mjs
 import { extractAdData as scrapeAd } from "../../core/extractor.mjs"
 import { createPage } from "../../core/anti-detect.mjs"
 import { executeSearch } from "../../core/run.mjs"
+import { enqueueJob, cancelJob, listQueue } from "../../core/job-manager.mjs"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export const engineRouter = Router()
@@ -194,6 +195,32 @@ function getCrawl(id) {
   return getCrawls().find((c) => c.id === id) || null
 }
 
+// عند الإقلاع: أي جوب بقي مفتوحاً (running/queued) بأثرية أقدم من نصف ساعة يعيَّن متوقفاً
+function reconcileStaleJobs() {
+  try {
+    const crawls = getCrawls()
+    const now = Date.now()
+    let changed = false
+    for (const c of crawls) {
+      if (c.status !== "running" && c.status !== "queued") continue
+      const ref = c.startTime || c.enqueuedAt || c.createdAt || null
+      if (!ref || now - new Date(ref).getTime() > 30 * 60 * 1000) {
+        Object.assign(c, { status: "interrupted", endTime: new Date().toISOString(), error: "server restarted mid-job" })
+        changed = true
+      }
+    }
+    if (changed) saveCrawlList(crawls)
+    logger.info(`Reconcile stale jobs: ${crawls.length} total, changed=${changed}`)
+  } catch (e) {
+    logger.warn("Reconcile stale jobs failed: " + e.message)
+  }
+}
+function saveCrawlList(crawls) {
+  writeJSON(path.join(STATE_DIR, "crawls.json"), crawls)
+}
+
+reconcileStaleJobs()
+
 engineRouter.get("/sites", (_req, res) => {
   ensureSites()
   res.json(getSites())
@@ -231,12 +258,22 @@ engineRouter.post("/crawl", async (req, res) => {
     targetCategory = { name: "general", url, selector: "a[href]" }
   }
 
-  const jobId = crypto.randomUUID()
-  const job = { id: jobId, status: "queued", progress: 0, adsScraped: 0, adsFailed: 0, bansDetected: 0, cloudflareDetections: 0, retries: 0, linksFound: 0, startTime: null, endTime: null, error: null, site: targetSite.hostname, category: targetCategory.name, url: targetCategory.url }
-  activeCrawls[jobId] = job
-  saveCrawl(jobId, job)
-  runCrawl(jobId, targetSite, targetCategory)
-  res.json({ jobId })
+  const enq = enqueueJob({
+    key: `${targetSite.hostname}:${targetCategory.name}:${targetCategory.url}`,
+    hostname: targetSite.hostname,
+    meta: { kind: "crawl", url: targetCategory.url },
+    task: async (ctx) => {
+      if (ctx.isCancelled()) return
+      await runCrawl(ctx.jobId, targetSite, targetCategory)
+    },
+  })
+  const jobId = enq.jobId
+  if (!enq.deduped) {
+    const job = { id: jobId, status: "queued", progress: 0, adsScraped: 0, adsFailed: 0, bansDetected: 0, cloudflareDetections: 0, retries: 0, linksFound: 0, startTime: null, endTime: null, error: null, site: targetSite.hostname, category: targetCategory.name, url: targetCategory.url }
+    activeCrawls[jobId] = job
+    saveCrawl(jobId, job)
+  }
+  res.status(202).json({ jobId, status: enq.status, deduped: enq.deduped, position: enq.position })
 })
 
 engineRouter.post("/search", (req, res) => {
@@ -251,64 +288,77 @@ engineRouter.post("/search", (req, res) => {
   const cat = site.categories?.find(c => c.name === categoryName)
   if (!cat) return res.status(404).json({ error: "Category not found: " + categoryName + " for " + siteHostname })
 
-  const jobId = crypto.randomUUID()
-  const job = {
-    id: jobId, status: "queued", progress: 0, adsScraped: 0, adsFailed: 0,
-    bansDetected: 0, cloudflareDetections: 0, retries: 0, linksFound: 0,
-    startTime: null, endTime: null, error: null,
-    site: siteHostname, category: categoryName, url: cat.url,
-    keyword: keyword || "", timePeriod: timePeriod || "2w",
-    searchResults: [], sseClients: [],
-  }
-  activeCrawls[jobId] = job
-  saveCrawl(jobId, job)
-
-  executeSearch(jobId, siteHostname, categoryName, keyword, timePeriod || "2w", (event) => {
-    const j = activeCrawls[jobId]
-    if (!j) return
-    if (event.type === "ad") {
-      j.adsScraped = (event.index || 0)
-      j.searchResults = j.searchResults || []
-      j.searchResults.push(event.data)
+  const runSearch = (jobId) => {
+    executeSearch(jobId, siteHostname, categoryName, keyword, timePeriod || "2w", (event) => {
+      const j = activeCrawls[jobId]
+      if (!j) return
+      if (event.type === "ad") {
+        j.adsScraped = (event.index || 0)
+        j.searchResults = j.searchResults || []
+        j.searchResults.push(event.data)
+        broadcastProgress(j, {
+          type: "ad", index: event.index, url: event.data?.url || event.link || "",
+          title: (event.data?.title || "N/A").substring(0, 40),
+          email: event.data?.email || "N/A",
+          phone: event.data?.phone || "N/A",
+          location: event.data?.location || "",
+          date: event.data?.postedDate || event.data?.extractedAt || "N/A",
+          checked: event.checked, total: event.total,
+        })
+      } else if (event.type === "skip") {
+        j.adsFailed = (j.adsFailed || 0) + 1
+        broadcastProgress(j, {
+          type: "skip", reason: event.reason, url: event.link?.substring(0, 40) || "",
+          checked: event.checked, total: event.total,
+        })
+      }
+    }).then(result => {
+      const j = activeCrawls[jobId]
+      if (!j) return
+      j.status = "completed"
+      j.progress = 100
+      j.endTime = new Date().toISOString()
+      j.linksFound = result.stats?.linksFound || 0
+      j.adsScraped = result.stats?.totalAds || 0
+      saveCrawl(jobId, j)
       broadcastProgress(j, {
-        type: "ad", index: event.index, url: event.data?.url || event.link || "",
-        title: (event.data?.title || "N/A").substring(0, 40),
-        email: event.data?.email || "N/A",
-        phone: event.data?.phone || "N/A",
-        location: event.data?.location || "",
-        date: event.data?.postedDate || event.data?.extractedAt || "N/A",
-        checked: event.checked, total: event.total,
+        type: "completed",
+        totalAds: result.stats?.totalAds || 0,
+        skippedKeyword: result.stats?.skippedKeyword || 0,
+        skippedDate: result.stats?.skippedDate || 0,
+        errors: result.stats?.errors || 0,
+        totalChecked: result.stats?.checked || 0,
+        elapsed: result.elapsed || 0,
       })
-    } else if (event.type === "skip") {
-      j.adsFailed = (j.adsFailed || 0) + 1
-      broadcastProgress(j, {
-        type: "skip", reason: event.reason, url: event.link?.substring(0, 40) || "",
-        checked: event.checked, total: event.total,
-      })
-    }
-  }).then(result => {
-    const j = activeCrawls[jobId]
-    if (!j) return
-    j.status = "completed"
-    j.progress = 100
-    j.endTime = new Date().toISOString()
-    j.linksFound = result.stats?.linksFound || 0
-    j.adsScraped = result.stats?.totalAds || 0
-    saveCrawl(jobId, j)
-    broadcastProgress(j, {
-      type: "completed",
-      totalAds: result.stats?.totalAds || 0,
-      skippedKeyword: result.stats?.skippedKeyword || 0,
-      skippedDate: result.stats?.skippedDate || 0,
-      errors: result.stats?.errors || 0,
-      totalChecked: result.stats?.checked || 0,
-      elapsed: result.elapsed || 0,
+    }).catch(err => {
+      const j = activeCrawls[jobId]
+      if (j) { j.status = "failed"; j.error = err.message; j.endTime = new Date().toISOString(); saveCrawl(jobId, j); broadcastProgress(j, { type: "failed", error: err.message }) }
+      logger.error("executeSearch fatal: " + err.message)
     })
-  }).catch(err => {
-    const j = activeCrawls[jobId]
-    if (j) { j.status = "failed"; j.error = err.message; j.endTime = new Date().toISOString(); saveCrawl(jobId, j); broadcastProgress(j, { type: "failed", error: err.message }) }
-    logger.error("executeSearch fatal: " + err.message)
+  }
+
+  const enq = enqueueJob({
+    key: `${siteHostname}:search:${categoryName}:${keyword || ""}`,
+    hostname: siteHostname,
+    meta: { kind: "search", site: siteHostname, category: categoryName, keyword: keyword || "" },
+    task: async (ctx) => {
+      if (ctx.isCancelled()) return
+      runSearch(ctx.jobId)
+    },
   })
+  const jobId = enq.jobId
+  if (!enq.deduped) {
+    const job = {
+      id: jobId, status: "queued", progress: 0, adsScraped: 0, adsFailed: 0,
+      bansDetected: 0, cloudflareDetections: 0, retries: 0, linksFound: 0,
+      startTime: null, endTime: null, error: null,
+      site: siteHostname, category: categoryName, url: cat.url,
+      keyword: keyword || "", timePeriod: timePeriod || "2w",
+      searchResults: [], sseClients: [],
+    }
+    activeCrawls[jobId] = job
+    saveCrawl(jobId, job)
+  }
 
   res.json({
     jobId,
@@ -316,7 +366,9 @@ engineRouter.post("/search", (req, res) => {
     category: categoryName,
     keyword: keyword || "",
     timePeriod: timePeriod || "2w",
-    status: "queued"
+    status: enq.status,
+    deduped: enq.deduped,
+    position: enq.position
   })
 })
 
@@ -399,7 +451,10 @@ engineRouter.get("/crawl/:id", (req, res) => {
 engineRouter.post("/crawl/:id/stop", (req, res) => {
   const job = activeCrawls[req.params.id]
   if (job) job.status = "stopped"
-  res.json({ ok: true })
+  const cancelled = cancelJob(req.params.id)
+  const existing = getCrawl(req.params.id)
+  if (existing) saveCrawl(req.params.id, { status: "stopped", endTime: new Date().toISOString() })
+  res.json({ ok: true, cancelled })
 })
 
 engineRouter.get("/crawl/:id/results", (req, res) => {
@@ -430,6 +485,8 @@ engineRouter.get("/reports/latest", (req, res) => {
 })
 
 engineRouter.get("/jobs", (_req, res) => res.json(getCrawls()))
+
+engineRouter.get("/jobs/queue", (_req, res) => res.json(listQueue()))
 
 engineRouter.get("/schedules", (_req, res) => res.json([]))
 engineRouter.post("/schedules", (_req, res) => res.json({ ok: true }))

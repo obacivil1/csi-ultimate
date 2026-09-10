@@ -239,9 +239,9 @@ The project contains **33+ scraper modules** across 6 directories, targeting **1
 
 ---
 
-## 10 — Implementation Status (updated 2026-09-10)
+## 10 — Implementation Status (updated 2026-09-11)
 
-Progress applied in parallel after the audit. Verified via `npm run test` → **64/64 tests pass**.
+Progress applied in parallel after the audit. Verified via `npm run test` → **87/87 tests pass**.
 
 | # | Audit Recommendation | Status | Evidence |
 |---|---|---|---|
@@ -254,12 +254,13 @@ Progress applied in parallel after the audit. Verified via `npm run test` → **
 | 7 | Add automated tests | **DONE** | `tests/` via `node --test`: config, db, rate-limiter, canonical, extraction-comparison, **+ per-site adapter suite** (site-configs + site-extraction). 64 tests green. GitHub Actions CI runs `npm test` on Node 20 & 22 + syntax checks on every push/PR |
 | 8 | Centralize rate-limit config | **DONE** | `config/defaults.json` (`rateLimit`); `core/rate-limiter.mjs` reads it; etimad uses `siteDelay.etimadMs` (4000) |
 | 9 | Extract hardcoded secrets | **DONE** | Admin email, JWT, SMTP, API keys → `.env`; `validate()` enforces in production |
-| 10 | Job queue (BullMQ/Redis) | NOT STARTED | Future phase 2 |
+| 10 | Job queue (per-host serialized) | **DONE (2026-09-11)** | `core/job-manager.mjs`: per-host serialization (جوب واحد لكل host بكل لحظة، المضيفات المختلفة بالتوازي)، dedupe (نفس المفتاح → نفس jobId)، إلغاء الوظائف القائمة، قائمة `/jobs/queue`. مربوط في `web/routes/engine.mjs` لـ `/crawl` + `/search` + `/crawl/:id/stop` + `GET /jobs/queue`، مع `reconcileStaleJobs()` عند الإقلاع (أي جوب أقدم من 30 دقيقة بقى open → interrupted). BullMQ/Redis جاهز كبديل للنشر متعدد العمليات. تحقق حي: زحف فاشل ينتهي failed بأمان، زحف حالي يظهر running في الطابور، تكرار الطلب يرجع نفس jobId بدإعلام deduped=true |
 | 11 | Proxy rotation | NOT STARTED | `CSI_PROXY` exists; pool w/ health checks pending |
 | 12 | Bayt.com fix | NOT STARTED | CF challenge via FlareSolverr v2 evaluation |
 | 13 | New sites | NOT STARTED | — |
 | 14 | Monitoring dashboard | **REDESIGNED → site profiles (2026-09-10)** | Instead of a generic metric dashboard the user asked for scraper *visibility*: how each site is entered, its discovery/extraction config, last live run, trust and maturity. Delivered as `core/site-profile.mjs` + `GET /api/profile` (+ `/:hostname`) + UI at `/visibility.html` |
-| 15 | API versioning | NOT STARTED | — |
+| 15 | API versioning | **DONE (2026-09-11)** | `web/routes/v1.mjs` يجمع كل المعالجات تحت `/api/v1/*` (مع `/api/v1/health` وإعادة تطبيق limiters على `/api/v1/auth/` و `/api/v1/payments/`)؛ المسارات القديمة `/api/*` بقيت شغّالة كأسماء بديلة — n8n قديم وجديد كلاهما يعمل. تحقق حي: `/api/v1/health` + `/api/v1/sites` + `/api/v1/profile` + `/api/v1/crawl` |
+| 16 | **وضع الاستقصاء العام (general mode)** | **STARTED (2026-09-11)** | تحويل المحرك الخاص بالليدز لمحرك بحث عام منهجي: (1) `core/topic-classifier.mjs` — تصنيف مواضيع (أعمال/أخبار/رياضة/تقنية/صحة/اقتصاد/وظائف/عقارات/سيارات/تعليم) عبر كلمات مفاتيح مرجّحة، ناتج النسب + التصنيف الغالب؛ (2) `core/general-crawl.mjs` — `parseHtmlDocument` (jsdom) يخرّج وثيقة منظمة (نص/عناوين/روابط داخلية وخارجية/صور/جداول) + `crawlUrls` (وضع fetch حي أو browser عبر anti-detect) + `summarizeDocuments` (توزيع مواضيع + تجميعات)؛ (3) `web/routes/general.mjs` — `/api/v1/general/crawl` (عبر الطابور نفسه) و `/general/jobs` و `/general/classify`. تحقق حي: زحف example.com أكمل وثيقة {title:"Example Domain"} والتصنيف عبر HTTP يعمل (عربي يُشوَّه فقط من PowerShell 5.1 على الإرسال — الكود سليم) |
 
 ### Regression-fix bonus findings (found via new tests)
 - `core/db.mjs#query` ignored `params` (passed only limit/offset) — fixed, now interpolates `params` + limit/offset.
@@ -298,4 +299,4 @@ Additional hardening during the same pass:
 2. ~~Full route merge of `engine/server.mjs` into `web/server.mjs`~~ **DONE** (2026-09-10): single-source `web/routes/engine.mjs` mounted on `web/server.mjs`; stripped dup `/api/health` + removed permissive `Access-Control-Allow-Origin:*` on the SSE stream; verified live on both servers.
 3. ~~Playwright per-site adapter integration suite + GitHub Actions CI~~ **DONE** (2026-09-10): `tests/site-configs.test.mjs` (static config validation ×6 sites) + `tests/site-extraction.test.mjs` (jsdom per-site extraction against realistic fixtures, via the real `config/sites` + gateway; uncovered 3 real canonical gaps — see Regression-fix). Optional live Playwright smoke: `node scripts/smoke-live-sites.mjs [hostname] [query]` (opt-in, wired **out** of default CI to avoid flaky/ToS runs). CI: `.github/workflows/ci.yml` — test matrix Node 20/22 + syntax check of `core/`, `web/`, `config/`, `run.mjs` on push/PR.
 4. ~~Monitoring dashboard~~ **REDESIGNED as site-visibility profiles (2026-09-10)** after user pushback (a generic metric dashboard is useless to the operator): per-site maturity cards — entry strategy from `state/strategy_ledger.json` (A-Standard/B-Proxy/C-HeadedHuman + success rate), extraction-config coverage, last live run (records/files/freshness), latest report quality + issues, trust score from `validation-engine`, linked insights. Backend `core/site-profile.mjs` (unit-tested `tests/site-profile.test.mjs`), API `GET /api/profile` + `/api/profile/:hostname`, UI `/visibility.html`. Live-verified on the actual repo state (6 sites, 5 with runs).
-5. Job queue (BullMQ/Redis), proxy pool, API versioning (Phase 3).
+5. ~~Job queue + API versioning~~ **DONE (2026-09-11)** (الطابور بالمضيف المخصص + العقد الثابت `/api/v1`؛ التفاصيل أعلاه). البقية من Phase 3: proxy pool مع health checks، إصلاح Bayt أو توثيق إهماله، مواقع جديدة. واستُهلت مرحلة جديدة دائمة الجار: **الوضع العام** (تصنيف المواضيع + مجرّة وثائق عامة + تقارير) — تُبنى فوق البنية التحتية الحالية بدل أي محرك منفصل.
