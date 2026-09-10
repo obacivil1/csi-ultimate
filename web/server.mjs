@@ -19,6 +19,7 @@ import { exportRouter } from './routes/export.mjs';
 import { alertsRouter } from './routes/alerts.mjs';
 import { adminRouter } from './routes/admin.mjs';
 import { contactRouter } from './routes/contact.mjs';
+import { engineRouter, ENGINE_PUBLIC_DIR } from './routes/engine.mjs';
 import { startScheduler } from './scheduler.mjs';
 import { preloadWarmup } from './cache.mjs';
 
@@ -102,6 +103,8 @@ app.use('/api/export', exportRouter);
 app.use('/api/alerts', alertsRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/contact', contactRouter);
+app.use('/api', engineRouter);
+app.use('/engine', express.static(ENGINE_PUBLIC_DIR));
 
 // Cached weather (refreshed every 10 min)
 let cachedWeather = { temperature: '--', desc: '' };

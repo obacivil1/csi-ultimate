@@ -249,7 +249,7 @@ Progress applied in parallel after the audit. Verified via `npm run test` → **
 | 2 | Add `.env` + boot validation (`config/env.mjs` + `env.validate()`) | **DONE** | `config/env.mjs`, `.env`, `.env.example`; fail-fast in production on missing/default `JWT_SECRET` |
 | 3 | Archive dead code | **DONE** | `scripts/diagnostics/` → `archive/scripts/diagnostics/`; `state/test_*` → `archive/state/test_scripts/`; root artifacts → `archive/root_artifacts/` |
 | 4 | Add structured logging | **DONE** | `core/logger.mjs` (JSON, levels, child bindings) wired into `bridge.mjs`, `flare-solver.mjs`, `rate-limiter.mjs`, `web/server.mjs`, `engine/server.mjs`, `app/server.mjs` (deprecation) |
-| 5 | Kill duplicate servers | **PARTIAL** | `app/server.mjs` (3456) marked DEPRECATED + logs warning; `web/server.mjs` (3000) is canonical. Full route merge pending |
+| 5 | Kill duplicate servers | **DONE** | `engine/server.mjs` (3030) is now a **deprecated compatibility shim** re-exporting `web/routes/engine.mjs`; all engine routes (crawl, search/SSE, sites, reports, jobs, validation, insights, evidence) are mounted at `/api` in `web/server.mjs` (3000) with the engine UI at `/engine`. `app/server.mjs` (3456) marked DEPRECATED (kept for `START_SCRAPER.bat`) |
 | 6 | SQLite for core data | **DONE** | `core/db.mjs` (WAL, upsert); `scripts/db-import.mjs` imported tenders 8,303 / contractors 13,375 / awards 20 / projects 1,222 |
 | 7 | Add automated tests | **DONE (unit)** | `tests/` via `node --test`: config, db, rate-limiter, canonical, extraction-comparison (26 tests green). Playwright per-site integration = PHASE 2 |
 | 8 | Centralize rate-limit config | **DONE** | `config/defaults.json` (`rateLimit`); `core/rate-limiter.mjs` reads it; etimad uses `siteDelay.etimadMs` (4000) |
@@ -292,6 +292,6 @@ Additional hardening during the same pass:
 
 ### Remaining priorities (from audit)
 1. ~~Consolidate extraction~~ **DONE** via `core/extractor.mjs` (single gateway, tests green).
-2. Full route merge of `engine/server.mjs` into `web/server.mjs`; hard-remove redundancy after verification.
+2. ~~Full route merge of `engine/server.mjs` into `web/server.mjs`~~ **DONE** (2026-09-10): single-source `web/routes/engine.mjs` mounted on `web/server.mjs`; stripped dup `/api/health` + removed permissive `Access-Control-Allow-Origin:*` on the SSE stream; verified live on both servers.
 3. Playwright per-site adapter integration suite + GitHub Actions CI.
 4. Job queue (BullMQ/Redis), proxy pool, monitoring dashboard, API versioning (Phase 3).
