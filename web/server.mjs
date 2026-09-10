@@ -21,9 +21,11 @@ import { adminRouter } from './routes/admin.mjs';
 import { contactRouter } from './routes/contact.mjs';
 import { engineRouter, ENGINE_PUBLIC_DIR } from './routes/engine.mjs';
 import { siteProfileRouter } from './routes/site-profile.mjs';
+import { proxiesRouter } from './routes/proxies.mjs';
 import { v1Router } from './routes/v1.mjs';
 import { startScheduler } from './scheduler.mjs';
 import { preloadWarmup } from './cache.mjs';
+import { seedFromEnv, startHealthChecks } from '../core/proxy-pool.mjs';
 
 import https from 'https';
 
@@ -107,6 +109,7 @@ app.use('/api/admin', adminRouter);
 app.use('/api/contact', contactRouter);
 app.use('/api', siteProfileRouter);
 app.use('/api', engineRouter);
+app.use('/api/proxies', proxiesRouter);
 
 // Versioned contract: /api/v1/* — يُركَّب بنفس منطق المعالجات؛ /api/* يبقى كأسماء بديلة قديمة
 app.use('/api/v1/auth/', authLimiter);
@@ -191,6 +194,11 @@ app.use((req, res) => {
 
 app.listen(PORT, () => {
   logger.info('web server started', { port: PORT, env: env.NODE_ENV });
+  if (env.PROXY) {
+    seedFromEnv(env.PROXY);
+    startHealthChecks(undefined, 60000);
+    logger.info('proxy pool seeded', { count: env.PROXY.split(',').filter(Boolean).length });
+  }
   startScheduler();
   // Warmup cache in background (non-blocking)
   const dataDir = path.join(__dirname, '..', 'data');

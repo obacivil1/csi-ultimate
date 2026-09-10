@@ -11,6 +11,7 @@
  */
 import { chromium } from "playwright-extra"
 import stealth from "puppeteer-extra-plugin-stealth"
+import { getProxy as getPoolProxy } from "./proxy-pool.mjs"
 
 chromium.use(stealth())
 
@@ -120,6 +121,8 @@ function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)] }
 let proxyIndex = 0
 
 function getProxy() {
+  const fromPool = getPoolProxy()
+  if (fromPool) return fromPool
   const proxyVar = process.env.CSI_PROXY
   if (!proxyVar) return ""
   const proxies = proxyVar.split(",").map(s => s.trim()).filter(Boolean)

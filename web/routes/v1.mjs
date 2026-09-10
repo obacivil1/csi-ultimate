@@ -13,6 +13,7 @@ import { contactRouter } from "./contact.mjs";
 import { engineRouter } from "./engine.mjs";
 import { siteProfileRouter } from "./site-profile.mjs";
 import { generalRouter } from "./general.mjs";
+import { proxiesRouter } from "./proxies.mjs";
 
 /**
  * v1.mjs — عقد الواجهة الثابت (/api/v1/*)
@@ -37,5 +38,6 @@ v1Router.use("/alerts", alertsRouter);
 v1Router.use("/admin", adminRouter);
 v1Router.use("/contact", contactRouter);
 v1Router.use("/general", generalRouter);
+v1Router.use("/proxies", proxiesRouter);
 v1Router.use("/", siteProfileRouter);
 v1Router.use("/", engineRouter);
