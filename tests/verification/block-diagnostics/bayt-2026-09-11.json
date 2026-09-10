@@ -1,0 +1,13 @@
+{
+  "checkedAt": "2026-09-11T00:00:00.000Z",
+  "site": "bayt.com",
+  "url": "https://www.bayt.com/en/saudi-arabia/jobs/",
+  "client": "Node 24 global fetch, Chrome 125 UA, follow-redirects",
+  "status": 403,
+  "blocked": true,
+  "title": "Attention Required! | Cloudflare",
+  "adLinksMatched": 0,
+  "evidence": "Cloudflare سؤال اهتمام مباشر (403) على صفحة القائمة نفسها. التشخيص الأخير الصحي كان 2026-06-13 (status 200, cf-cache HIT, title حقيقي). تجارب المتصفح القديمة (2026-06-14 data/www_bayt_com_jobs_*1419*) أعطت قواقع عنوان \"www.bayt.com\" بلا محتوى. معا يُثبت أن الموقع خاضع لحماية Cloudflare متصاعدة تعجز عنها الوضع العادي والسابق.",
+  "verdict": "إهمال موثق (لا يُعاد تفعيل الآن); إعادة التقييم فقط عبر FlareSolverr v2 أو حل Turnstile قبل أي محاولة.",
+  "probeScript": "scripts/scratch/bayt-probe.mjs"
+}
