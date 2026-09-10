@@ -241,7 +241,9 @@ The project contains **33+ scraper modules** across 6 directories, targeting **1
 
 ## 10 — Implementation Status (updated 2026-09-11)
 
-Progress applied in parallel after the audit. Verified via `npm run test` → **103/103 tests pass**.
+Progress applied in parallel after the audit. Verified via `npm run test` → **117/117 tests pass**. (وهذا يشمل: وحدة `contact-miner` الجديدة + فحوصات التركيب لكل موقع + نظام الأرقام GCC المُصلَح.)
+
+**تحقق حي إضافي (2026-09-11, جهات التماس العام):** `contact-miner.mjs` استخرج مباشرةً من صفحة تواصل حقيقية `emails=3` مع ربطها بأعمدة (إيميلات/هواتف/واتساب/اجتماعية + `hasContact`) في JSON/CSV/XLSX/HTML/شرائح — مثلات الفحص: 117/117.
 
 | # | Audit Recommendation | Status | Evidence |
 |---|---|---|---|

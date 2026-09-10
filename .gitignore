@@ -30,7 +30,8 @@ web/data/contact_messages.json
 
 # Databases, runtime data, scratch & logs
 *.db
-scripts/scratch/
+ scripts/scratch/
+temp/
 data/job_hunter_*.json
 data/muqawil_all_regions_PARTIAL.json
 data/insurance_offers_*

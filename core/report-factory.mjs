@@ -35,8 +35,17 @@ export function flattenDocs(docs, classify = null) {
       tableRows: d.tableRows || 0,
       dominantTopic: t?.dominant?.topic || "general",
       topicPct: t?.dominant?.pct ?? null,
+      emails: (d.contacts?.emails || []).join("; "),
+      phones: (d.contacts?.phones || []).join("; "),
+      whatsapp: (d.contacts?.whatsapp || []).join("; "),
+      social: (d.contacts?.social || []).join("; "),
+      hasContact: !!d.contacts?.hasAny,
     };
   });
+}
+
+function countCell(s) {
+  return String(s || "").split("; ").filter(Boolean).length;
 }
 
 export function buildReport(opts = {}) {
@@ -59,6 +68,10 @@ export function buildReport(opts = {}) {
     links: rows.reduce((a, r) => a + r.links, 0),
     images: rows.reduce((a, r) => a + r.images, 0),
     tableRows: rows.reduce((a, r) => a + r.tableRows, 0),
+    contactPages: rows.filter((r) => r.hasContact).length,
+    emails: rows.reduce((a, r) => a + countCell(r.emails), 0),
+    phones: rows.reduce((a, r) => a + countCell(r.phones), 0),
+    whatsapp: rows.reduce((a, r) => a + countCell(r.whatsapp), 0),
   };
 
   const topicDist = {};
@@ -96,7 +109,7 @@ function statCardsHtml(report) {
   const s = report.stats;
   const cards = [
     ["صفحات", s.pages], ["مضيفون", s.hosts], ["أحرف", s.chars],
-    ["روابط", s.links], ["صور", s.images], ["صفوف جداول", s.tableRows],
+    ["روابط", s.links], ["جهات تماس", s.contactPages], ["إيميلات/هواتف", `${s.emails}/${s.phones}`],
   ];
   return cards.map(([label, v]) => `<div class="card"><div class="num">${v}</div><div>${label}</div></div>`).join("");
 }
@@ -109,12 +122,14 @@ export function renderHtmlReport(report) {
   }).join("");
 
   const hostRows = report.hosts.map((h) => `<tr><td>${esc(h.host)}</td><td>${h.pages}</td></tr>`).join("");
+  const contactHosts = [...new Map(report.docs.filter((d) => d.hasContact).map((d) => [d.host, d])).values()]
+    .map((d) => `<li><b>${esc(d.host)}</b> — ${esc(d.title || d.url)} → ${countCell(d.emails)} إيميل · ${countCell(d.phones)} هاتف</li>`).join("");
   const docGroups = report.docs.slice(0, 500).map((d) => `
     <tr>
       <td><a href="${esc(d.url)}">${esc(d.title || d.url)}</a></td>
       <td>${esc(d.host)}</td>
       <td>${esc(d.dominantTopic)}</td>
-      <td>${d.chars}</td><td>${d.links}</td><td>${d.images}</td>
+      <td>${d.chars}</td><td>${d.links}</td><td>${countCell(d.emails)}</td><td>${countCell(d.phones)}</td>
     </tr>`).join("");
 
   return `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
@@ -147,7 +162,8 @@ export function renderHtmlReport(report) {
         <table><tr><th>المضيف</th><th>صفحات</th></tr>${hostRows}</table></div>
     </div>
     <h2>الوثائق (${report.docs.length})</h2>
-    <table><tr><th>العنوان</th><th>المضيف</th><th>الموضوع</th><th>أحرف</th><th>روابط</th><th>صور</th></tr>${docGroups}</table>
+    <table><tr><th>العنوان</th><th>المضيف</th><th>الموضوع</th><th>أحرف</th><th>روابط</th><th>إيميلات</th><th>هواتف</th></tr>${docGroups}</table>
+    ${contactHosts ? `<h2>جهات تماس (<b>${report.stats.emails}</b> إيميل · <b>${report.stats.phones}</b> هاتف · <b>${report.stats.whatsapp}</b> واتساب)</h2><ul>${contactHosts}</ul>` : ""}
     <h2>المصادر</h2><ul>${report.sources.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>
   </div>
   <footer>محرك CSI-Ultimate · وضع الاستقصاء العام · تقرير تلقائي</footer>
@@ -163,6 +179,10 @@ export function renderHtmlDeck(report) {
   }).join("");
 
   const hostSlide = `<section class="slide"><h2>المضيفون</h2><ul class="rows">${report.hosts.map((h) => `<li><b>${esc(h.host)}</b> — ${h.pages} صفحة</li>`).join("")}</ul></section>`;
+
+  const contactsSlide = report.stats.contactPages > 0
+    ? `<section class="slide"><h2>جهات تماس · ${report.stats.emails} إيميل · ${report.stats.phones} هاتف</h2><ul class="rows">${report.docs.filter((d) => d.hasContact).slice(0, 12).map((d) => `<li><b>${esc(d.host)}</b> — ${esc(d.title || d.url)}<br><span style="color:#9fb8d0;font-size:13px">${esc(d.emails)}${d.phones ? " · " + esc(d.phones) : ""}</span></li>`).join("")}</ul></section>`
+    : "";
 
   return `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
   <title>${esc(report.meta.title)} — عرض</title>
@@ -182,6 +202,7 @@ export function renderHtmlDeck(report) {
     <div class="cards">${coverCards}</div>
     <p style="color:#9fb8d0;font-size:14px">أنشئ في ${esc(report.meta.generatedAt)} · ${esc(report.sources.length)} مصادر</p></section>
   ${topicSlides}
+  ${contactsSlide}
   ${hostSlide}
   </body></html>`;
 }

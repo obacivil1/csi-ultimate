@@ -55,6 +55,30 @@ test("normalizeUrl يتجاهل البروتوكولات غير الصالحة �
   assert.equal(internalLink("https://elsewhere.test/a", "example-news.test"), false);
 });
 
+test("parseHtmlDocument يستخرج جهات تماس من HTML", () => {
+  const html = `<!DOCTYPE html><html><head><title>متجر الحاج</title></head><body>
+    <p>تواصل معنا على sales@haaj-shop.ae أو 0551112233</p>
+    <a href="https://wa.me/971501234567">واتساب</a>
+    <a href="https://www.linkedin.com/company/haaj-shop">لينكدإن</a>
+  </body></html>`;
+  const doc = parseHtmlDocument(html, "https://haaj-shop.ae/page/1");
+  assert.equal(doc.contacts.hasAny, true);
+  assert.ok(doc.contacts.emails.includes("sales@haaj-shop.ae"));
+  assert.ok(doc.contacts.phones.includes("0551112233"));
+  assert.ok(doc.contacts.whatsapp.includes("971501234567"));
+  assert.equal(doc.contacts.social.length, 1);
+});
+
+test("رسائل الرفض والمشاركة لا تُعدّ جهات تماس كاذبة", () => {
+  const html = `<html><body>
+    <p>لا اتصال هنا، سنة 2026، معرف 9999.</p>
+    <a href="https://www.facebook.com/sharer/sharer.php?u=x">شارك</a>
+  </body></html>`;
+  const doc = parseHtmlDocument(html, "https://quiet.test/");
+  assert.equal(doc.contacts.hasAny, false);
+  assert.equal(doc.contacts.social.length, 0);
+});
+
 test("summarizeDocuments يحسب توزيع المواضيع والتجميعات", () => {
   const newsDoc = parseHtmlDocument(`<html><body><h1>أخبار عاجلة رياضية</h1><p>تقرير عن مباراة الدوري والجمهور وكرة القدم والملعب.</p></body></html>`, "https://a.test/n");
   const techDoc = parseHtmlDocument(`<html><body><h1>تقنية</h1><p>تطبيق بالذكاء الاصطناعي لأمن البيانات السحابية.</p><table><tr><td>1</td></tr></table></body></html>`, "https://b.test/t");

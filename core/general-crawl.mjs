@@ -5,6 +5,7 @@
  * قابل للاختبار حتمياً عبر jsdom؛ التنفيذ الحي بالمتصفح (crawlUrls) يُحمَّل عند الطلب.
  */
 import { JSDOM } from "jsdom";
+import { mineContacts } from "./contact-miner.mjs";
 
 export function normalizeUrl(raw, base) {
   try {
@@ -105,6 +106,7 @@ export function parseHtmlDocument(html, baseUrl, opts = {}) {
     images: images.length,
     tables,
     tableRows: tables.reduce((acc, t) => acc + t.rows.length, 0),
+    contacts: mineContacts(text, links),
   };
 }
 

@@ -170,6 +170,8 @@ export function isValidPhone(phone, countryCode = "GB") {
   }
   if (countryCode === "AE") {
     if (/^0[5][0-9]{8}$/.test(cleaned)) return true
+    if (/^9715[0-9]{8}$/.test(cleaned)) return true
+    if (/^\+9715[0-9]{8}$/.test(cleaned)) return true
     return false
   }
   if (countryCode === "SA") {
@@ -334,6 +336,9 @@ export async function extractAdData(page, siteConfig, category) {
         if (c !== adId && c.length >= 10 && c.length <= 15) phoneSet.add(c)
       })
     })
+    ;(bodyText.replace(/[\s\-\(\)\.]/g, "").match(/\+\d{10,14}|0\d{10,11}/g) || []).forEach(m => {
+      if (m !== adId && m.length >= 10 && m.length <= 15) phoneSet.add(m)
+    })
     let phone = [...phoneSet][0] || null
     if (phone) {
       const cleaned = phone.replace(/[\s\-\(\)\.]/g, "")
@@ -347,11 +352,13 @@ export async function extractAdData(page, siteConfig, category) {
       } else if (countryCode === "SA") {
         if (!/^(\+?9665[0-9]{8}|05[0-9]{8})$/.test(cleaned)) phone = null
       } else if (countryCode === "GCC") {
-        const gcc = /^(\+?9665[0-9]{8}|05[0-9]{8})$/.test(cleaned) ||
-          /^\+?97[134][0-9]{8}$/.test(cleaned) ||
-          /^\+?968[0-9]{8}$/.test(cleaned) ||
-          /^\+?965[0-9]{8}$/.test(cleaned)
-        if (!gcc) phone = null
+        const gcc24 = /^(\+?9665[0-9]{8}|05[0-9]{8})$/.test(cleaned) || // السعودية
+          /^(\+?9715[0-9]{8}|05[0-9]{8})$/.test(cleaned) || // الإمارات
+          /^\+?9689[0-9]{8}$/.test(cleaned) || // عمان
+          /^\+?974[3567][0-9]{7}$/.test(cleaned) || // قطر
+          /^\+?9733[0-9]{7}$/.test(cleaned) || // البحرين
+          /^\+?965[569][0-9]{7}$/.test(cleaned) // الكويت
+        if (!gcc24) phone = null
       } else if (!/^\+?[1-9][0-9]{6,14}$/.test(cleaned)) phone = null
     }
 

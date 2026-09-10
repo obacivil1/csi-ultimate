@@ -94,6 +94,21 @@ const FIXTURES = {
     </body></html>`,
     expect: { title: "Senior Planning Engineer", priceDigits: "25000", location: "Riyadh", minPhoneDigits: 11 },
   },
+  "gulfclassifieds.org": {
+    url: "https://gulfclassifieds.org/item/human-resources-manager-required-in-dubai-225599.html",
+    html: `<html><head><title>Human Resources Manager Required in Dubai - Dubai - Gulf Classifieds</title></head><body>
+      <div class="item_details">
+        <h1>Human Resources Manager Required in Dubai</h1>
+        <span class="small_text">Dubai</span>
+        <span class="label_text green small">Featured</span>
+        <p class="description">We are hiring an experienced HR manager for our Dubai office.</p>
+      </div>
+      <span class="price">AED 8,900</span>
+      <a href="tel:+971501234567">050 123 4567</a>
+      <a href="mailto:hr@firm.ae">contact</a>
+    </body></html>`,
+    expect: { title: "Human Resources Manager Required in Dubai", priceDigits: "8900", location: "Dubai", emailIncludes: "firm.ae", phoneIncludes: "501234567" },
+  },
 };
 
 for (const [hostname, fx] of Object.entries(FIXTURES)) {
