@@ -1,0 +1,42 @@
+name: اختبارات المشروع
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: تثبيت الاعتماديات
+        run: npm install
+
+      - name: فحص مصدر التشغيل
+        run: npm run lint
+
+      - name: تشغيل الاختبارات
+        run: npm test
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: تثبيت الاعتماديات
+        run: npm install
+      - name: فحص صياغة كل ملفات core
+        run: |
+          for f in core/*.mjs web/**/*.mjs config/*.mjs run.mjs; do node --check "$f" || exit 1; done

@@ -241,7 +241,7 @@ The project contains **33+ scraper modules** across 6 directories, targeting **1
 
 ## 10 — Implementation Status (updated 2026-09-10)
 
-Progress applied in parallel after the audit. Verified via `npm run test` → **26/26 tests pass**.
+Progress applied in parallel after the audit. Verified via `npm run test` → **64/64 tests pass**.
 
 | # | Audit Recommendation | Status | Evidence |
 |---|---|---|---|
@@ -251,7 +251,7 @@ Progress applied in parallel after the audit. Verified via `npm run test` → **
 | 4 | Add structured logging | **DONE** | `core/logger.mjs` (JSON, levels, child bindings) wired into `bridge.mjs`, `flare-solver.mjs`, `rate-limiter.mjs`, `web/server.mjs`, `engine/server.mjs`, `app/server.mjs` (deprecation) |
 | 5 | Kill duplicate servers | **DONE** | `engine/server.mjs` (3030) is now a **deprecated compatibility shim** re-exporting `web/routes/engine.mjs`; all engine routes (crawl, search/SSE, sites, reports, jobs, validation, insights, evidence) are mounted at `/api` in `web/server.mjs` (3000) with the engine UI at `/engine`. `app/server.mjs` (3456) marked DEPRECATED (kept for `START_SCRAPER.bat`) |
 | 6 | SQLite for core data | **DONE** | `core/db.mjs` (WAL, upsert); `scripts/db-import.mjs` imported tenders 8,303 / contractors 13,375 / awards 20 / projects 1,222 |
-| 7 | Add automated tests | **DONE (unit)** | `tests/` via `node --test`: config, db, rate-limiter, canonical, extraction-comparison (26 tests green). Playwright per-site integration = PHASE 2 |
+| 7 | Add automated tests | **DONE** | `tests/` via `node --test`: config, db, rate-limiter, canonical, extraction-comparison, **+ per-site adapter suite** (site-configs + site-extraction). 64 tests green. GitHub Actions CI runs `npm test` on Node 20 & 22 + syntax checks on every push/PR |
 | 8 | Centralize rate-limit config | **DONE** | `config/defaults.json` (`rateLimit`); `core/rate-limiter.mjs` reads it; etimad uses `siteDelay.etimadMs` (4000) |
 | 9 | Extract hardcoded secrets | **DONE** | Admin email, JWT, SMTP, API keys → `.env`; `validate()` enforces in production |
 | 10 | Job queue (BullMQ/Redis) | NOT STARTED | Future phase 2 |
@@ -267,6 +267,9 @@ Progress applied in parallel after the audit. Verified via `npm run test` → **
 - `core/canonical-extractor.mjs` `detectCurrency` did not recognize `SAR`/`ر.س`/`ريال` — added.
 - `canonical-extractor.mjs` had **no Saudi phone support**: `cleanPhone`/`isValidPhone` were GB-only (`0[0-9]...`/`+44`). Added SA formats (`+9665xxxxxxxx`, local `05xxxxxxxx` → `+966`), and fixed SA-priority ordering so `055...` (Arabic sites) normalizes to `+9665...` instead of being parsed as a UK-style number.
 - `canonical-extractor.mjs#getAllText` crashed on pages where `querySelectorAll` matched elements without `innerText` (Arabic classifieds) — the whole extract crashed. Hardened with optional chaining; `crumbs` and `telLinks` similarly hardened.
+- **`canonical-extractor.mjs#extractAdData` region mapping was GB-only** (found by the new per-site suite): `phoneRegion` (`SA`/`GCC`/`PK`/`AE`) was ignored, so the inline filter dropped every non-GB phone (all SA + GCC ads lost phone on the canonical/gateway path). Now maps `SA`, `GCC` (966/971/973/974/965/968), `PK` and `AE` and validates per region.
+- **`canonical-extractor.mjs#extractAdData` did not read `mailto:` hrefs** — emails only from page text, so mailto-only contacts (typical OpenSooq/Expatriates) were missed; now collected from anchors with a text fallback.
+- **Canonical currency chain missed Arabic `ر.س`/`ريال`** — now maps to `SAR` (the gateway `detectCurrency` fallback already did; standalone canonical now agrees).
 - **`engine/server.mjs` called undefined `canonicalExtract`** — every ad extraction through engine would have thrown `ReferenceError`. Routed to `core/extractor.mjs`.
 - `tests/config.test.mjs` originally used `await import` at top level of a sync test → syntax error; rewritten.
 - jsdom (used for offline DOM extraction tests) does not implement `innerText` — the test harness shims it via `textContent`.
@@ -293,5 +296,5 @@ Additional hardening during the same pass:
 ### Remaining priorities (from audit)
 1. ~~Consolidate extraction~~ **DONE** via `core/extractor.mjs` (single gateway, tests green).
 2. ~~Full route merge of `engine/server.mjs` into `web/server.mjs`~~ **DONE** (2026-09-10): single-source `web/routes/engine.mjs` mounted on `web/server.mjs`; stripped dup `/api/health` + removed permissive `Access-Control-Allow-Origin:*` on the SSE stream; verified live on both servers.
-3. Playwright per-site adapter integration suite + GitHub Actions CI.
+3. ~~Playwright per-site adapter integration suite + GitHub Actions CI~~ **DONE** (2026-09-10): `tests/site-configs.test.mjs` (static config validation ×6 sites) + `tests/site-extraction.test.mjs` (jsdom per-site extraction against realistic fixtures, via the real `config/sites` + gateway; uncovered 3 real canonical gaps — see Regression-fix). Optional live Playwright smoke: `node scripts/smoke-live-sites.mjs [hostname] [query]` (opt-in, wired **out** of default CI to avoid flaky/ToS runs). CI: `.github/workflows/ci.yml` — test matrix Node 20/22 + syntax check of `core/`, `web/`, `config/`, `run.mjs` on push/PR.
 4. Job queue (BullMQ/Redis), proxy pool, monitoring dashboard, API versioning (Phase 3).

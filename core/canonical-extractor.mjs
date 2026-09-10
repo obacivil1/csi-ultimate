@@ -283,7 +283,10 @@ export async function extractAdData(page, siteConfig, category) {
   const sel = siteConfig.selectors || siteConfig.extraction?.selectors || {}
   const ext = siteConfig.extraction || {}
   const hostname = siteConfig.hostname || "unknown"
-  const countryCode = ext.phoneRegion === "GB" ? "GB" : hostname.includes("pk") ? "PK" : hostname.includes("ae") ? "AE" : "GB"
+  const regionMap = { GB: "GB", UK: "GB", PK: "PK", AE: "AE", SA: "SA", GCC: "GCC" }
+  const countryCode =
+    (ext.phoneRegion && regionMap[ext.phoneRegion]) ||
+    (hostname.includes("pk") ? "PK" : hostname.includes("ae") ? "AE" : "GB")
 
   const adIdPatternStr = ext.adIdPattern || siteConfig.adIdPattern || null
 
@@ -335,12 +338,31 @@ export async function extractAdData(page, siteConfig, category) {
     if (phone) {
       const cleaned = phone.replace(/[\s\-\(\)\.]/g, "")
       if (cleaned === adId) phone = null
-      else if (countryCode === "GB" && !/^07[0-9]{9}$/.test(cleaned) && !/^\+447[0-9]{9}$/.test(cleaned)) phone = null
+      else if (countryCode === "GB") {
+        if (!/^07[0-9]{9}$/.test(cleaned) && !/^\+447[0-9]{9}$/.test(cleaned)) phone = null
+      } else if (countryCode === "PK") {
+        if (!/^(0[3456][0-9]{9}|\+?92[0-9]{10})$/.test(cleaned)) phone = null
+      } else if (countryCode === "AE") {
+        if (!/^(05[0-9]{8}|\+9715[0-9]{8})$/.test(cleaned)) phone = null
+      } else if (countryCode === "SA") {
+        if (!/^(\+?9665[0-9]{8}|05[0-9]{8})$/.test(cleaned)) phone = null
+      } else if (countryCode === "GCC") {
+        const gcc = /^(\+?9665[0-9]{8}|05[0-9]{8})$/.test(cleaned) ||
+          /^\+?97[134][0-9]{8}$/.test(cleaned) ||
+          /^\+?968[0-9]{8}$/.test(cleaned) ||
+          /^\+?965[0-9]{8}$/.test(cleaned)
+        if (!gcc) phone = null
+      } else if (!/^\+?[1-9][0-9]{6,14}$/.test(cleaned)) phone = null
     }
 
-    const emailMatch = bodyText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)
+    const emailRx = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/
     const blacklist = /sentry|@2x|\.png|\.jpg|\.gif|noreply|no-reply|w3\.org|cloudflare|jquery|bootstrap|google|facebook|twitter|schema\.org|example\.com/i
-    const email = (emailMatch && !blacklist.test(emailMatch[0])) ? emailMatch[0] : null
+    const emailCandidates = Array.from(document.querySelectorAll('a[href^="mailto:"]'))
+      .map(a => a.getAttribute("href")?.replace(/^mailto:/i, "").split(/[?&#]/)[0].trim() || "")
+      .filter(Boolean)
+    const bodyEmail = bodyText.match(emailRx)?.[0] || ""
+    if (bodyEmail) emailCandidates.push(bodyEmail)
+    const email = emailCandidates.find(e => !blacklist.test(e)) || null
 
     const priceElRaw = getEl(sel.price) || getEl('[data-aut-id="itemPrice"]') || getEl('[class*="price"]') || getEl('[class*="salary"]')
     const priceEl = priceElRaw && /\d/.test(priceElRaw) ? priceElRaw : null
@@ -348,7 +370,7 @@ export async function extractAdData(page, siteConfig, category) {
     const price = priceEl || (priceMatch ? priceMatch[1]?.trim() : null)
 
     const rawText = bodyText.substring(0, 5000)
-    const currency = rawText.includes("£") ? "GBP" : rawText.includes("₹") ? "INR" : rawText.includes("PKR") || rawText.includes("Rs ") ? "PKR" : rawText.includes("SAR") ? "SAR" : rawText.includes("AED") ? "AED" : rawText.includes("€") ? "EUR" : rawText.includes("$") ? "USD" : null
+    const currency = rawText.includes("£") ? "GBP" : rawText.includes("₹") ? "INR" : rawText.includes("PKR") || rawText.includes("Rs ") ? "PKR" : rawText.includes("ر.س") || rawText.includes("ريال") ? "SAR" : rawText.includes("SAR") ? "SAR" : rawText.includes("AED") ? "AED" : rawText.includes("€") ? "EUR" : rawText.includes("$") ? "USD" : null
 
     const location = getEl(sel.location) || getEl('[class*="address"]') || document.querySelector("address")?.innerText?.trim() || getAllText('[class*="location"]') || null
 
