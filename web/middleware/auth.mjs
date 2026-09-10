@@ -3,12 +3,12 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { getJSON, invalidate } from '../cache.mjs';
+import { env } from '../../config/env.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = env.JWT_SECRET;
 if (!JWT_SECRET) {
-  console.error('JWT_SECRET environment variable is required');
-  process.exit(1);
+  throw new Error('JWT_SECRET environment variable is required — set it in .env');
 }
 const USERS_FILE = path.join(__dirname, '..', 'data', 'users.json');
 
@@ -34,7 +34,7 @@ export function authenticate(req, res, next) {
     // Check subscription
     if (req.user.subscription === 'trial') {
       const trialEnd = new Date(req.user.trialStart);
-      trialEnd.setDate(trialEnd.getDate() + 3);
+      trialEnd.setDate(trialEnd.getDate() + 7);
       if (new Date() > trialEnd) {
         req.user.subscription = 'expired';
         saveUsers(users);
