@@ -54,7 +54,7 @@
 <div class="modal-overlay" id="registerModal">
   <div class="modal">
     <button class="modal-close" onclick="closeModal('registerModal')">✕</button>
-    <h2>اشتراك جديد — 3 أيام مجاناً</h2>
+    <h2>اشتراك جديد — 7 أيام مجاناً</h2>
     <form id="registerForm" onsubmit="handleRegister(event)">
       <div class="form-group">
         <label>الاسم الكامل</label>
@@ -79,7 +79,7 @@
       <button type="submit" class="btn" id="registerBtn">ابدأ الفترة المجانية</button>
     </form>
     <div class="switch-link">عندك حساب؟ <a onclick="switchModal('login')">تسجيل دخول</a></div>
-    <p style="text-align:center;color:#888;font-size:0.8em;margin-top:10px;">✅ 3 أيام مجاناً — بدون بطاقة ائتمان</p>
+    <p style="text-align:center;color:#888;font-size:0.8em;margin-top:10px;">✅ 7 أيام مجاناً — بدون بطاقة ائتمان</p>
   </div>
 </div>
 
@@ -236,8 +236,8 @@
         <div class="price">1,199 <span>ريال/شهر</span></div>
         <div style="font-size:0.85em;color:var(--success);font-weight:700;margin:-5px 0 10px;">💡 السنوي: 9,999 ريال/سنة (وفر 4,389)</div>
         <ul>
-          <li>جميع المنافسات النشطة (8,160+)</li>
-          <li>جميع المقاولين (13,514)</li>
+          <li>جميع المنافسات النشطة (<span id="pricingTenders">—</span>)</li>
+          <li>جميع المقاولين (<span id="pricingContractors">—</span>)</li>
           <li>أرقام جوالات وإيميلات</li>
           <li>فلترة التشييد والمقاولات</li>
           <li>تحديث أسبوعي</li>
@@ -407,6 +407,11 @@ async function updateAuthUI(user) {
 
     const contStats = await API.get('/api/contractors/stats');
     animateNumber('statContractors', contStats.total || 0);
+
+    const pricingTenders = document.getElementById('pricingTenders');
+    if (pricingTenders) animateNumber('pricingTenders', stats.active || 0);
+    const pricingContractors = document.getElementById('pricingContractors');
+    if (pricingContractors) animateNumber('pricingContractors', contStats.total || 0);
   } catch(e) {
     document.querySelectorAll('.stat-item h3').forEach(el => el.textContent = '—');
   }

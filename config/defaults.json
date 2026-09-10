@@ -1,0 +1,41 @@
+{
+  "rateLimit": {
+    "minDelayMs": 800,
+    "maxDelayMs": 8000,
+    "baseDelayMs": 1500,
+    "backoffFactor": 2,
+    "recoveryFactor": 0.9,
+    "errorThreshold": 3,
+    "maxRetries": 3,
+    "jitterFactor": 0.2,
+    "requestsPerMinute": 15
+  },
+  "timeouts": {
+    "navigationMs": 30000,
+    "adPageMs": 20000,
+    "alertFetchMs": 5000,
+    "httpRequestMs": 8000
+  },
+  "stealth": {
+    "preNavJitterMs": 5000,
+    "postNavJitterMsMax": 15000,
+    "betweenAdsJitterMs": 15000,
+    "warmupTurns": 3
+  },
+  "siteDelay": {
+    "etimadMs": 4000,
+    "muqawilMinMs": 3000,
+    "muqawilMaxMs": 8000,
+    "muqawilPhoneConcurrency": 6
+  },
+  "pipeline": {
+    "defaultKeyResultsPerSite": 25,
+    "cloudflareWaitMs": 35000
+  },
+  "scoring": {
+    "jobHunterBudgetMs": 420000,
+    "emailScoreMin": 30,
+    "leadScoreThreshold": 65,
+    "verifiedLeadMinScore": 65
+  }
+}

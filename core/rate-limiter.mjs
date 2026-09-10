@@ -18,6 +18,8 @@
  *  ④ RequestThrottle     : تحديد معدل الطلبات لكل دومين
  */
 
+import { rateLimit as RL } from "../config/index.mjs";
+
 // ============================================================
 //  BanDetector — كشف علامات الحظر
 // ============================================================
@@ -34,6 +36,8 @@ const BAN_PATTERNS = [
   /please wait/i,
   /verify you are human/i,
   /unusual traffic/i,
+  /just a moment/i,     // Cloudflare challenge interstitial
+  /checking your browser/i,
 ];
 
 /**
@@ -73,12 +77,12 @@ export class AdaptiveRateLimiter {
    * @param {number} [opts.errorThreshold]  - عدد الأخطاء قبل رفع التأخير — default 3
    */
   constructor(opts = {}) {
-    this._min      = opts.minDelay       ?? 500;
-    this._max      = opts.maxDelay       ?? 8000;
-    this._current  = opts.baseDelay      ?? 1500;
-    this._backoff  = opts.backoffFactor  ?? 2;
-    this._recovery = opts.recoveryFactor ?? 0.9;
-    this._errThres = opts.errorThreshold ?? 3;
+    this._min      = opts.minDelay       ?? RL.minDelayMs;
+    this._max      = opts.maxDelay       ?? RL.maxDelayMs;
+    this._current  = opts.baseDelay      ?? RL.baseDelayMs;
+    this._backoff  = opts.backoffFactor  ?? RL.backoffFactor;
+    this._recovery = opts.recoveryFactor ?? RL.recoveryFactor;
+    this._errThres = opts.errorThreshold ?? RL.errorThreshold;
 
     this._errorCount   = 0;
     this._successCount = 0;
@@ -164,7 +168,7 @@ export class RetryHandler {
    * @param {number} [opts.maxDelay]     — ms — default 30000
    */
   constructor(opts = {}) {
-    this._max      = opts.maxRetries ?? 3;
+    this._max      = opts.maxRetries ?? RL.maxRetries;
     this._base     = opts.baseDelay  ?? 2000;
     this._backoff  = opts.backoff    ?? 2;
     this._maxDelay = opts.maxDelay   ?? 30000;
@@ -273,14 +277,14 @@ export class RequestThrottle {
 // ============================================================
 
 export const rateLimiter = new AdaptiveRateLimiter({
-  minDelay:    800,
-  maxDelay:    5000,
-  baseDelay:   1500,
+  minDelay:    RL.minDelayMs,
+  maxDelay:    RL.maxDelayMs,
+  baseDelay:   RL.baseDelayMs,
 });
 
 export const retryHandler = new RetryHandler({
-  maxRetries: 3,
+  maxRetries: RL.maxRetries,
   baseDelay:  2000,
 });
 
-export const throttle = new RequestThrottle(15); // 15 req/min
+export const throttle = new RequestThrottle(RL.requestsPerMinute); // req/min

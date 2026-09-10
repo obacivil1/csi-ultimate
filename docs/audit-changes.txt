@@ -1,0 +1,98 @@
+════════════════════════════════════════════════════════════════════
+ CSI-Ultimate — Audit Completion Record
+ Date: 2026-08-31
+ Scope: Completion of interrupted "Expatriates + Docker" investigation
+════════════════════════════════════════════════════════════════════
+
+## 1. Root-cause investigation (live-verified, 2026-08-31)
+
+Question: "ليش بطل يطلع نتائج على Expatriates وليش أحتاج Docker؟"
+(Why did the crawler stop returning results, and why is Docker needed?)
+
+### A. Why results stopped
+Live Playwright probing of expatriates.com confirmed:
+- Homepage `/` → HTTP 200, full content (NOT blocked).
+- Listing pages `/classifieds/riyadh/jobs/` + `/job-seekers/`
+  → HTTP 403 "Just a moment..." Cloudflare JS challenge.
+- In HEADLESS Chromium the challenge never auto-clears → the configured
+  listing selector `a[href*='/cls/'][href$='.html']` returns 0 links
+  → the crawl reports "no new listings" / zero results.
+- In HEADFUL (headed) Chromium the listing challenge auto-clears (~1.5-3s)
+  → 122 `/cls/` listing links found.
+
+### B. Why Docker is needed (the precise answer)
+- Listing stage: recoverable locally via headful mode (`--hard`).
+- Detail stage: EVERY ad page `/cls/NNNNNNN.html` re-issues its own
+  Cloudflare challenge. It sometimes auto-clears after ~28s and sometimes
+  never does; the injected stealth script makes it worse. Tested runs
+  extracted the fake "www.expatriates.com" shell when extraction proceeded
+  without waiting, and reliably 0 real ads.
+- Therefore reliable bulk extraction requires a real-browser
+  challenge-SOLVER. FlareSolverr (the standard solution) runs via Docker
+  and solves the per-request challenge, returning cleared HTML + cookies.
+- Additionally, on headless Linux servers a "headed" browser needs a
+  virtual display (Xvfb); Docker provides both the deps (`--with-deps`)
+  and the isolation.
+
+Verdict: results stopped because Cloudflare now JS-challenges both listing
+and detail pages; Docker/FlareSolverr is genuinely the production-grade
+path for this site's extraction (not merely a convenience).
+
+════════════════════════════════════════════════════════════════════
+
+## 2. Code changes applied
+
+### FIX 1 — core/live-verifier.mjs (real runtime defect)
+- `page.viewport()` is a Puppeteer-only API → throws
+  `page.viewport is not a function` inside the SUCCESS path of
+  runLiveVerification. This made live-checks FAIL even when the site
+  loaded, so no strategy was ever recorded as verified and every run
+  re-ran the full A/B/C live-check.
+- Changed to `page.viewportSize()` and `navigator.userAgent` (Playwright).
+- Verified: after fix, expatriates live-check logs
+  `LEDGER Verified strategy="A-Standard"` and proceeds (previously failed).
+
+### FIX 2 — core/bridge.mjs (new, safe extraction gate)
+- Added `waitForCloudflare(page, timeoutMs, siteConfig)`.
+- `extractAdData()` now waits for any Cloudflare challenge to clear before
+  reading content; if it never clears it throws `BLOCKED_CF` so the ad is
+  skipped instead of emitting a fake "Just a moment" row.
+- Tunable via `CSI_CF_WAIT_MS` (default 35000) and per-site
+  `challengePatterns` in the site config.
+
+## 3. Local recovery (no Docker) for listing discovery
+Run headful to recover the listing stage:
+  node core/run.mjs expatriates.com Jobs "delivery" 1m --hard
+Observed: 122 links recovered on page 1; detail-page extraction still
+needs FlareSolverr/Docker for reliability.
+
+## 4. Recommended production path for Expatriates
+- Docker image already exists (Dockerfile).
+- Add FlareSolverr sidecar and route detail-page fetch through it
+  (POST /v1, cmd=request.get → cleared HTML + cf_clearance cookies).
+- Keep headful/Xvfb as fallback; reuse `waitForCloudflare` for anything
+  already past the challenge.
+
+## 5. FlareSolverr integration (implemented, pending Docker run)
+Added automatic Cloudflare recovery so detail-page extraction becomes
+reliable:
+- `core/flare-solver.mjs` (NEW): FlareSolverr client. `fetchWithFlareSolverr`
+  POSTs /v1 (request.get) to `${CSI_FLARE_URL}` (default
+  http://localhost:8191), returns cleared HTML with an LRU cache
+  (`CSI_FLARE_CACHE_SIZE`, default 200). `extractFromFlareHtml` parses the
+  result through `extractAdContentFromHtml`. `isFlareAvailable` health-checks.
+  Env: CSI_FLARE_URL, CSI_FLARE_TIMEOUT_MS (60000), CSI_FLARE_DISABLED.
+- `core/bridge.mjs`: `extractAdData()` now falls back to FlareSolverr when
+  `waitForCloudflare` reports the page blocked; if FlareSolverr recovers it,
+  emits the parsed ad with `source:"flaresolverr"`; otherwise still throws
+  BLOCKED_CF.
+- `docker-compose.yml` (NEW): `flaresolverr` service (port 8191,
+  ghcr.io/flaresolverr/flaresolverr:latest) + `csi` web server (port 3000)
+  wired via CSI_FLARE_URL=http://flaresolverr:8191.
+
+To use:
+  docker compose up -d flaresolverr
+  (service footprint: Web server warns only if
+  CSI_FLARE_URL is unreachable; scraping falls back gracefully.)
+  Then re-run: node core/run.mjs expatriates.com Jobs "delivery" 1m --hard
+  Or inside Docker: docker compose up -d && node core/run.mjs ...

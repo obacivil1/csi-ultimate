@@ -24,10 +24,10 @@ function runScript(scriptRelPath) {
 
 export function startScheduler() {
   console.log('  ⏰ Scheduler active');
-  console.log('     → Daily  2AM : Scrape SaudiGulfProjects + rebuild database');
-  console.log('     → Sun    3AM : Scrape Etimad awards (if script exists)');
+  console.log('     → Daily  12AM : Scrape SaudiGulfProjects + rebuild database');
+  console.log('     → Daily  12AM : Scrape Etimad awards');
 
-  cron.schedule('0 2 * * *', async () => {
+  cron.schedule('0 0 * * *', async () => {
     console.log('⏰ [scheduler] Daily update started...');
     try {
       await runScript('scripts/lead-gen/scrape-saudi-gulf-projects.mjs');
@@ -38,8 +38,8 @@ export function startScheduler() {
     }
   });
 
-  cron.schedule('0 3 * * 0', async () => {
-    console.log('⏰ [scheduler] Weekly Etimad awards...');
+  cron.schedule('0 1 * * *', async () => {
+    console.log('⏰ [scheduler] Daily Etimad awards...');
     try {
       await runScript('scripts/lead-gen/etimad-awards.mjs');
       console.log('⏰ [scheduler] Etimad awards updated ✓');

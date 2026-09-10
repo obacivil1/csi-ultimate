@@ -4,20 +4,23 @@ import fs from "fs"
 import path from "path"
 import crypto from "crypto"
 import { fileURLToPath } from "url"
+import { env } from "../config/env.mjs"
+import { logger } from "../core/logger.mjs"
 import { generateSiteVerification, generateAuditSamples, calculateFieldAccuracy, calculateDuplicateMetrics, calculateTrustScore, loadCrawlRecords, listCrawlRecords } from "../core/validation-engine.mjs"
 import { generateInsights, loadInsights } from "../core/insight-engine.mjs"
 import { toCanonical, exportAll as canonicalExport } from "../core/canonical-extractor.mjs"
+import { extractAdData as scrapeAd } from "../core/extractor.mjs"
 import { createPage } from "../core/anti-detect.mjs"
 import { executeSearch } from "../core/run.mjs"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
-const PORT = process.env.CSI_PORT || 3030
+const PORT = env.CSI_PORT
 const STATE_DIR = path.resolve(__dirname, "..", "state")
 const CRAWLS_DIR = path.join(STATE_DIR, "crawls")
 const RECORDS_DIR = path.join(STATE_DIR, "records")
 
-console.log("STATE_DIR:", STATE_DIR)
+logger.info("engine server deprecation notice: prefer web/server.mjs as the single HTTP entrypoint", { port: PORT })
 
 app.use(cors())
 app.use(express.json({ limit: "10mb" }))
@@ -58,7 +61,7 @@ function ensureSites() {
 let activeCrawls = {}
 
 async function extractAdData(page, siteConfig) {
-  return await canonicalExtract(page, siteConfig)
+  return await scrapeAd(page, siteConfig)
 }
 
 // Parse date from expatriates.com format: "Saturday, Jun 13, 2026, 10:51:26 PM"
@@ -299,11 +302,12 @@ app.post("/api/search", async (req, res) => {
       j.searchResults = j.searchResults || []
       j.searchResults.push(event.data)
       broadcastProgress(j, {
-        type: "ad", index: event.index, url: event.link?.substring(0, 40) || "",
+        type: "ad", index: event.index, url: event.data?.url || event.link || "",
         title: (event.data?.title || "N/A").substring(0, 40),
         email: event.data?.email || "N/A",
         phone: event.data?.phone || "N/A",
-        date: event.data?.postedDate || "N/A",
+        location: event.data?.location || "",
+        date: event.data?.postedDate || event.data?.extractedAt || "N/A",
         checked: event.checked, total: event.total,
       })
     } else if (event.type === "skip") {

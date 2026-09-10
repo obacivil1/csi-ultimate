@@ -32,42 +32,42 @@ import { existsSync, mkdirSync } from "fs";
 import { resolve }               from "path";
 
 // ── Stage 1 + 2 ────────────────────────────────────────────
-import { BrowserPool, createPool } from "./core/browser-pool.mjs";
-import { WorkerQueue as Queue } from "./core/queue.mjs";
-import { pageCache }      from "./core/cache.mjs";
-import { dedupe }         from "./core/dedupe.mjs";
-import { extractAd } from "./core/crawler-core.mjs";
+import { BrowserPool, createPool } from "../../../core/browser-pool.mjs";
+import { WorkerQueue as Queue } from "../../../core/queue.mjs";
+import { pageCache }      from "../../../core/cache.mjs";
+import { dedupe }         from "../../../core/dedupe.mjs";
+import { extractAd } from "../../../core/crawler-core.mjs";
 
 // ── Stage 3 ────────────────────────────────────────────────
 import {
   buildCategoryTree,
   walkCategories,
   categorySession,
-} from "./core/category-walker.mjs";
-import { searchMultiple } from "./core/keyword-search.mjs";
-import { searchMultipleKeywords } from "./core/smart-search.mjs";
+} from "../../../core/category-walker.mjs";
+import { searchMultiple } from "../../../core/keyword-search.mjs";
+import { searchMultipleKeywords } from "../../../core/smart-search.mjs";
 
 // ── Stage 4 ────────────────────────────────────────────────
-import { exportAll, exportIntegrityCheck } from "./core/exporter.mjs";
-import { CrawlScheduler as Scheduler, parseInterval } from "./core/scheduler.mjs";
+import { exportAll, exportIntegrityCheck } from "../../../core/exporter.mjs";
+import { CrawlScheduler as Scheduler, parseInterval } from "../../../core/scheduler.mjs";
 
 // ── Site Config ────────────────────────────────────────────
-import { getSiteConfig } from "./core/site-adapter.mjs";
+import { getSiteConfig } from "../../../core/site-adapter.mjs";
 
 // ── Stage 5 ────────────────────────────────────────────────
 import {
   postSearch,
   postSearchMultiple,
   probeSearchMechanism,
-} from "./core/post-search.mjs";
+} from "../../../core/post-search.mjs";
 import {
   rateLimiter,
   retryHandler,
   throttle,
   detectBan,
   AdaptiveRateLimiter,
-} from "./core/rate-limiter.mjs";
-import { createReporter } from "./core/reporter.mjs";
+} from "../../../core/rate-limiter.mjs";
+import { createReporter } from "../../../core/reporter.mjs";
 
 // ── Stage 6 ────────────────────────────────────────────────
 import {
@@ -78,10 +78,10 @@ import {
   printValidationResult,
   promptInteractive,
   buildConfig,
-} from "./core/cli.mjs";
-import { createDashboard }                     from "./core/dashboard.mjs";
-import { saveProfile, listProfiles, loadConfig } from "./core/config-manager.mjs";
-import { runAllTests }                          from "./core/integration-tester.mjs";
+} from "../../../core/cli.mjs";
+import { createDashboard }                     from "../../../core/dashboard.mjs";
+import { saveProfile, listProfiles, loadConfig } from "../../../core/config-manager.mjs";
+import { runAllTests }                          from "../../../core/integration-tester.mjs";
 
 // ============================================================
 //  scrapeLinks — يسحب تفاصيل إعلانات من قائمة روابط
@@ -181,7 +181,7 @@ async function runCategories(pool, baseUrl, config, reporter, dash) {
 
 async function getLinksFromUrl(pool, url, baseUrl, config = {}) {
   const links = await pool.withPage(async (page) => {
-    const { smartLoad, classifyPageState, summarizePageState, captureDiscoveryEvidence, discoverLinksFromHtml, selectCandidateLinks, learnLinkPatterns, classifyPageSemantically, decidePageAction } = await import("./core/crawler-core.mjs");
+    const { smartLoad, classifyPageState, summarizePageState, captureDiscoveryEvidence, discoverLinksFromHtml, selectCandidateLinks, learnLinkPatterns, classifyPageSemantically, decidePageAction } = await import("../../../core/crawler-core.mjs");
     const loaded = await smartLoad(page, url, {
       outputDir: config.outputDir,
       debugDiscovery: config.debugDiscovery,
@@ -327,7 +327,7 @@ async function main() {
 
   // ── فحص صحة site config ───────────────────────────────
   const siteCfg = getSiteConfig(config.baseUrl);
-  const { validateSiteConfig } = await import("./core/site-adapter.mjs");
+  const { validateSiteConfig } = await import("../../../core/site-adapter.mjs");
   const cfgWarnings = validateSiteConfig(siteCfg, config.baseUrl);
   for (const w of cfgWarnings) console.warn(`  ⚠️  ${w}`);
 

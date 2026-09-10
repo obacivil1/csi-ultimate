@@ -28,10 +28,11 @@ import stealth from "puppeteer-extra-plugin-stealth"
 chromium.use(stealth())
 
 import { getRandomFingerprint, buildContextOptions, buildStealthScript, rotateFingerprint, initSessionFingerprint } from "./fingerprint-engine.mjs"
-import { randomDelay, humanScroll, humanMouseMove, simulateHumanBehavior, waitForStabilization } from "./behavior-engine.mjs"
+import { randomDelay, humanScroll, humanMouseMove, simulateHumanBehavior, waitForStabilization, getAdaptiveDelay, recordSiteResponse } from "./behavior-engine.mjs"
 import { recordCheck, getVerifiedStrategy, getSuccessRate, isBelowThreshold, getHistory } from "./strategy-ledger.mjs"
 import { createSessionManager } from "./session-manager.mjs"
 import { injectSessionCookies, enableNetworkCapture, getCapturedApiData, clearCapturedApiData } from "./interaction-engine.mjs"
+import { AdaptiveLearningLoop } from "./adaptive-learning-loop.mjs"
 
 // ═══════════════════════════════════════════════════════════════
 // LAYER 3 — Jitter Controller
@@ -212,16 +213,55 @@ export async function createStealthContext(browser, strategyName) {
 // ═══════════════════════════════════════════════════════════════
 
 let proxyIndex = 0
+const proxyFailures = new Map()
 
 function getNextProxy() {
   const proxyVar = process.env.CSI_PROXY
   if (!proxyVar) return null
   const proxies = proxyVar.split(",").map(s => s.trim()).filter(Boolean)
   if (proxies.length === 0) return null
-  const p = proxies[proxyIndex % proxies.length]
+
+  // Skip proxies with too many failures
+  const healthy = proxies.filter(p => {
+    const f = proxyFailures.get(p)
+    return !f || f.consecutiveFailures < 3
+  })
+  const pool = healthy.length > 0 ? healthy : proxies
+
+  const p = pool[proxyIndex % pool.length]
   proxyIndex++
   return p
 }
+
+function recordProxyFailure(proxy) {
+  if (!proxy) return
+  const f = proxyFailures.get(proxy) || { consecutiveFailures: 0, totalFailures: 0, lastFailure: null }
+  f.consecutiveFailures++
+  f.totalFailures++
+  f.lastFailure = Date.now()
+  proxyFailures.set(proxy, f)
+}
+
+function recordProxySuccess(proxy) {
+  if (!proxy) return
+  const f = proxyFailures.get(proxy)
+  if (f) {
+    f.consecutiveFailures = 0
+    proxyFailures.set(proxy, f)
+  }
+}
+
+// Decay proxy failures over time (recover after 30 minutes)
+function decayProxyFailures() {
+  const now = Date.now()
+  for (const [proxy, f] of proxyFailures) {
+    if (f.lastFailure && (now - f.lastFailure) > 1800000) {
+      f.consecutiveFailures = Math.max(0, f.consecutiveFailures - 1)
+      proxyFailures.set(proxy, f)
+    }
+  }
+}
+setInterval(decayProxyFailures, 300000) // every 5 minutes
 
 // ── Strategy A: Standard ─────────────────────────────────────
 async function strategyA(browser, url, siteConfig, adId, extractors) {
@@ -503,9 +543,22 @@ const STRATEGIES = [
 export async function executeWithStrategy(browser, url, siteConfig, adId, extractors, opts = {}) {
   const hostname = opts.hostname || siteConfig.hostname || "unknown"
   const recovery = new ErrorRecovery(3)
+  const learningLoop = new AdaptiveLearningLoop()
 
   const orderedStrategies = [...STRATEGIES]
-  if (opts.preferredStrategy) {
+
+  // Check adaptive learning for recommended strategy first
+  if (!opts.preferredStrategy) {
+    const recommended = learningLoop.getRecommendedStrategy(hostname)
+    if (recommended) {
+      const idx = orderedStrategies.findIndex(s => s.name === recommended)
+      if (idx > 0) {
+        const [pref] = orderedStrategies.splice(idx, 1)
+        orderedStrategies.unshift(pref)
+        console.log(`[[STRATEGY_ADAPTIVE]] using="${recommended}" (from learning loop, ${((learningLoop.getStrategyRankings(hostname).find(r => r.strategy === recommended)?.successRate || 0) * 100).toFixed(0)}% success)`)
+      }
+    }
+  } else if (opts.preferredStrategy) {
     const idx = orderedStrategies.findIndex(s => s.name === opts.preferredStrategy)
     if (idx > 0) {
       const [pref] = orderedStrategies.splice(idx, 1)
@@ -519,13 +572,20 @@ export async function executeWithStrategy(browser, url, siteConfig, adId, extrac
 
     while (true) {
       try {
-        await Jitter.delay(500, 3000)
+        // Use adaptive jitter based on site's history
+        const adaptiveDelay = getAdaptiveDelay(hostname)
+        await Jitter.delay(adaptiveDelay, adaptiveDelay + 3000)
+        const startTime = Date.now()
         const result = await strategy.fn(browser, url, siteConfig, adId, extractors)
+        const elapsed = Date.now() - startTime
+
+        recordSiteResponse(hostname, elapsed, false)
 
         if (result) {
           console.log(`[[STRATEGY_ACTIVE]] success="${strategy.name}" fields=${Object.keys(result).filter(k => result[k]).length}`)
           const fpId = `p${Math.floor(Math.random() * 8) + 1}`
           recordCheck(hostname, strategy.name, "SUCCESS", { fields: Object.keys(result).filter(k => result[k]).length, fingerprintId: fpId })
+          learningLoop.recordOutcome({ hypothesisType: strategy.name, success: true, signal: 'extraction', hostname })
           if (opts.sessionManager) {
             opts.sessionManager.lockIdentity({ fingerprintId: fpId, ua: "" })
             console.log(`[[SESSION_LOCK]] identity locked for "${hostname}"`)
@@ -536,12 +596,19 @@ export async function executeWithStrategy(browser, url, siteConfig, adId, extrac
         throw new Error("DEEP_EXTRACTION_FAILED")
       } catch (error) {
         const msg = error.message?.substring(0, 100) || "UNKNOWN"
+        const elapsed = 30000
+        recordSiteResponse(hostname, elapsed, true)
         console.log(`[[STRATEGY_FAILED]] name="${strategy.name}" attempt=${recovery.attempt + 1}/${recovery.maxRetries} reason="${msg}"`)
         recordCheck(hostname, strategy.name, "BLOCKED", { error: msg, attempt: recovery.attempt + 1 })
+        learningLoop.recordOutcome({ hypothesisType: strategy.name, success: false, signal: 'blocked', hostname })
 
         if (recovery.shouldRetry(error)) {
-          console.log(`[[BACKOFF]] waiting ${Math.round(recovery.getDelay() / 1000)}s before retry`)
-          await recovery.wait()
+          const waitSec = Math.round(recovery.getDelay() / 1000)
+          console.log(`[[BACKOFF]] waiting ${waitSec}s before retry`)
+          // Use adaptive jitter for backoff
+          const adaptiveDelay = getAdaptiveDelay(hostname)
+          await new Promise(r => setTimeout(r, Math.max(recovery.getDelay(), adaptiveDelay)))
+          recovery.attempt++
           continue
         }
         break

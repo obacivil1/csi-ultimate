@@ -152,6 +152,54 @@ export async function waitForStabilization(page, minWait = 500) {
   }
 }
 
+// ── Per-site adaptive jitter profiles ──────────────────────
+const jitterProfiles = new Map()
+
+export function getSiteJitterProfile(hostname) {
+  if (!jitterProfiles.has(hostname)) {
+    jitterProfiles.set(hostname, {
+      hostname,
+      minJitterMs: 5000,
+      maxJitterMs: 15000,
+      backoffFactor: 1.0,
+      consecutiveBlocks: 0,
+      lastBlockAt: null,
+      avgResponseMs: 0,
+      sampleCount: 0,
+    })
+  }
+  return jitterProfiles.get(hostname)
+}
+
+export function recordSiteResponse(hostname, responseMs, blocked = false) {
+  const profile = getSiteJitterProfile(hostname)
+  if (blocked) {
+    profile.consecutiveBlocks++
+    profile.lastBlockAt = Date.now()
+    profile.backoffFactor = Math.min(profile.backoffFactor * 1.5, 5.0)
+  } else {
+    profile.consecutiveBlocks = 0
+    profile.backoffFactor = Math.max(profile.backoffFactor * 0.95, 0.5)
+  }
+  profile.avgResponseMs = (profile.avgResponseMs * profile.sampleCount + responseMs) / (profile.sampleCount + 1)
+  profile.sampleCount++
+}
+
+export function getAdaptiveDelay(hostname) {
+  const profile = getSiteJitterProfile(hostname)
+  const baseMin = profile.minJitterMs * profile.backoffFactor
+  const baseMax = profile.maxJitterMs * profile.backoffFactor
+  const min = Math.min(baseMin, 60000)
+  const max = Math.min(baseMax, 90000)
+  const r = Math.random()
+  const weighted = min + (max - min) * (r * r * 0.7 + r * 0.3)
+  return Math.floor(weighted)
+}
+
+export function resetSiteProfile(hostname) {
+  jitterProfiles.delete(hostname)
+}
+
 export default {
   generateHumanMousePath,
   generateScrollPath,
@@ -162,4 +210,8 @@ export default {
   humanType,
   randomDelay,
   waitForStabilization,
+  getSiteJitterProfile,
+  recordSiteResponse,
+  getAdaptiveDelay,
+  resetSiteProfile,
 }

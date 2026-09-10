@@ -370,4 +370,214 @@ export async function runInteractionPipeline(page, context, hostname, siteConfig
   }
 }
 
-export { CAPTCHA_PATTERNS, REVEAL_SELECTORS }
+// ── CAPTCHA Solving (2Captcha Integration) ─────────────────────
+
+const CAPTCHA_API_KEY = process.env.CSI_CAPTCHA_API_KEY || ""
+
+async function solveCaptchaWith2Captcha(siteKey, pageUrl, type = "recaptcha_v2") {
+  if (!CAPTCHA_API_KEY) {
+    log("INTERACTION", "CAPTCHA solving skipped — no CSI_CAPTCHA_API_KEY set")
+    return null
+  }
+
+  const baseUrl = "https://2captcha.com"
+  const methods = {
+    recaptcha_v2: "userrecaptcha",
+    recaptcha_v3: "userrecaptcha",
+    hcaptcha: "hcaptcha",
+    turnstile: "turnstile",
+  }
+  const method = methods[type] || "userrecaptcha"
+
+  try {
+    const submitRes = await fetch(`${baseUrl}/in.php`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        key: CAPTCHA_API_KEY,
+        method,
+        googlekey: siteKey,
+        pageurl: pageUrl,
+        json: 1,
+      }),
+    })
+    const submitData = await submitRes.json()
+    if (submitData.status !== 1) {
+      log("INTERACTION_BLOCKED", `2Captcha submit failed: ${submitData.request}`)
+      return null
+    }
+
+    const captchaId = submitData.request
+    log("INTERACTION", `2Captcha solving (${type}) — waiting for result`, { id: captchaId })
+
+    for (let attempt = 0; attempt < 30; attempt++) {
+      await new Promise(r => setTimeout(r, 5000))
+      const resultRes = await fetch(`${baseUrl}/res.php`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key: CAPTCHA_API_KEY,
+          action: "get",
+          id: captchaId,
+          json: 1,
+        }),
+      })
+      const resultData = await resultRes.json()
+      if (resultData.status === 1) {
+        log("INTERACTION_OK", `CAPTCHA solved (${type}) in ${(attempt + 1) * 5}s`)
+        return resultData.request
+      }
+      if (resultData.request !== "CAPCHA_NOT_READY") {
+        log("INTERACTION_BLOCKED", `2Captcha error: ${resultData.request}`)
+        return null
+      }
+    }
+    log("INTERACTION_BLOCKED", `2Captcha timeout after 150s`)
+    return null
+  } catch (e) {
+    log("INTERACTION_BLOCKED", `2Captcha network error: ${e.message?.substring(0, 60)}`)
+    return null
+  }
+}
+
+async function detectAndSolveCaptcha(page) {
+  const captchaCheck = await detectCaptcha(page)
+  if (!captchaCheck.blocked) return { solved: false, reason: "none_detected" }
+
+  const pageUrl = page.url()
+  log("INTERACTION", `Attempting to solve CAPTCHA (pattern: ${captchaCheck.pattern})`)
+
+  // Detect CAPTCHA type and sitekey
+  const captchaInfo = await page.evaluate(() => {
+    const info = { type: null, siteKey: null }
+
+    // reCAPTCHA v2
+    const recaptcha = document.querySelector('.g-recaptcha')
+    if (recaptcha) {
+      info.type = 'recaptcha_v2'
+      info.siteKey = recaptcha.getAttribute('data-sitekey')
+    }
+
+    // hCaptcha
+    const hcaptcha = document.querySelector('.h-captcha')
+    if (hcaptcha) {
+      info.type = 'hcaptcha'
+      info.siteKey = hcaptcha.getAttribute('data-sitekey')
+    }
+
+    // Cloudflare Turnstile
+    const turnstile = document.querySelector('[class*="cf-turnstile"]')
+    if (turnstile) {
+      info.type = 'turnstile'
+      info.siteKey = turnstile.getAttribute('data-sitekey')
+    }
+
+    // reCAPTCHA v3 (invisible)
+    if (!info.siteKey) {
+      const scripts = Array.from(document.querySelectorAll('script[src*="recaptcha"]'))
+      for (const s of scripts) {
+        const m = s.src.match(/render=([^&"]+)/)
+        if (m) { info.type = 'recaptcha_v3'; info.siteKey = m[1]; break }
+      }
+    }
+
+    // Fallback: search entire HTML for sitekey
+    if (!info.siteKey) {
+      const html = document.documentElement.innerHTML
+      const m = html.match(/(?:data-sitekey|sitekey)[=:]["']([^"']+)["']/)
+      if (m) { info.siteKey = m[1]; info.type = info.type || 'recaptcha_v2' }
+    }
+
+    return info
+  }).catch(() => ({ type: null, siteKey: null }))
+
+  if (!captchaInfo.siteKey) {
+    log("INTERACTION_BLOCKED", "CAPTCHA detected but could not find sitekey")
+    return { solved: false, reason: "no_sitekey" }
+  }
+
+  const token = await solveCaptchaWith2Captcha(captchaInfo.siteKey, pageUrl, captchaInfo.type)
+  if (!token) {
+    log("INTERACTION_BLOCKED", "CAPTCHA solving failed")
+    return { solved: false, reason: "solver_failed" }
+  }
+
+  // Inject the solved token
+  await page.evaluate(({ token, type }) => {
+    return new Promise((resolve) => {
+      // reCAPTCHA: find the textarea and trigger callback
+      if (type === 'recaptcha_v2' || type === 'recaptcha_v3') {
+        const textarea = document.getElementById('g-recaptcha-response')
+        if (textarea) {
+          textarea.innerHTML = token
+          textarea.style.display = 'block'
+          const form = textarea.closest('form')
+          if (form) form.dispatchEvent(new Event('submit'))
+        }
+        // Try calling __doPostBack or grecaptcha callback
+        if (typeof grecaptcha !== 'undefined' && grecaptcha.getResponse) {
+          try {
+            const widgetIds = grecaptcha.getWidgetId ? [grecaptcha.getWidgetId()] : [0]
+            widgetIds.forEach(id => {
+              if (grecaptcha.getResponse(id) === '') {
+                grecaptcha.execute(id)
+              }
+            })
+          } catch {}
+        }
+      }
+
+      // hCaptcha
+      if (type === 'hcaptcha') {
+        const textarea = document.querySelector('.h-captcha textarea')
+        if (textarea) {
+          textarea.innerHTML = token
+          textarea.dispatchEvent(new Event('change', { bubbles: true }))
+        }
+        if (typeof hcaptcha !== 'undefined' && hcaptcha.getResponse) {
+          try { hcaptcha.execute() } catch {}
+        }
+      }
+
+      // Cloudflare Turnstile
+      if (type === 'turnstile') {
+        const input = document.querySelector('[name="cf-turnstile-response"]')
+        if (input) {
+          input.value = token
+          input.dispatchEvent(new Event('input', { bubbles: true }))
+        }
+        if (typeof turnstile !== 'undefined') {
+          try { turnstile.render('#cf-turnstile', { 'response': token }) } catch {}
+        }
+      }
+
+      // Fallback: try finding any callback function
+      const allScripts = Array.from(document.scripts)
+      for (const s of allScripts) {
+        const m = s.textContent.match(/(?:callback|verifyCallback)\s*[=:]\s*(function|\([^)]*\))/)
+        if (m) {
+          try {
+            new Function('token', m[0])(token)
+          } catch {}
+        }
+      }
+
+      setTimeout(resolve, 2000)
+    })
+  }, { token, type: captchaInfo.type })
+
+  await Jitter.delay(2000, 4000)
+
+  // Verify if solved
+  const recheck = await detectCaptcha(page)
+  if (recheck.blocked) {
+    log("INTERACTION_BLOCKED", "CAPTCHA still present after solving — may need human intervention")
+    return { solved: false, reason: "still_present" }
+  }
+
+  log("INTERACTION_OK", "CAPTCHA solved and cleared")
+  recordCheck(page.url()?.replace(/[^a-z0-9.]/g, "_") || "unknown", "captcha-solve", "SUCCESS")
+  return { solved: true, method: captchaInfo.type }
+}
+
+export { CAPTCHA_PATTERNS, REVEAL_SELECTORS, detectAndSolveCaptcha }

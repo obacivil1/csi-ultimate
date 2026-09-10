@@ -1,11 +1,12 @@
 import { chromium } from 'playwright';
 import fs from 'fs';
 import path from 'path';
+import { siteDelay } from '../../config/index.mjs';
 
 const TENDERS_FILE = path.resolve('data/etimad_all_tenders.json');
 const AWARDS_FILE = path.resolve('data/etimad_all_awards.json');
 const PROGRESS_FILE = path.resolve('data/etimad_awards_progress.json');
-const DELAY_MS = 3000;
+const DELAY_MS = siteDelay.etimadMs;
 const SAVE_EVERY = 50;
 const BASE = 'https://tenders.etimad.sa';
 

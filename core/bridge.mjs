@@ -16,15 +16,17 @@ import { getVerifiedStrategy, getSuccessRate, isBelowThreshold, getHistory, clea
 import { createSessionManager } from "./session-manager.mjs"
 import { evaluateStrategies } from "./live-verifier.mjs"
 import { runInteractionPipeline, professionalClick, extractHiddenData, detectCaptcha } from "./interaction-engine.mjs"
+import { extractFromFlareHtml } from "./flare-solver.mjs"
 
 const STATE_DIR = path.resolve(import.meta.dirname, "..", "state")
 const RECORDS_DIR = path.join(STATE_DIR, "records")
 if (!fs.existsSync(RECORDS_DIR)) fs.mkdirSync(RECORDS_DIR, { recursive: true })
 
 // ── Logger ─────────────────────────────────────────────────────
+import { env } from "../config/env.mjs"
 const LOG_LEVELS = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3, SILENT: 4 }
-const LOG_LEVEL = process.env.CSI_LOG_LEVEL || "INFO"
-const UAT_MODE = process.env.CSI_UAT === "1"
+const LOG_LEVEL = env.LOG_LEVEL
+const UAT_MODE = env.UAT
 
 function log(level, tag, msg, meta) {
   if (LOG_LEVELS[level] < LOG_LEVELS[LOG_LEVEL]) return
@@ -39,7 +41,7 @@ const logError = (t, m, x) => log("ERROR", t, m, x)
 const logDebug = (t, m, x) => log("DEBUG", t, m, x)
 
 // ── Alert dispatcher ───────────────────────────────────────────
-const ALERT_WEBHOOK_URL = process.env.CSI_ALERT_URL || ""
+const ALERT_WEBHOOK_URL = env.ALERT_URL
 
 /**
  * sendAlert — Lightweight webhook dispatcher.
@@ -304,9 +306,88 @@ export async function deepExtraction(page, siteConfig, adId) {
 }
 
 // ── Core extraction ────────────────────────────────────────────
+// ── Cloudflare challenge handling ──────────────────────────────
+// Many protected sites (e.g. expatriates.com) re-issue a "Just a moment..."
+// JS challenge on EVERY navigation, including each ad detail page. In headful
+// (hard) mode the challenge auto-clears; headless mode never does. This helper
+// waits for the challenge to clear before extraction and returns whether the
+// page reached real content. Otherwise callers skip the ad without extracting
+// garbage. Bounded by CSI_CF_WAIT_MS (default 35s) so a permanently-blocked
+// page never hangs the crawl.
+export async function waitForCloudflare(page, timeoutMs = null, siteConfig = {}) {
+  const ms = timeoutMs !== null && timeoutMs !== undefined
+    ? timeoutMs
+    : env.CF_WAIT_MS
+
+  const challengePatterns = siteConfig.challengePatterns || [
+    "just a moment",
+    "security verification",
+    "verify you are human",
+    "checking your browser",
+    "enable javascript and cookies",
+  ]
+  const rules = challengePatterns.map((p) => new RegExp(p, "i"))
+
+  const detected = await page.evaluate(() => {
+    const t = String(document.title || "").toLowerCase()
+    const b = String(document.body?.innerText || "").toLowerCase()
+    return t.includes("just a moment") || b.includes("security verification") ||
+      b.includes("verify you are human") || b.includes("checking your browser")
+  }).catch(() => false)
+
+  if (!detected) return true // no challenge present
+
+  logWarn("[EXT]", "Cloudflare challenge detected — waiting for auto-resolution", {
+    url: page.url()?.substring(0, 60),
+    waitMs: ms,
+  })
+
+  try {
+    await page.waitForFunction((rulesSrc) => {
+      const rules = rulesSrc.map((r) => new RegExp(r, "i"))
+      const t = String(document.title || "").toLowerCase()
+      const b = String(document.body?.innerText || "").toLowerCase()
+      return !rules.some((r) => r.test(t) || r.test(b))
+    }, { timeout: ms, polling: 1500 }, rules.map((r) => r.source))
+    return true
+  } catch {
+    logWarn("[EXT]", "Cloudflare challenge did not auto-clear", {
+      url: page.url()?.substring(0, 60),
+      stillBlocked: await page.evaluate(() => (document.title || "").toLowerCase()).catch(() => "?"),
+    })
+    return false
+  }
+}
+
 export async function extractAdData(page, siteConfig) {
   const sel = siteConfig.selectors || siteConfig.extraction?.selectors || {}
   const ext = siteConfig.extraction || {}
+
+  // Gate on real content: if a Cloudflare challenge is present and never
+  // auto-clears, fall back to FlareSolverr (Docker sidecar) which solves the
+  // challenge in a separate real browser and returns cleared HTML.
+  const contentReady = await waitForCloudflare(page, null, siteConfig)
+  if (!contentReady) {
+    const url = page.url()
+    logWarn("[EXT]", "Page blocked by Cloudflare — attempting FlareSolverr", { url: url?.substring(0, 60) })
+    const flare = await extractFromFlareHtml(url, siteConfig?.flare)
+    if (flare) {
+      logInfo("[EXT]", "Recovered ad via FlareSolverr", { title: (flare.title || "").substring(0, 40) })
+      return {
+        id: String(url.match(/\/(\d{6,12})/)?.[1] || ""),
+        title: flare.title,
+        description: flare.description,
+        price: null,
+        currency: null,
+        phone: flare.phones?.join(", ") || "",
+        email: flare.emails?.join(", ") || "",
+        location: "",
+        extractedAt: new Date().toISOString(),
+        source: "flaresolverr",
+      }
+    }
+    throw new Error("BLOCKED_CF: ad page did not clear Cloudflare challenge" + (flare === null ? " (FlareSolverr unavailable)" : ""))
+  }
 
   const id = await page.evaluate((pattern) => {
     const p = window.location.pathname
@@ -544,8 +625,8 @@ export async function runSearch(config, onProgress) {
   const results = []
   let checked = 0, skippedKeyword = 0, skippedDate = 0, errors = 0
 
-  const extremeMode = config.extremeMode || process.env.CSI_EXTREME_MODE === "1"
-  const hardMode = extremeMode || config.hardMode || process.env.CSI_HARD_MODE === "1"
+  const extremeMode = config.extremeMode || env.EXTREME_MODE
+  const hardMode = extremeMode || config.hardMode || env.HARD_MODE
 
   logInfo("[INIT]", "Pipeline started", { site: siteConfig.hostname, category: category.name, keyword, timePeriod, maxResults, hardMode, extremeMode })
 
@@ -553,7 +634,7 @@ export async function runSearch(config, onProgress) {
   const hostname = siteConfig.hostname?.toLowerCase() || ""
   if (hostname.includes("indeed")) {
     logInfo("[INDEED-API]", "Trying Indeed Publisher API...")
-    const publisherId = process.env.CSI_INDEED_PUBLISHER_ID || ""
+    const publisherId = env.INDEED_PUBLISHER_ID
     const rssKw = keyword?.trim() ? keyword : category.name
     const indeedResults = await fetchIndeedJobs(rssKw, "Riyadh", publisherId)
     if (indeedResults.length > 0) {

@@ -734,6 +734,7 @@ td.phone { font-family: "SF Mono", "Cascadia Code", "Consolas", monospace; font-
               <th>Title</th>
               <th>Email</th>
               <th>Phone</th>
+              <th>Link</th>
               <th>Location</th>
               <th>Date</th>
             </tr>
@@ -1054,6 +1055,7 @@ function handleSSEEvent(data) {
         title: data.title,
         email: data.email,
         phone: data.phone,
+        location: data.location || '',
         date: data.date,
       });
       addLog('ad', `#${data.index} ${data.title}${data.email ? ' — ' + data.email : ''}${data.phone ? ' — ' + data.phone : ''}`);
@@ -1152,7 +1154,7 @@ function renderResultsTable() {
   const records = state.results;
 
   if (!records.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text3)">No results found</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text3)">No results found</td></tr>';
     return;
   }
 
@@ -1168,6 +1170,7 @@ function renderResultsTable() {
       <td><strong>${escapeHtml(r.title || '')}</strong></td>
       <td class="email">${escapeHtml(r.email || '')}</td>
       <td class="phone">${escapeHtml(r.phone || '')}</td>
+      <td>${r.url ? '<a href="' + escapeHtml(r.url) + '" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;cursor:pointer">🔗 Open</a>' : ''}</td>
       <td>${escapeHtml(r.location || '')}</td>
       <td>${dateStr}</td>
     </tr>`;

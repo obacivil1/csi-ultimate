@@ -172,6 +172,12 @@ export function isValidPhone(phone, countryCode = "GB") {
     if (/^0[5][0-9]{8}$/.test(cleaned)) return true
     return false
   }
+  if (countryCode === "SA") {
+    if (/^05[0-9]{8}$/.test(cleaned)) return true
+    if (/^9665[0-9]{8}$/.test(cleaned)) return true
+    if (/^\+9665[0-9]{8}$/.test(cleaned)) return true
+    return false
+  }
   if (/^\+?[1-9][0-9]{6,14}$/.test(cleaned)) return true
   return false
 }
@@ -189,11 +195,26 @@ export function cleanPhone(raw, url, countryCode = "GB") {
   if (!raw) return null
   let phone = null
   if (typeof raw === "string") {
-    const match = raw.match(/0[0-9]{9,10}/)
-    if (match) phone = match[0]
-    else {
-      const intMatch = raw.match(/\+44[0-9]{10}/)
-      if (intMatch) phone = intMatch[0]
+    if (countryCode === "SA" || /\+966|966|ر.س|السعودية/i.test(raw)) {
+      const digits = raw.replace(/\D/g, "")
+      const saIntl = digits.match(/9665[0-9]{8}/)
+      if (saIntl) phone = "+" + saIntl[0]
+      else {
+        const saLocal = digits.match(/^05[0-9]{8}/)
+        if (saLocal) phone = "+966" + saLocal[0].slice(1)
+        else {
+          const saLocal2 = digits.match(/5[0-9]{8}/)
+          if (saLocal2) phone = "+966" + saLocal2[0]
+        }
+      }
+    }
+    if (!phone) {
+      const match = raw.match(/0[0-9]{9,10}/)
+      if (match) phone = match[0]
+      else {
+        const intMatch = raw.match(/\+44[0-9]{10}/)
+        if (intMatch) phone = intMatch[0]
+      }
     }
   }
   if (!phone) return null
@@ -230,6 +251,9 @@ export function detectCurrency(bodyText) {
   if (bodyText.includes("Rs")) return "PKR"
   if (bodyText.includes("PKR")) return "PKR"
   if (bodyText.includes("AED")) return "AED"
+  if (bodyText.includes("ر.س")) return "SAR"
+  if (bodyText.includes("ريال")) return "SAR"
+  if (/\bSAR\b/.test(bodyText)) return "SAR"
   if (bodyText.includes("€")) return "EUR"
   if (bodyText.includes("$")) return "USD"
   return null
@@ -286,13 +310,18 @@ export async function extractAdData(page, siteConfig, category) {
     }
     const getAllText = (s) => {
       if (!s) return null
-      return Array.from(document.querySelectorAll(s)).map(e => e.innerText.trim()).filter(Boolean).join(", ") || null
+      const out = []
+      for (const el of document.querySelectorAll(s)) {
+        const t = el.innerText?.trim?.()
+        if (t) out.push(t)
+      }
+      return out.join(", ") || null
     }
 
     const title = getEl(sel.title) || getEl("h1") || document.title?.split(/[-|–]/)[0]?.trim() || "N/A"
 
     const telLinks = Array.from(document.querySelectorAll('a[href^="tel:"]'))
-      .map(a => a.href.replace("tel:", "").replace(/[\s\-\(\)\.]/g, ""))
+      .map(a => a.href?.replace?.("tel:", "")?.replace(/[\s\-\(\)\.]/g, "") || "")
       .filter(n => n.length >= 10 && n !== adId)
     const phoneRx = [/\b07[0-9]{9}\b/g, /\b0[0-9]{10}\b/g, /\+\d{10,14}/g]
     const phoneSet = new Set(telLinks)
@@ -323,7 +352,7 @@ export async function extractAdData(page, siteConfig, category) {
 
     const location = getEl(sel.location) || getEl('[class*="address"]') || document.querySelector("address")?.innerText?.trim() || getAllText('[class*="location"]') || null
 
-    const crumbs = Array.from(document.querySelectorAll('[class*="breadcrumb"] a, nav a, [class*="crumb"] a')).map(a => a.innerText.trim()).filter(Boolean).join(" > ") || null
+    const crumbs = Array.from(document.querySelectorAll('[class*="breadcrumb"] a, nav a, [class*="crumb"] a')).map(a => a.innerText?.trim?.() || "").filter(Boolean).join(" > ") || null
 
     return {
       id: adId,

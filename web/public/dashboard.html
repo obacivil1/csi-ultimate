@@ -79,10 +79,6 @@
       </div>
       <button onclick="handleLogout()">تسجيل خروج</button>
       </div>
-      <div style="background:var(--bg-card);border-radius:12px;padding:20px;box-shadow:0 2px 8px var(--shadow);margin-top:20px;">
-        <h3 style="margin-bottom:15px;color:var(--accent-hover);">📧 رسائل التواصل</h3>
-        <div id="adminMessages"><p style="color:var(--text-muted);">جاري التحميل...</p></div>
-      </div>
     </div>
 </div>
 
@@ -347,7 +343,7 @@
           <div class="price-tag" style="font-size:1.3em;">1,199 <small>ريال/شهر</small></div>
           <ul class="features" style="font-size:0.8em;">
             <li>جميع المنافسات</li>
-            <li>جميع المقاولين (13,000+)</li>
+            <li>جميع المقاولين (<span id="dashPricingContractors">—</span>)</li>
             <li>تصدير Excel 1,000 صف</li>
             <li>تنبيهات المنافسات</li>
             <li>فلتر التشييد والأيام</li>
@@ -514,6 +510,15 @@ async function checkAuth() {
   loadTenders();
   loadAlerts();
   loadRegions();
+  loadPricingStats();
+}
+
+async function loadPricingStats() {
+  try {
+    const contStats = await API.get('/api/contractors/stats');
+    const el = document.getElementById('dashPricingContractors');
+    if (el) el.textContent = (contStats.total || 0).toLocaleString();
+  } catch (e) { /* ignore */ }
 }
 
 // ── Filter Options ──

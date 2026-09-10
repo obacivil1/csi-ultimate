@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { authenticate, requireSubscription, getPlanLimits } from '../middleware/auth.mjs';
+import { authenticate, getPlanLimits } from '../middleware/auth.mjs';
 import { getJSON } from '../cache.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

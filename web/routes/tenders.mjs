@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { authenticate, requireSubscription, getPlanLimits, applyPlanLimit } from '../middleware/auth.mjs';
+import { getPlanLimits } from '../middleware/auth.mjs';
 import { getJSON } from '../cache.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -32,6 +32,7 @@ tendersRouter.get('/', (req, res) => {
 
   // Filters
   const { search, activity, agency, type, status, region, construction, expiring, maxDays, minDays, dateFrom, dateTo, page = 1, limit = 24 } = req.query;
+  if (!status) filtered = filtered.filter(t => t.tenderStatusId !== 8);
 
   if (search) {
     const s = search.toLowerCase();
@@ -180,8 +181,10 @@ tendersRouter.get('/stats', (req, res) => {
 
   const active = tenders.filter(t => [2, 3, 4, 5].includes(t.tenderStatusId));
 
+  const activeOrAwarded = tenders.filter(t => t.tenderStatusId !== 8);
+
   statsCache = {
-    total: tenders.length,
+    total: activeOrAwarded.length,
     active: active.length,
     construction: construction.length,
     expiringSoon: expiring.length,

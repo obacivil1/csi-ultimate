@@ -231,15 +231,15 @@ export async function runLiveVerification(browser, hostname, strategyName, testU
       recordCheck(hostname, strategyName, "SUCCESS", {
         fields: Object.keys(data).filter(k => data[k]).length,
         fingerprintId: profile?.fingerprintId || "generic",
-        ua: page.context()?.userAgent?.()?.substring(0, 80) || "",
-        viewport: `${page.viewport()?.width || 0}x${page.viewport()?.height || 0}`,
+        ua: (await page.evaluate(() => navigator.userAgent).catch(() => ""))?.substring(0, 80) || "",
+        viewport: `${page.viewportSize()?.width || 0}x${page.viewportSize()?.height || 0}`,
       })
 
       // Lock identity
       const identity = {
         fingerprintId: `profile_${Math.floor(Math.random() * 8) + 1}`,
-        ua: page.context()?.userAgent?.()?.substring(0, 100) || "",
-        viewport: `${page.viewport()?.width || 0}x${page.viewport()?.height || 0}`,
+        ua: (await page.evaluate(() => navigator.userAgent).catch(() => ""))?.substring(0, 100) || "",
+        viewport: `${page.viewportSize()?.width || 0}x${page.viewportSize()?.height || 0}`,
       }
       sessionManager.lockIdentity(identity)
 

@@ -20,17 +20,20 @@ import { fetchIndeedJobs } from "./indeed-api.mjs"
 
 // ── Rotating fingerprints ──────────────────────────────────────
 const USER_AGENTS = [
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:130.0) Gecko/20100101 Firefox/130.0",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15",
 ]
 const MOBILE_UAS = [
-  "Mozilla/5.0 (Linux; Android 14; SM-S928B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.6422.147 Mobile Safari/537.36",
-  "Mozilla/5.0 (Linux; Android 13; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.179 Mobile Safari/537.36",
-  "Mozilla/5.0 (iPhone14,3; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+  "Mozilla/5.0 (Linux; Android 14; SM-S928B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.107 Mobile Safari/537.36",
+  "Mozilla/5.0 (Linux; Android 14; Pixel 9 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.39 Mobile Safari/537.36",
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
 ]
 const VIEWPORTS = [
   { width: 1440, height: 900 },  { width: 1920, height: 1080 },
@@ -247,10 +250,32 @@ export async function createPage(opts = {}) {
     locale: lc,
     timezoneId: tz,
   })
-  // Use generated stealth script with this profile's spoofing
-  const initScript = extremeMode
+  // Use profile-based stealth script for all modes (consistent WebGL, canvas, audio)
+  // Normal mode: use base bypass + profile WebGL/Canvas/Audio
+  // Hard/Extreme: full profile-based fingerprint
+  const initScript = hardMode
     ? buildStealthScript(fp.profile, true)
-    : (hardMode ? HARD_CF_BYPASS : CF_BYPASS_SCRIPT)
+    : `(function(){${CF_BYPASS_SCRIPT}
+  // WebGL vendor spoofing from profile
+  const gp=WebGLRenderingContext.prototype.getParameter;
+  WebGLRenderingContext.prototype.getParameter=function(p){
+    if(p===37445)return '${fp.profile.vendorWebGL}';
+    if(p===37446)return '${fp.profile.renderer}';
+    return gp.call(this,p)
+  };
+  // Canvas noise
+  const tD=HTMLCanvasElement.prototype.toDataURL;
+  HTMLCanvasElement.prototype.toDataURL=function(t){
+    const c=this.getContext('2d');if(c){const d=c.getImageData(0,0,this.width,this.height);
+    for(let i=0;i<d.data.length;i+=4){d.data[i]^=1;d.data[i+1]^=1}c.putImageData(d,0,0)}
+    return tD.call(this,t)
+  };
+  // Audio noise
+  const gC=AudioBuffer.prototype.getChannelData;
+  AudioBuffer.prototype.getChannelData=function(c){
+    const d=gC.call(this,c);if(d.length>0)d[0]*=1.000001;return d
+  };
+  })()`
   await context.addInitScript(initScript)
   const page = await context.newPage()
   // Block resources only in normal mode

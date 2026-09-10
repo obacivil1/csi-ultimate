@@ -8,7 +8,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const dashboardRouter = Router();
 
 const TENDERS_FILE = path.join(__dirname, '..', '..', 'data', 'etimad_all_tenders.json');
-const CONTRACTORS_FILE = path.join(__dirname, '..', '..', 'data', 'muqawil_contractors.json');
 
 // In-memory analytics cache (computed once, refreshed when tenders cache invalidates)
 let analyticsCache = null;
@@ -105,7 +104,7 @@ dashboardRouter.get('/summary', authenticate, (req, res) => {
 });
 
 // GET /api/dashboard/analytics - Charts data (cached)
-dashboardRouter.get('/analytics', (req, res) => {
+dashboardRouter.get('/analytics', authenticate, (req, res) => {
   try {
     const now = Date.now();
     if (analyticsCache && (now - analyticsCacheTime) < ANALYTICS_CACHE_TTL) {
