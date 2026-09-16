@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node run.mjs",
     "serve": "node web/server.mjs",
+    "report:completeness": "node scripts/analytics/field-completeness.mjs",
     "start:legacy": "node scripts/legacy/crawlers/csi-crawler-v9.mjs",
     "test:legacy": "node scripts/legacy/crawlers/csi-crawler-v9.mjs --test",
     "test:live": "node scripts/legacy/crawlers/csi-crawler-v9.mjs --test-live",
