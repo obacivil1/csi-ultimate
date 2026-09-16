@@ -7,6 +7,27 @@
 import { JSDOM } from "jsdom";
 import { mineContacts } from "./contact-miner.mjs";
 
+// أضف فاصل مسافة بين النصوص المتجاورة عند التسطيح — يمنع الالتصاق
+// (مثل "gmail.comtalent") الذي يضيع حدود العناصر عبر textContent المدمج.
+const BLOCK_TAGS = new Set(["P", "DIV", "SPAN", "LI", "TD", "TH", "TR", "BR", "H1", "H2", "H3", "H4", "H5", "H6", "SECTION", "ARTICLE", "A", "B", "STRONG", "EM", "UL", "OL"]);
+
+export function extractText(root) {
+  if (!root) return "";
+  const chunks = [];
+  for (const el of root.querySelectorAll("*")) {
+    const tag = el.tagName;
+    if (!BLOCK_TAGS.has(tag)) continue;
+    // نص مباشر تحت هذا العنصر (بلا رجوع للنصوص داخل أبناء كتلية أيضاً — لأنها ستُجمع عنصراً عنصراً)
+    let own = "";
+    for (const child of el.childNodes) {
+      if (child.nodeType === 3) own += (child.nodeValue || "");
+    }
+    const t = own.replace(/\s+/g, " ").trim();
+    if (t) chunks.push(t);
+  }
+  return chunks.join(" ").replace(/\s+/g, " ").trim();
+}
+
 export function normalizeUrl(raw, base) {
   try {
     const u = new URL(raw, base);
@@ -51,7 +72,7 @@ export function parseHtmlDocument(html, baseUrl, opts = {}) {
   const headings = Array.from(d.querySelectorAll("h1,h2,h3,h4,h5,h6")).map((h) =>
     (h.textContent || "").replace(/\s+/g, " ").trim()).filter(Boolean);
 
-  const text = (d.body?.textContent || "").replace(/\s+/g, " ").trim();
+  const text = extractText(d.body);
 
   const links = [];
   const linkSet = new Set();

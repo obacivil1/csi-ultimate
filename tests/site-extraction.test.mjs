@@ -30,6 +30,19 @@ function makePage(html, url) {
 
 function digits(s) { return String(s || "").replace(/\D/g, ""); }
 
+test("D9: canonical extractor does not gluing a 10-digit phone with a trailing standalone digit", async () => {
+  const html = `<html><head><title>Web Dev - leads</title></head><body>
+    <h1 data-q="vip-title">Web Dev</h1>
+    <span data-q="ad-price">£45.00</span>
+    <div data-q="ad-location">London</div>
+    <p>07700 900123 8 — near station</p>
+  </body></html>`;
+  const { page } = makePage(html, "https://www.gumtree.com/p/x/12345678");
+  const cfg = await getSiteConfig("www.gumtree.com");
+  const rec = await extractor(page, cfg);
+  assert.equal(digits(rec.phone), "07700900123", `D9: merged phone=${rec.phone}`);
+});
+
 // Realistic simplified ad-page fixtures, kept aligned with each adapter's selectors.
 const FIXTURES = {
   "sa.opensooq.com": {

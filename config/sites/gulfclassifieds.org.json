@@ -30,5 +30,5 @@
   "categories": {
     "autoDiscover": true
   },
-  "excludeUrlPatterns": ["/post/", "/yellow-pages/", "/page/", "/register", "/login"]
+  "excludeUrlPatterns": ["/post/", "/yellow-pages/", "/page/", "/register", "/login", "/admin/"]
 }

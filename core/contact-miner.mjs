@@ -95,3 +95,69 @@ export function mineContacts(text = "", links = []) {
   const hasAny = emails.length > 0 || phones.length > 0 || whatsapp.length > 0 || social.length > 0;
   return { emails, phones, whatsapp, social, hasAny };
 }
+
+/**
+ * runContactMine — نمط الإثراء (Enrichment) عبر طبقة C4 (documents).
+ * يقرأ وثائق من الجدول تحتاج contacts (missingContacts صامتة)، يستخرج جهات
+ * التماس من raw_json المحفوظ، ثم يعيد كتابة الصف عبر upsertDocuments دفعة واحدة.
+ *
+ * مبدأ الرصد قبل التفاعل: أي صف raw_json بلا text كافٍ يُتجاهل بأمان ويُشعَر
+ * عنه في results.skipped_no_text بدل كتابة contacts فارغة فوق بيانات سابقة.
+ * نتيجة skipped_no_text كبيرة = قرار معماري: توسيع ما يُخزَّن في raw_json.
+ *
+ * @param {object} opts
+ * @param {string} [opts.run_id] run_id للكتابة (إن تمرر يعلّم كل محدَّث؛ وإلا يحافظ على القديم)
+ * @param {string} [opts.dbPath] مسار DB — إنتاجي افتراضياً (data/csi.db)
+ * @param {boolean} [opts.persist=true] إن false يمسح ويحصي فقط دون كتابة (dry-run)
+ * @param {object} [opts.filter] فلاتر إضافية تمر لقارئ queryDocuments
+ * @param {boolean} [opts.force] إن true يمسح كل الوثائق ولو كانت contacts موجودة
+ * @returns {Promise<{scanned:number, updated:number, skipped_no_text:number, errors:Array}>}
+ */
+export async function runContactMine({ run_id, dbPath, persist = true, filter = {}, force = false } = {}) {
+  const { default: openDb, toDocumentRow } = await import("./db.mjs");
+  const db = openDb(dbPath);
+  try {
+    const missing = force ? undefined : true;
+    const rows = db.queryDocuments({ ...filter, missingContacts: missing });
+    const results = { scanned: rows.length, updated: 0, skipped_no_text: 0, errors: [] };
+    const toUpdate = [];
+
+    for (const row of rows) {
+      let doc;
+      if (typeof row.raw_json === "string") {
+        try {
+          doc = JSON.parse(row.raw_json);
+        } catch {
+          results.errors.push({ id: row.id, reason: "raw_json_parse_failed" });
+          continue;
+        }
+      } else if (row.raw_json && typeof row.raw_json === "object") {
+        doc = row.raw_json;
+      } else {
+        results.errors.push({ id: row.id, reason: "raw_json_missing" });
+        continue;
+      }
+      if (!doc.text || typeof doc.text !== "string" || doc.text.length < 20) {
+        results.skipped_no_text++;
+        continue;
+      }
+      const contacts = mineContacts(doc.text, doc.links || []);
+      toUpdate.push(toDocumentRow(doc, {
+        doc_type: row.doc_type || "document",
+        topic: row.topic || null,
+        contacts,
+        run_id: run_id ?? row.run_id,
+        extractedAt: row.extracted_at,
+      }));
+      results.updated++;
+    }
+
+    if (persist && toUpdate.length) {
+      const { inserted, updated } = db.upsertDocuments(toUpdate);
+      results.updated = updated || inserted;
+    }
+    return results;
+  } finally {
+    db.close();
+  }
+}

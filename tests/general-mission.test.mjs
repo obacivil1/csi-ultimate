@@ -17,7 +17,7 @@ test("رحلة بدون شبكة تنتج تقريراً وملفات", async ()
   const tmp = path.join(os.tmpdir(), "opencode", `mission-test-${Date.now()}`);
   const result = await runMission({
     _docs: offlineDocs(), urls: ["https://n.test", "https://t.test"],
-    title: "رحلة تجريبية", outputDir: tmp,
+    title: "رحلة تجريبية", outputDir: tmp, persist: false,
   });
   assert.equal(result.docs.length, 2);
   assert.equal(result.summary.hosts.length, 2);
@@ -33,11 +33,31 @@ test("فلترة الرحلة بالمواضيع المطلوبة", async () => 
   const tmp = path.join(os.tmpdir(), "opencode", `mission-topic-${Date.now()}`);
   const result = await runMission({
     _docs: offlineDocs(), urls: ["https://n.test", "https://t.test"],
-    topics: ["tech"], title: "تقنية فقط", outputDir: tmp,
+    topics: ["tech"], title: "تقنية فقط", outputDir: tmp, persist: false,
   });
   assert.equal(result.docs.length, 1);
   assert.equal(result.report.docs.length, 1);
   assert.equal(result.report.docs[0].host, "t.test");
   assert.equal(result.report.topics[0].topic, "tech");
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("persist:true يكتب الدفعة إلى C4 مع run_id وdoc_type المحقونين", async () => {
+  const tmp = path.join(os.tmpdir(), "opencode", `mission-persist-${Date.now()}`);
+  const dbPath = path.join(tmp, "csi-persist.db");
+  const { default: openDb } = await import("../core/db.mjs");
+  const result = await runMission({
+    _docs: offlineDocs(), urls: ["https://n.test", "https://t.test"],
+    title: "رحلة مع كتابة", outputDir: tmp, persist: true,
+    run_id: "test-run-abc", docType: "classified", dbPath,
+  });
+  assert.equal(result.persisted.inserted, 2);
+  assert.equal(result.persisted.updated, 0);
+  const db = openDb(dbPath);
+  const rows = db.queryDocuments({ run_id: "test-run-abc" });
+  assert.equal(rows.length, 2);
+  assert.ok(rows.every((r) => r.doc_type === "classified"));
+  assert.ok(rows.every((r) => r.canonical_json && typeof r.canonical_json.title === "string"));
+  db.close();
   fs.rmSync(tmp, { recursive: true, force: true });
 });

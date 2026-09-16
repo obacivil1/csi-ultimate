@@ -69,6 +69,17 @@ test("parseHtmlDocument يستخرج جهات تماس من HTML", () => {
   assert.equal(doc.contacts.social.length, 1);
 });
 
+test("extractText يمنع الالتصاق بين عناصر متجاورة (Silent Data Corruption)", () => {
+  const glued = parseHtmlDocument(`<p>Contact us at muhammedahmedkk@gmail.com</p><span>talent needed</span>`, "https://t.io/1");
+  assert.ok(!glued.text.includes("gmail.comtalent"), `التصاق! text="${glued.text}"`);
+  assert.ok(glued.contacts.emails.includes("muhammedahmedkk@gmail.com"), "الإيميل المعزول يُستخرج سليماً");
+  const mixed = parseHtmlDocument(`<div>Hello <b>world</b></div><p>Second paragraph</p>`, "https://t.io/2").text;
+  assert.ok(mixed.includes("Hello"), "نص مباشر قبل عنصر متداخل لا يضيع");
+  assert.ok(mixed.includes("world"));
+  assert.ok(mixed.includes("Second paragraph"));
+  assert.ok(!mixed.includes("Hello<b>"), "لا حدود خام داخل النص");
+});
+
 test("رسائل الرفض والمشاركة لا تُعدّ جهات تماس كاذبة", () => {
   const html = `<html><body>
     <p>لا اتصال هنا، سنة 2026، معرف 9999.</p>

@@ -336,8 +336,8 @@ export async function extractAdData(page, siteConfig, category) {
         if (c !== adId && c.length >= 10 && c.length <= 15) phoneSet.add(c)
       })
     })
-    ;(bodyText.replace(/[\s\-\(\)\.]/g, "").match(/\+\d{10,14}|0\d{10,11}/g) || []).forEach(m => {
-      if (m !== adId && m.length >= 10 && m.length <= 15) phoneSet.add(m)
+    ;(bodyText.match(/(?<![\d])(?:\+\d{1,4}[\s\-\(\)\.]?\d{2,4}(?:[\s\-\(\)\.]?\d{2,4}){1,3}|0\d{1,3}[\s\-\(\)\.]?\d{2,4}(?:[\s\-\(\)\.]?\d{2,4}){1,3})(?![\d])/g) || []).forEach(m => {
+      if (m !== adId) phoneSet.add(m.replace(/[\s\-\(\)\.]/g, ""))
     })
     let phone = [...phoneSet][0] || null
     if (phone) {
