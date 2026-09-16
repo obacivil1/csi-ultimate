@@ -23,9 +23,9 @@ import { engineRouter, ENGINE_PUBLIC_DIR } from './routes/engine.mjs';
 import { siteProfileRouter } from './routes/site-profile.mjs';
 import { proxiesRouter } from './routes/proxies.mjs';
 import { v1Router } from './routes/v1.mjs';
-import { startScheduler } from './scheduler.mjs';
+import { startScheduler, stopScheduler } from './scheduler.mjs';
 import { preloadWarmup } from './cache.mjs';
-import { seedFromEnv, startHealthChecks } from '../core/proxy-pool.mjs';
+import { seedFromEnv, startHealthChecks, stopHealthChecks } from '../core/proxy-pool.mjs';
 
 import https from 'https';
 
@@ -95,6 +95,11 @@ app.get('/api/health', (req, res) => {
       node: process.version
     }
   });
+});
+
+// Liveness probe لصحة الحاوية (Docker HEALTHCHECK / كيوبر/نقابة) — دون امتيازات أو تبعيات
+app.get('/api/healthz', (req, res) => {
+  res.json({ ok: true, pid: process.pid, uptime: Math.round(process.uptime()), time: Date.now() });
 });
 app.use('/api/auth', authRouter);
 app.use('/api/tenders', tendersRouter);
@@ -192,7 +197,7 @@ app.use((req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   logger.info('web server started', { port: PORT, env: env.NODE_ENV });
   if (env.PROXY) {
     seedFromEnv(env.PROXY);
@@ -210,3 +215,20 @@ app.listen(PORT, () => {
     awards_sample: path.join(dataDir, 'etimad_sample_awards.json')
   });
 });
+
+// إيقاف رشيق: يوقف الاستماع والمجدوِل وفحوصات البروكسي ثم يخرج
+let shuttingDown = false;
+function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  logger.warn('shutdown initiated', { signal });
+  stopScheduler();
+  stopHealthChecks();
+  server.close(() => {
+    logger.info('shutdown complete');
+    process.exit(0);
+  });
+  setTimeout(() => process.exit(1), 15000).unref();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

@@ -4,8 +4,22 @@ const LEVELS = { SILENT: 0, ERROR: 1, WARN: 2, INFO: 3, DEBUG: 4 };
 
 export const level = LEVELS[env.LOG_LEVEL] ?? LEVELS.INFO;
 
+// تصريف آمن: أخطاء → كائنات، BigInt → نص، وكسر الدورات
+function toSafeJson(value) {
+  const seen = new WeakSet();
+  return JSON.stringify(value, (k, v) => {
+    if (typeof v === "bigint") return v.toString();
+    if (v instanceof Error) return { name: v.name, message: v.message, stack: v.stack };
+    if (typeof v === "object" && v !== null) {
+      if (seen.has(v)) return "[Circular]";
+      seen.add(v);
+    }
+    return v;
+  });
+}
+
 function emit(sev, msg, meta) {
-  const line = JSON.stringify({
+  const line = toSafeJson({
     ts: new Date().toISOString(),
     level: sev,
     msg: String(msg ?? ""),
