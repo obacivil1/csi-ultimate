@@ -26,7 +26,6 @@ web/data/contact_messages.json
 /_ocr_txt/
 /__pycache__/
 /archive/
-!/archive/scratch/
 /server.err
 
 # Databases, runtime data, scratch & logs
