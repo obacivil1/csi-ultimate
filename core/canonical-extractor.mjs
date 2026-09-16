@@ -36,26 +36,13 @@ async function getBrowser() {
   return _browserSingleton
 }
 
-const BLOCK_KEYWORDS = [
-  "cloudflare", "captcha", "just a moment", "access denied",
-  "please enable javascript", "blocked", "your request has been blocked",
-  "cf-ray", "checking your browser", "attention required",
-]
+import { classifyBan } from "./ban-detector.mjs";
 
 function detectBlock(httpStatus, pageTitle, bodyText, htmlContent) {
-  if (httpStatus === 403) return { blocked: true, type: "HTTP_403", reason: "HTTP 403 Forbidden" }
-  if (httpStatus === 429) return { blocked: true, type: "HTTP_429", reason: "HTTP 429 Rate Limited" }
-  if (httpStatus === 503) return { blocked: true, type: "HTTP_503", reason: "HTTP 503 Service Unavailable" }
-
-  const haystack = (pageTitle + " " + bodyText + " " + htmlContent).toLowerCase()
-  for (const kw of BLOCK_KEYWORDS) {
-    if (haystack.includes(kw)) {
-      const type = kw === "cf-ray" || kw === "checking your browser" || haystack.includes("challenge-platform") ? "CLOUDFLARE" :
-        kw === "captcha" ? "CAPTCHA" : "BLOCKED"
-      return { blocked: true, type, reason: "Detected: \"" + kw + "\"" }
-    }
-  }
-  return { blocked: false }
+  // المصدر الموحّد للقسم: كشف موزون بالأدلة (يستبدل القائمة المكررة هنا)
+  const c = classifyBan({ statusCode: httpStatus, title: pageTitle, bodyText, html: htmlContent });
+  if (!c.banned) return { blocked: false };
+  return { blocked: true, type: (c.kind || "BLOCKED").toUpperCase(), reason: c.reason };
 }
 
 async function navigateWithRetry(page, url, context, retries = 2) {

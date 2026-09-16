@@ -12,10 +12,12 @@
 import { chromium } from "playwright-extra"
 import stealth from "puppeteer-extra-plugin-stealth"
 import { getProxy as getPoolProxy } from "./proxy-pool.mjs"
+import { classifyBan } from "./ban-detector.mjs"
+import { getCircuitBreaker, reportHostResult } from "./rate-limiter.mjs"
 
 chromium.use(stealth())
 
-import { initSessionFingerprint, rotateFingerprint, getSessionFingerprint, getRandomFingerprint, buildContextOptions, buildStealthScript } from "./fingerprint-engine.mjs"
+import { initSessionFingerprint, rotateFingerprint, getSessionFingerprint, getRandomFingerprint, buildContextOptions, buildStealthScript, geoForHostname } from "./fingerprint-engine.mjs"
 import { randomDelay, humanClick, simulateHumanBehavior, waitForStabilization } from "./behavior-engine.mjs"
 import { fetchIndeedJobs } from "./indeed-api.mjs"
 
@@ -117,6 +119,11 @@ const EXTREME_CF_BYPASS = `
 
 function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)] }
 
+function hostnameOf(url) {
+  try { return new URL(url).hostname.replace(/^www\./, "") }
+  catch { return "" }
+}
+
 // ── Proxy helpers ──────────────────────────────────────────────
 let proxyIndex = 0
 
@@ -132,28 +139,12 @@ function getProxy() {
   return p
 }
 
-// ── Block detection ────────────────────────────────────────────
-const BLOCK_TEXT = [
-  "just a moment", "attention required", "checking your browser", "enable javascript",
-  "cf-chl", "cf-error", "access denied", "captcha", "are you a robot",
-  "rate limit", "too many requests", "blocked", "ddos", "verify you are human",
-  "unusual traffic", "error 1015", "ray id:", "sorry, you have been blocked",
-  "performing security verification", "security check", "challenge-platform",
-]
-
-function detectBlock(page, statusCode) {
-  if ([403, 429, 503].includes(statusCode)) return { blocked: true, type: `HTTP_${statusCode}` }
-  return { blocked: false }
-}
-
-async function checkBlocked(page) {
+// ── Block detection (المصدر الموحّد: ban-detector) ─────────
+async function checkBlocked(page, statusCode = null, url = "") {
   const title = await page.title().catch(() => "")
   const text  = await page.evaluate(() => document.body?.innerText?.substring(0, 800) || "").catch(() => "")
-  const lower = (title + " " + text).toLowerCase()
-  for (const kw of BLOCK_TEXT) {
-    if (lower.includes(kw)) return true
-  }
-  return false
+  const html  = await page.evaluate(() => document.documentElement?.outerHTML?.substring(0, 3000) || "").catch(() => "")
+  return classifyBan({ statusCode, title, bodyText: text, html, url })
 }
 
 // ── Human-like behavior helpers (now from behavior-engine.mjs) ─
@@ -210,7 +201,9 @@ export async function createPage(opts = {}) {
   const hardMode = extremeMode || opts.hardMode || process.env.CSI_HARD_MODE === "1"
 
   // Use fingerprint engine for realistic device profile per session
-  initSessionFingerprint()
+  // (محاذاة جغرافية: هوية المتصفح بنطاق جمهور الموقع، لا كلها رياض)
+  const targetHost = opts.hostname || (opts.url ? hostnameOf(opts.url) : "")
+  initSessionFingerprint(geoForHostname(targetHost))
   const fp = getSessionFingerprint()
 
   const ua = opts.userAgent || fp.profile.ua
@@ -290,8 +283,9 @@ export async function createPage(opts = {}) {
 }
 
 // ── Create a fresh context per ad (hard/extreme mode) ──────────
-export async function createAdContext(browser, extremeMode = false) {
-  const fp = getRandomFingerprint()
+export async function createAdContext(browser, extremeMode = false, hostname = "") {
+  const region = geoForHostname(hostname)
+  const fp = getRandomFingerprint({ region })
   const profile = fp.profile
   const proxy = getProxy()
 
@@ -324,6 +318,11 @@ export async function createAdContext(browser, extremeMode = false) {
 // ── Navigate with Cloudflare challenge handling ────────────────
 export async function navigateWithRetry(page, url, retries = 3, hardMode = false) {
   const extreme = process.env.CSI_EXTREME_MODE === "1"
+  const hostname = hostnameOf(url)
+  const breaker = getCircuitBreaker()
+  if (breaker.status(hostname) !== "closed" && !breaker.canRequestNow(hostname)) {
+    throw new Error("BREAKER_OPEN:" + hostname)
+  }
   // Rotate fingerprint on each attempt for varied detection surface
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
@@ -341,15 +340,17 @@ export async function navigateWithRetry(page, url, retries = 3, hardMode = false
         }, { timeout: cfTimeout, polling: 1500 })
       } catch {}
       if (extreme) {
-        const hostname = new URL(url).hostname.replace(/^www\./, "")
-        await smartContentWait(page, hostname, 15000)
+        const hostname2 = hostnameOf(url)
+        await smartContentWait(page, hostname2, 15000)
         await waitForStabilization(page, 5000)
       } else if (hardMode) {
         await randomDelay(3000, 6000)
       } else {
         await page.waitForTimeout(1500 + Math.random() * 1000)
       }
-      if (await checkBlocked(page)) throw new Error("BLOCKED")
+      const blockRes = await checkBlocked(page, resp?.status?.() ?? null, url)
+      reportHostResult(hostname, !blockRes.banned, blockRes.kind)
+      if (blockRes.banned) throw new Error("BLOCKED")
       return resp
     } catch (e) {
       if (e.message === "BLOCKED" && attempt < retries) {
@@ -359,8 +360,8 @@ export async function navigateWithRetry(page, url, retries = 3, hardMode = false
             ? 15000 * attempt + Math.random() * 10000
             : 8000 * attempt + Math.random() * 4000
         console.log(`[anti-detect] retry ${attempt}/${retries} blocked for ${url.substring(0, 60)} in ${Math.round(waitMs)}ms`)
-        // Rotate fingerprint for next attempt
-        rotateFingerprint()
+        // Rotate fingerprint for next attempt (بنفس منطقة الجمهور المستهدفة)
+        rotateFingerprint(geoForHostname(hostname))
         await page.waitForTimeout(waitMs)
       } else if (attempt >= retries) {
         throw e
@@ -385,7 +386,8 @@ export async function openAdPage(mainPage, url, context) {
       }, { timeout: 60000, polling: 1500 })
     } catch { /* timed out */ }
     await adPage.waitForTimeout(1000)
-    if (await checkBlocked(adPage)) throw new Error("BLOCKED")
+    const blockAd = await checkBlocked(adPage, resp?.status?.() ?? null, url)
+    if (blockAd.banned) throw new Error("BLOCKED")
     return adPage
   } catch (e) {
     await adPage.close().catch(() => {})
@@ -395,11 +397,11 @@ export async function openAdPage(mainPage, url, context) {
 
 // ── Open ad page (hard/extreme mode: fresh context, AI human behavior) ─
 export async function openAdPageHard(browser, url, extremeMode = false) {
-  const { context, page } = await createAdContext(browser, extremeMode)
+  const { context, page } = await createAdContext(browser, extremeMode, hostnameOf(url))
   try {
     const timeout = extremeMode ? 120000 : 90000
     await randomDelay(extremeMode ? 3000 : 1000, extremeMode ? 6000 : 3000)
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout })
+    const resp = await page.goto(url, { waitUntil: "domcontentloaded", timeout })
     // AI behavior mimicry
     await simulateHumanBehavior(page)
     try {
@@ -410,7 +412,8 @@ export async function openAdPageHard(browser, url, extremeMode = false) {
       }, { timeout: 90000, polling: 1500 })
     } catch {}
     await waitForStabilization(page, extremeMode ? 5000 : 2000)
-    if (await checkBlocked(page)) throw new Error("BLOCKED")
+    const blockHard = await checkBlocked(page, resp?.status?.() ?? null, url)
+    if (blockHard.banned) throw new Error("BLOCKED")
     return { page, context }
   } catch (e) {
     await page.close().catch(() => {})
@@ -433,11 +436,12 @@ export async function withFreshPage(url, fn) {
       }, { timeout: 60000, polling: 1500 })
     } catch {}
     await page.waitForTimeout(2000)
-    if (await checkBlocked(page)) throw new Error("BLOCKED")
+    const blockFresh = await checkBlocked(page, resp?.status?.() ?? null, url)
+    if (blockFresh.banned) throw new Error("BLOCKED")
     return await fn(page, resp)
   } finally {
     await browser.close()
   }
 }
 
-export { BLOCK_TEXT }
+export { checkBlocked }

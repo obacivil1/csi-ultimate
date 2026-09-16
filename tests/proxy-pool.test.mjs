@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import net from "node:net";
 import * as pool from "../core/proxy-pool.mjs";
-import { tcpProbe, parseProxyEndpoint } from "../core/proxy-pool.mjs";
+import { tcpProbe, parseProxyEndpoint, httpConnectProbe, socks5Probe, protocolProbe } from "../core/proxy-pool.mjs";
 
 function reset() { pool.resetPool(); }
 
@@ -79,4 +80,64 @@ test("parseProxyEndpoint يستخرج المضيف والمنفذ الافترا
   assert.deepEqual(parseProxyEndpoint("http://h.test:3128"), { host: "h.test", port: 3128 });
   assert.deepEqual(parseProxyEndpoint("https://h.test"), { host: "h.test", port: 443 });
   assert.equal(parseProxyEndpoint("not-a-url"), null);
+});
+
+// ── أدوات اختبار محلية للسيرفرات (CONNECT / SOCKS5) ─────────────
+
+function startProxyServer(replyBuffer) {
+  return new Promise((resolve) => {
+    const server = net.createServer((socket) => {
+      socket.once("data", () => socket.write(replyBuffer));
+    });
+    server.listen(0, "127.0.0.1", () => {
+      resolve({ server, port: server.address().port });
+    });
+  });
+}
+
+test("httpConnectProbe: CONNECT ناجح (200) يعيد true", async () => {
+  const { server, port } = await startProxyServer(Buffer.from("HTTP/1.1 200 Connection established\r\n\r\n"));
+  try {
+    const ok = await httpConnectProbe(`http://127.0.0.1:${port}`, "www.gstatic.com", 443, 2000);
+    assert.equal(ok, true);
+  } finally { server.close(); }
+});
+
+test("httpConnectProbe: رفض البروكسي (403) يعيد false", async () => {
+  const { server, port } = await startProxyServer(Buffer.from("HTTP/1.1 403 Forbidden\r\n\r\n"));
+  try {
+    const ok = await httpConnectProbe(`http://127.0.0.1:${port}`, "www.gstatic.com", 443, 2000);
+    assert.equal(ok, false);
+  } finally { server.close(); }
+});
+
+test("socks5Probe: greeting ناجح (05 00) يعيد true", async () => {
+  const { server, port } = await startProxyServer(Buffer.from([0x05, 0x00]));
+  try {
+    const ok = await socks5Probe(`socks5://127.0.0.1:${port}`, 2000);
+    assert.equal(ok, true);
+  } finally { server.close(); }
+});
+
+test("protocolProbe يوجّه برقياً حسب بروتوكول URL", async () => {
+  const { server, port } = await startProxyServer(Buffer.from("HTTP/1.1 200 Connection established\r\n\r\n"));
+  try {
+    assert.equal(await protocolProbe(`http://127.0.0.1:${port}`, 2000), true, "http → CONNECT");
+    assert.equal(await protocolProbe(`https://127.0.0.1:${port}`, 2000), true, "https → CONNECT");
+  } finally { server.close(); }
+  const { server: s2, port: p2 } = await startProxyServer(Buffer.from([0x05, 0x00]));
+  try {
+    assert.equal(await protocolProbe(`socks5://127.0.0.1:${p2}`, 2000), true, "socks5 → SOCKS5");
+  } finally { s2.close(); }
+});
+
+test("checkProxies بالبروتوكول المحقون يرصد سلامتة حقيقية", async () => {
+  reset();
+  const { server, port } = await startProxyServer(Buffer.from("HTTP/1.1 200 Connection established\r\n\r\n"));
+  const good = `http://127.0.0.1:${port}`;
+  pool.addProxies([good, "http://127.0.0.1:9"]); // منفذ مغلق
+  const results = await pool.checkProxies(protocolProbe, { force: true });
+  assert.equal(results.find((r) => r.url === good).ok, true);
+  assert.equal(results.find((r) => r.url.includes(":9")).ok, false);
+  server.close();
 });

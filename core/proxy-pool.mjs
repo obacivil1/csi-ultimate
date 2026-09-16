@@ -1,8 +1,12 @@
 /**
  * proxy-pool.mjs — حمام سباحة بروكسيات بفحوصات صحة
  * يسجّل البروكسيات، يختارها بالتناوب من السليمة فقط، يراقب حالتها الصحية
- * (فحص استباقي TCP + تغذية راجعة من الزحف)، ويضع حدّاً للكسر عند تكرار الفشل
- * ثم يعيد فحصها بعد فترة تهدئة (cooldown). قابل للاختبار: المُختبِر يُحقن.
+ * (فحص استباقي TCP + CONNECT/بروتوكول + تغذية راجعة من الزحف)، ويضع حدّاً للكسر
+ * عند تكرار الفشل ثم يعيد فحصها بعد فترة تهدئة (cooldown).
+ * قابل للاختبار: المُختبِر يُحقن.
+ * ──────────────────────────────────────────────────────────────
+ * الترقية V1: فحص بروتوكولي حقيقي (TCP + CONNECT أو SOCKS5)
+ *             بدلاً من فحص TCP فقط (لا يثبت أن النفق يعمل فعلاً).
  */
 import net from "node:net";
 
@@ -116,10 +120,81 @@ export function tcpProbe(proxyUrl, timeoutMs = 4000) {
 }
 
 /**
+ * فحص CONNECT بروتوكولي: يثبت أن البروكسي يفتح نفقاً فعلاً (HTTP 200 من المستخدم).
+ * المهمة: CONNECT www.gstatic.com:443 HTTP/1.1 → 200 Connection established.
+ */
+export function httpConnectProbe(proxyUrl, targetHost = "www.gstatic.com", targetPort = 443, timeoutMs = 4000) {
+  const ep = parseProxyEndpoint(proxyUrl);
+  if (!ep) return Promise.resolve(false);
+  return new Promise((resolve) => {
+    const sock = net.connect({ host: ep.host, port: ep.port, timeout: timeoutMs });
+    let resolved = false;
+    const finish = (ok) => { if (!resolved) { resolved = true; try { sock.destroy(); } catch {} resolve(ok); } };
+    sock.once("timeout", () => finish(false));
+    sock.once("error", () => finish(false));
+    sock.once("connect", () => {
+      const req = `CONNECT ${targetHost}:${targetPort} HTTP/1.1\r\nHost: ${targetHost}:${targetPort}\r\n\r\n`;
+      sock.write(req);
+      // Wait for status line (first 14 bytes typical "HTTP/1.1 200 ..")
+      let buf = Buffer.alloc(0);
+      const onData = (chunk) => {
+        buf = Buffer.concat([buf, chunk]);
+        const line = buf.toString("ascii").split(/\r?\n/)[0] ?? "";
+        if (line.includes("200")) finish(true);
+        else if (line.length > 3) finish(false); // non-200
+      };
+      sock.on("data", onData);
+      // Safety timeout fallback
+      setTimeout(() => finish(false), timeoutMs - 100);
+    });
+  });
+}
+
+/**
+ * فحص SOCKS5: greeting → اتفاق على عدم التوثيق فقط يثبت أن البروكسي SOCKS5 يعمل.
+ * المهمة: 05 01 00 → 05 00.
+ */
+export function socks5Probe(proxyUrl, timeoutMs = 4000) {
+  const ep = parseProxyEndpoint(proxyUrl);
+  if (!ep) return Promise.resolve(false);
+  return new Promise((resolve) => {
+    const sock = net.connect({ host: ep.host, port: ep.port, timeout: timeoutMs });
+    let resolved = false;
+    const finish = (ok) => { if (!resolved) { resolved = true; try { sock.destroy(); } catch {} resolve(ok); } };
+    sock.once("timeout", () => finish(false));
+    sock.once("error", () => finish(false));
+    sock.once("connect", () => {
+      // SOCKS5 greeting: version=5, 1 method, method=0 (no auth)
+      sock.write(Buffer.from([0x05, 0x01, 0x00]));
+      const onData = (chunk) => {
+        const b = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        if (b.length >= 2 && b[0] === 0x05 && b[1] === 0x00) finish(true);
+        else finish(false);
+      };
+      sock.once("data", onData);
+      setTimeout(() => finish(false), timeoutMs - 100);
+    });
+  });
+}
+
+/**
+ * فحص بروتوكولي ذكي: يختار البروتوكول المناسب تلقائياً حسب نوع URL.
+ * - socks5:// → SOCKS5 greeting
+ * - http(s):// → HTTP CONNECT
+ */
+export function protocolProbe(proxyUrl, timeoutMs = 4000) {
+  if (String(proxyUrl).startsWith("socks5://")) {
+    return socks5Probe(proxyUrl, timeoutMs);
+  }
+  return httpConnectProbe(proxyUrl, "www.gstatic.com", 443, timeoutMs);
+}
+
+/**
  * فحص شامل: يجري على كل بروكسي ويكثر حالة الصحة. force يتجاوز فترة التهدئة.
+ * الافتراضي البروتوكولي: فحص TCP أولاً، ثم CONNECT أو SOCKS5.
  * @param {Function} [tester] - (url, timeoutMs) => Promise<boolean>
  */
-export async function checkProxies(tester = tcpProbe, opts = {}) {
+export async function checkProxies(tester = protocolProbe, opts = {}) {
   const { force = false, timeoutMs = 4000 } = opts;
   const results = [];
   for (const p of PROXIES.values()) {
@@ -153,7 +228,7 @@ export async function checkProxies(tester = tcpProbe, opts = {}) {
   return results;
 }
 
-export function startHealthChecks(tester = tcpProbe, intervalMs = 60000) {
+export function startHealthChecks(tester = protocolProbe, intervalMs = 60000) {
   if (healthTimer.id) return false;
   const id = setInterval(() => { checkProxies(tester).catch(() => {}); }, intervalMs);
   if (id && id.unref) id.unref();

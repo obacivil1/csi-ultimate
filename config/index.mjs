@@ -12,3 +12,6 @@ export const stealth = defaults.stealth;
 export const siteDelay = defaults.siteDelay;
 export const pipeline = defaults.pipeline;
 export const scoring = defaults.scoring;
+export const banDetection = defaults.banDetection;
+export const circuitBreaker = defaults.circuitBreaker;
+export const fingerprint = defaults.fingerprint;

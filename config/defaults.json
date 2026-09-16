@@ -37,5 +37,46 @@
     "emailScoreMin": 30,
     "leadScoreThreshold": 65,
     "verifiedLeadMinScore": 65
+  },
+  "banDetection": {
+    "confidenceThreshold": 60,
+    "softBlockMinContentBytes": 500,
+    "statusHardCodes": [403, 429, 503],
+    "patterns": {
+      "cf_challenge": ["just a moment", "cf-chl", "challenge-platform", "checking your browser", "...click verify", "attention required"],
+      "cf_error": ["cf-ray", "error 1015", "error 1020", "error 1006", "cloudflare ray"],
+      "captcha": ["captcha", "recaptcha", "are you a robot", "verify you are human", "verify humanity", "hcaptcha"],
+      "waf_block": ["access denied", "your request has been blocked", "request has been blocked", "blocked", "you have been blocked", "unusual traffic", "too many requests", "rate limit", "ddos", "suspicious activity"],
+      "js_required": ["please enable javascript", "enable javascript", "javascript is required"]
+    }
+  },
+  "circuitBreaker": {
+    "tripThreshold": 3,
+    "windowMs": 600000,
+    "cooldownMs": 900000,
+    "halfOpenProbeLimit": 1
+  },
+  "fingerprint": {
+    "geoByHostname": {
+      "gumtree.com": "uk",
+      "gumtree.co.uk": "uk",
+      "olx.co.uk": "uk",
+      "rightmove.co.uk": "uk",
+      "zoopla.co.uk": "uk",
+      "expatriates.com": "gcc",
+      "bayt.com": "gcc",
+      "olx.com.pk": "pk",
+      "rozee.pk": "pk",
+      "etimad.gov.sa": "sa",
+      "sa.indeed.com": "sa",
+      "www.indeed.com": "sa"
+    },
+    "geoDefaults": {
+      "uk": { "timezone": "Europe/London", "locale": "en-GB", "languages": ["en-GB", "en-US"], "geolocation": { "latitude": 51.5074, "longitude": -0.1278 } },
+      "gcc": { "timezone": "Asia/Dubai", "locale": "en-AE", "languages": ["en-AE", "en-US"], "geolocation": { "latitude": 25.2048, "longitude": 55.2708 } },
+      "pk": { "timezone": "Asia/Karachi", "locale": "en-PK", "languages": ["en-PK", "en-US"], "geolocation": { "latitude": 24.8607, "longitude": 67.0011 } },
+      "sa": { "timezone": "Asia/Riyadh", "locale": "ar-SA", "languages": ["ar-SA", "en-US"], "geolocation": { "latitude": 24.7136, "longitude": 46.6753 } }
+    },
+    "defaultGeo": "gcc"
   }
 }

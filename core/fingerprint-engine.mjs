@@ -1,6 +1,36 @@
 // Professional anti-detection fingerprint engine
 // Generates unique, realistic browser fingerprints per session
 // Uses real device profiles from crowd-sourced data
+import { fingerprint as FP } from "../config/index.mjs";
+
+// ── المطابقة الجغرافية: مضيف → منطقة → هوية زمن/لغة/موقع ─────────
+// بدل كل البروفايلات "رياض"، منا نحاذي هوية المتصفح مع جمهور الموقع
+// (متصفح لندني لحجمة gumtree.co.uk ...) فما يبدو مطابقة مكشوفة.
+
+function normalizeHostname(hostname) {
+  return String(hostname || "").toLowerCase().replace(/^www\./, "");
+}
+
+export function geoForHostname(hostname) {
+  const h = normalizeHostname(hostname);
+  return FP.geoByHostname[h] ?? FP.defaultGeo;
+}
+
+export function geoDefaultsFor(region) {
+  return FP.geoDefaults[region] ?? FP.geoDefaults[FP.defaultGeo];
+}
+
+/** ينسخ البروفايل ويحاذي هويته للمنطقة المستهدفة (لا يعدّل الأصل). */
+export function alignProfile(profile, region) {
+  const g = geoDefaultsFor(region);
+  return {
+    ...profile,
+    timezone: g.timezone,
+    locale: g.locale,
+    languages: g.languages,
+    geolocation: g.geolocation,
+  };
+}
 
 // ── Real device profiles (crowd-sourced from real users) ────
 const PROFILES = [
@@ -229,10 +259,15 @@ const PROFILES = [
 
 // ── Browser context configuration generators ─────────────────
 
-export function getRandomFingerprint() {
-  const profile = PROFILES[Math.floor(Math.random() * PROFILES.length)]
-  const viewport = getViewport(profile)
-  return { profile, viewport }
+export function getRandomFingerprint(opts = {}) {
+  const { region = null, mobile = null } = opts;
+  let pool = PROFILES;
+  if (mobile === true) pool = pool.filter((p) => p.touchSupport);
+  else if (mobile === false) pool = pool.filter((p) => !p.touchSupport);
+  const raw = pool[Math.floor(Math.random() * pool.length)];
+  const profile = region ? alignProfile(raw, region) : raw;
+  const viewport = getViewport(profile);
+  return { profile, viewport };
 }
 
 function getViewport(profile) {
@@ -248,13 +283,14 @@ function getViewport(profile) {
 
 export function buildContextOptions(fingerprint) {
   const { profile, viewport } = fingerprint
+  const geo = profile.geolocation || { latitude: 24.7136, longitude: 46.6753 } // Riyadh (افتراضي)
   return {
     viewport,
     userAgent: profile.ua,
     locale: profile.locale,
     timezoneId: profile.timezone,
     permissions: ["geolocation"],
-    geolocation: { latitude: 24.7136, longitude: 46.6753 }, // Riyadh
+    geolocation: geo,
     // Randomize viewport slightly to appear more natural
     viewport: {
       ...viewport,
@@ -376,14 +412,17 @@ export function buildStealthScript(profile, randomize = true) {
 
 // ── Per-session unique fingerprint ──────────────────────────
 let sessionFingerprint = null
+let sessionRegion = null
 
-export function initSessionFingerprint() {
-  sessionFingerprint = getRandomFingerprint()
+export function initSessionFingerprint(region = null) {
+  sessionRegion = region
+  sessionFingerprint = getRandomFingerprint({ region })
   return sessionFingerprint
 }
 
-export function rotateFingerprint() {
-  sessionFingerprint = getRandomFingerprint()
+export function rotateFingerprint(region = null) {
+  sessionRegion = region ?? sessionRegion
+  sessionFingerprint = getRandomFingerprint({ region: sessionRegion })
   return sessionFingerprint
 }
 

@@ -51,3 +51,69 @@ test("rate-limiter: RequestThrottle paces requests per domain", async () => {
   const elapsed = Date.now() - t0;
   assert.ok(elapsed >= 900, `expected >=900ms, got ${elapsed}`);
 });
+
+test("circuit-breaker: قفل بعد عتبة الحجب ثم نصف-مفتوح بعد التهدئة", async () => {
+  const { CircuitBreaker } = await import("../core/rate-limiter.mjs");
+  const cb = new CircuitBreaker({ tripThreshold: 3, windowMs: 50, cooldownMs: 30, halfOpenProbeLimit: 2 });
+  const host = "x.com";
+  cb.onFailure(host, "cf_challenge");
+  cb.onFailure(host, "cf_challenge");
+  assert.equal(cb.status(host), "closed");
+  cb.onFailure(host, "cf_challenge");
+  assert.equal(cb.status(host), "open");
+  assert.equal(cb.canRequestNow(host), false, "مفتوح — محجوب خلال التهدئة");
+  // بعد انتهاء التهدئة → half-open مع حصة استكشاف محدودة
+  await new Promise((r) => setTimeout(r, 35));
+  assert.equal(cb.status(host), "half_open");
+  assert.equal(cb.canRequestNow(host), true, "أول مساحة استكشاف");
+  assert.equal(cb.canRequestNow(host), true, "ثاني مساحة استكشاف");
+  assert.equal(cb.canRequestNow(host), false, "استُنفدت الحصة");
+});
+
+test("circuit-breaker: نجاح يشفّي المضيف فوراً", async () => {
+  const { CircuitBreaker } = await import("../core/rate-limiter.mjs");
+  const cb = new CircuitBreaker({ tripThreshold: 2, cooldownMs: 100000 });
+  cb.onFailure("good.com");
+  cb.onFailure("good.com");
+  assert.equal(cb.status("good.com"), "open");
+  cb.onSuccess("good.com");
+  assert.equal(cb.status("good.com"), "closed");
+  assert.equal(cb.canRequestNow("good.com"), true);
+});
+
+test("circuit-breaker: فشل أثناء نصف-مفتوح يعيد القفل مباشرة", async () => {
+  const { CircuitBreaker } = await import("../core/rate-limiter.mjs");
+  const cb = new CircuitBreaker({ tripThreshold: 2, cooldownMs: 10 });
+  cb.onFailure("flaky.com");
+  cb.onFailure("flaky.com");
+  await new Promise((r) => setTimeout(r, 12));
+  assert.equal(cb.status("flaky.com"), "half_open");
+  cb.onFailure("flaky.com", "captcha");
+  assert.equal(cb.status("flaky.com"), "open", "فشل الاستكشاف يعيد القفل");
+});
+
+test("circuit-breaker: عزل المضيفات — حجب مضيف لا يوقف غيره", async () => {
+  const { CircuitBreaker } = await import("../core/rate-limiter.mjs");
+  const cb = new CircuitBreaker({ tripThreshold: 2, cooldownMs: 5000 });
+  cb.onFailure("bad.com");
+  cb.onFailure("bad.com");
+  assert.equal(cb.status("bad.com"), "open");
+  assert.equal(cb.canRequestNow("bad.com"), false);
+  assert.equal(cb.status("ok.com"), "closed");
+  assert.equal(cb.canRequestNow("ok.com"), true, "المضيف السليم لا يتأثر");
+});
+
+test("rate-limiter: محدِّد معزول لكل مضيف (Bulkhead)", async () => {
+  const { getHostLimiter, waitForHost, reportHostResult } = await import("../core/rate-limiter.mjs");
+  const a = getHostLimiter("alpha.com");
+  const b = getHostLimiter("beta.com");
+  assert.notEqual(a, b, "مثالان منفصلان");
+  assert.equal(getHostLimiter("alpha.com"), a, "نفس المضيف = نفس المثيل");
+  // إشارة حظر كثيفة على alpha لا تمس beta
+  for (let i = 0; i < 5; i++) a.onError(true);
+  assert.equal(a.stats().currentDelay > b.stats().currentDelay, true);
+  assert.equal(b.stats().currentDelay, 1500, "beta لم يتأثر بالتأخير العالمي");
+  await waitForHost("gamma.com");
+  reportHostResult("delta.com", false, "captcha");
+  reportHostResult("delta.com", true);
+});

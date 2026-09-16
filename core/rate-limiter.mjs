@@ -18,48 +18,148 @@
  *  ④ RequestThrottle     : تحديد معدل الطلبات لكل دومين
  */
 
-import { rateLimit as RL } from "../config/index.mjs";
+import { rateLimit as RL, circuitBreaker as CB } from "../config/index.mjs";
 
 // ============================================================
-//  BanDetector — كشف علامات الحظر
+//  BanDetector — كشف علامات الحظر (المصدر الموحّد: ban-detector)
 // ============================================================
 
-const BAN_PATTERNS = [
-  /captcha/i,
-  /are you a robot/i,
-  /rate.?limit/i,
-  /too many requests/i,
-  /access denied/i,
-  /blocked/i,
-  /cf-error/i,          // Cloudflare
-  /ddos.?guard/i,
-  /please wait/i,
-  /verify you are human/i,
-  /unusual traffic/i,
-  /just a moment/i,     // Cloudflare challenge interstitial
-  /checking your browser/i,
-];
+export { detectBan } from "./ban-detector.mjs";
 
-/**
- * يفحص الـ HTML أو HTTP status ويحدد إذا كان الـ IP محظور
- * @param {number} statusCode
- * @param {string} [html]
- * @returns {{ banned: boolean, reason: string }}
- */
-export function detectBan(statusCode, html = "") {
-  // HTTP status codes للحظر
-  if (statusCode === 429) return { banned: true, reason: "429 Too Many Requests" };
-  if (statusCode === 403) return { banned: true, reason: "403 Forbidden"         };
-  if (statusCode === 503) return { banned: true, reason: "503 Service Unavailable" };
+// ============================================================
+//  CircuitBreaker — قاطع دائرة على مستوى المضيف
+//  يوقف المضيف وحده بعد عدد حجب متتالٍ، وألا يرفع تأخير بقية
+//  المضيفات (عزل زمني — Bulkhead). يرجّع نصف-مفتوح تلقائياً
+//  بعد الهدوء ويسمح بطلبات استكشاف محدودة.
+// ============================================================
 
-  // فحص محتوى الصفحة
-  for (const pattern of BAN_PATTERNS) {
-    if (pattern.test(html)) {
-      return { banned: true, reason: `محتوى يشير إلى حجب: ${pattern}` };
+export class CircuitBreaker {
+  constructor(opts = {}) {
+    this._threshold  = opts.tripThreshold       ?? CB.tripThreshold;
+    this._windowMs   = opts.windowMs            ?? CB.windowMs;
+    this._cooldownMs = opts.cooldownMs          ?? CB.cooldownMs;
+    this._halfProbes = opts.halfOpenProbeLimit  ?? CB.halfOpenProbeLimit;
+    this._hosts      = new Map(); // hostname → state
+  }
+
+  _state(hostname) {
+    let s = this._hosts.get(hostname);
+    if (!s) {
+      s = { failCount: 0, openUntil: 0, probeBudget: 0, lastKind: null };
+      this._hosts.set(hostname, s);
+    }
+    return s;
+  }
+
+  /** سجّل نجاح — يشفّي المضيف */
+  onSuccess(hostname) {
+    const s = this._hosts.get(hostname);
+    if (!s) return;
+    s.failCount = 0;
+    s.openUntil = 0;
+    s.probeBudget = 0;
+    s.lastKind = null;
+  }
+
+  /** سجّل فشل/حجب — يعدّ حتى القفل، ولا يمر قبل انقضاء windowMs */
+  onFailure(hostname, kind = null, at = Date.now()) {
+    const s = this._state(hostname);
+    // نصف-مفتوح: فشل استكشاف يعيد القفل فوراً
+    if (s.openUntil > 0 && at >= s.openUntil) {
+      s.openUntil = at + this._cooldownMs;
+      s.probeBudget = this._halfProbes;
+      s.failCount = this._threshold;
+      s.lastKind = kind;
+      return;
+    }
+    s.lastKind = kind;
+    s.failCount += 1;
+    if (s.failCount >= this._threshold) {
+      s.openUntil = at + this._cooldownMs;
+      s.probeBudget = this._halfProbes;
     }
   }
 
-  return { banned: false, reason: "" };
+  /** هل يمر الطلب الآن؟ */
+  canRequestNow(hostname, at = Date.now()) {
+    const s = this._hosts.get(hostname);
+    if (!s) return true;
+    if (at < s.openUntil) return false;            // open — محجوب
+    if (s.failCount < this._threshold) return true; // لم يُفتح بعد
+    // half-open — يُسمح بعدد استكشاف محدود
+    if (s.probeBudget > 0) {
+      s.probeBudget -= 1;
+      return true;
+    }
+    return false;
+  }
+
+  /** حالة المضيف الكمية */
+  status(hostname, at = Date.now()) {
+    const s = this._hosts.get(hostname);
+    if (!s) return "closed";
+    if (at < s.openUntil) return "open";
+    if (s.failCount >= this._threshold) return "half_open";
+    return "closed";
+  }
+
+  reset(hostname) {
+    this._hosts.delete(hostname);
+  }
+
+  snapshot() {
+    const out = {};
+    for (const [h, s] of this._hosts) {
+      out[h] = { failCount: s.failCount, status: this.status(h), lastKind: s.lastKind };
+    }
+    return out;
+  }
+}
+
+// ============================================================
+//  HostLimiters — عزل المحددات على مستوى المضيف
+//  (مثيل AdaptiveRateLimiter لكل hostname بدل محدِّد عالمي)
+// ============================================================
+
+const HOST_LIMITERS = new Map();
+const DEFAULT_HOST = "*";
+
+export function getHostLimiter(hostname = DEFAULT_HOST) {
+  const key = hostname || DEFAULT_HOST;
+  if (!HOST_LIMITERS.has(key)) {
+    HOST_LIMITERS.set(key, new AdaptiveRateLimiter({
+      minDelay:  RL.minDelayMs,
+      maxDelay:  RL.maxDelayMs,
+      baseDelay: RL.baseDelayMs,
+    }));
+  }
+  return HOST_LIMITERS.get(key);
+}
+
+/** انتظر حسب المضيف المعزول */
+export async function waitForHost(hostname) {
+  await getHostLimiter(hostname).wait();
+}
+
+/**
+ * سجل نتيجة لجلسة مضيف: يحدّث المحدد المعزول + قاطع الدائرة.
+ * @param {string} hostname
+ * @param {boolean} ok
+ * @param {string} [kind] - نوع الحظر (من ban-detector)
+ */
+export function reportHostResult(hostname, ok, kind = null) {
+  const limiter = getHostLimiter(hostname);
+  if (ok) limiter.onSuccess();
+  else limiter.onError(Boolean(kind));
+  const breaker = getCircuitBreaker();
+  if (ok) breaker.onSuccess(hostname);
+  else breaker.onFailure(hostname, kind);
+}
+
+let _circuitBreaker = null;
+export function getCircuitBreaker() {
+  if (!_circuitBreaker) _circuitBreaker = new CircuitBreaker();
+  return _circuitBreaker;
 }
 
 // ============================================================
@@ -288,3 +388,6 @@ export const retryHandler = new RetryHandler({
 });
 
 export const throttle = new RequestThrottle(RL.requestsPerMinute); // req/min
+
+// قاطع الدائرة المعلّق العام (يُنشأ عند أول استخدام)
+export const circuitBreaker = getCircuitBreaker();
