@@ -141,3 +141,28 @@ test("checkProxies بالبروتوكول المحقون يرصد سلامتة �
   assert.equal(results.find((r) => r.url.includes(":9")).ok, false);
   server.close();
 });
+
+test("scoreOf: الدرجة تعكس نسبة نجاح/كمون", () => {
+  reset();
+  pool.addProxies(["http://fresh.test:1"]);
+  const snapshot = pool.listProxies()[0];
+  assert.equal(pool.scoreOf(snapshot), 100, "غير مختبَر = فرصة عادلة");
+  for (let i = 0; i < 3; i++) pool.reportResult("http://fresh.test:1", true);
+  for (let i = 0; i < 1; i++) pool.reportResult("http://fresh.test:1", false);
+  const after = pool.listProxies()[0]; // لقطة حديثة بعد التحديث
+  assert.ok(pool.scoreOf(after) < 100, "فشل يخفض الدرجة");
+});
+
+test("getProxy يوزن اختياره نحو الأعلى درجة بدل التناوب الأعمى", () => {
+  reset();
+  pool.addProxies(["http://fast.test:1", "http://slow.test:1", "http://new.test:1"]);
+  // slow كسّرت مرة → درجتها أقل من المتساويين
+  pool.reportResult("http://slow.test:1", false);
+  const slowScore = pool.listProxies().find((p) => p.url.includes("slow")).score;
+  const fastScore = pool.listProxies().find((p) => p.url.includes("fast")).score;
+  assert.ok(fastScore > slowScore);
+  const draws = new Set();
+  for (let i = 0; i < 12; i++) draws.add(pool.getProxy("host"));
+  assert.ok(!draws.has("http://slow.test:1"), "الأدنى درجة لا يُختار دون مساواة");
+  assert.equal(draws.size, 2, "يتناوب بين الأعلى درجة فحسب");
+});

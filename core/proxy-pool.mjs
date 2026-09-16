@@ -61,6 +61,7 @@ export function listProxies() {
     lastOkAt: p.lastOkAt,
     lastError: p.lastError,
     latencyMs: p.latencyMs,
+    score: scoreOf(p),
   }));
 }
 
@@ -68,13 +69,27 @@ export function healthyCount() {
   return [...PROXIES.values()].filter((p) => p.ok).length;
 }
 
-/** اختيار التناوب على السليمة فقط؛ يعيد null إذا لا يوجد أي بروكسي. */
+/** اختيار موزون: يُفضّل السليم الأعلى درجة (نسبة نجاح/كمون) بدل التناوب الأعمى،
+ *  مع تناوب عادل ضمن نفس الدرجة. يعيد null إذا لا يوجد أي بروكسي سليم. */
 export function getProxy(_hostname) {
   const healthy = [...PROXIES.values()].filter((p) => p.ok);
   if (!healthy.length) return null;
-  const p = healthy[rr % healthy.length];
+  const ordered = healthy.slice().sort((a, b) => scoreOf(b) - scoreOf(a));
+  // الوجه الأعلى درجة أولاً مع تناوب بين المتساوين
+  const top = ordered[0];
+  const peers = ordered.filter((p) => scoreOf(p) === scoreOf(top));
+  const p = peers[rr % peers.length];
   rr += 1;
   return p.url;
+}
+
+/** درجة لوجستية من بيانات الحالة: نسبة نجاح مرجحة لاحقاً + كلفة كمون. */
+export function scoreOf(p) {
+  const total = p.totalSuccesses + p.totalFailures;
+  if (total === 0) return 100; // غير مختبَر بعد — فرصة عادلة
+  const successRatio = p.totalSuccesses / total;
+  const latencyPenalty = p.latencyMs && p.latencyMs > 0 ? Math.min(p.latencyMs / 2000, 1) : 0;
+  return Math.round(100 * (successRatio * 0.7 + (1 - latencyPenalty) * 0.3));
 }
 
 /** تغذية راجعة من الزحف نفسه: نجاح/فشل فيبرمج حدّ الكسر. */
