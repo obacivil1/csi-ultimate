@@ -26,18 +26,37 @@ function cleanId(v) {
   return v === null || v === undefined ? `x-${Math.random().toString(36).slice(2, 10)}` : String(v);
 }
 
+// حالات etimad معروفة (حسب ما يجمع السكربت الإنتاجي — ID الحالي هو المرجع)
+const STATUS_LABELS = {
+  4: "نشطة / Active",
+  8: "منتهية / Ended",
+  5: "تم الترسية / Awarded",
+  6: "تم الترسية / Awarded",
+  7: "تم الترسية / Awarded",
+  15: "مؤرشفة / Archived",
+  10: "ملغية / Cancelled",
+  11: "ملغية / Cancelled",
+  12: "ملغية / Cancelled",
+  18: "ملغية / Cancelled",
+};
+
 function toTender(r) {
   const id = cleanId(r.tenderId ?? r.referenceNumber ?? r.tenderName);
+  // الاسم قد يكون خالياً في التدفق — النوع هو المرجع الأوثق
+  const status = r.tenderStatusName || STATUS_LABELS[r.tenderStatusId] || r.status || "";
+  // الرابط المباشر للتفاصيل (زائر) يُبنى من المعرّف عند غياب رابط UGRP
+  const detailUrl = r.ugrpRfxUrl || r.url
+    || (r.tenderIdString ? `https://tenders.etimad.sa/Tender/DetailsForVisitor?STenderId=${encodeURIComponent(r.tenderIdString)}` : "");
   return {
     id,
     title: r.tenderName || r.title || "",
     entity: r.agencyName || r.entity || "",
     value: Number(r.financialFees) || r.value || null,
     currency: "SAR",
-    status: r.tenderStatusName || r.status || "",
+    status,
     deadline: r.lastOfferPresentationDate || r.deadline || "",
     activity: r.tenderActivityName || r.activity || "",
-    url: r.ugrpRfxUrl || r.url || "",
+    url: detailUrl,
     source: "etimad",
     scraped_at: NOW,
   };
@@ -51,7 +70,7 @@ function toContractor(r) {
     region: r.region_name ?? "",
     phone: r.phone ?? "",
     email: r.email ?? "",
-    url: r.domain ?? r.url ?? "",
+    url: r.domain ? `https://${r.domain}` : (r.url ?? ""),
     source: "muqawil",
     scraped_at: NOW,
   };
@@ -61,7 +80,7 @@ function toAward(r) {
   return {
     id: cleanId(r.tenderId ?? r.awardId ?? r.id),
     title: r.tenderName || r.title || r.awardName || "",
-    winner: r.winner || r.bestOfferSubmissionValue?.length ? (r.winnerContractor || "") : "",
+    winner: r.winner || r.winnerContractor || "",
     value: r.awardedValue || r.value || null,
     currency: "SAR",
     entity: r.agencyName || r.entity || "",
