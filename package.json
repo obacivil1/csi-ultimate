@@ -8,6 +8,8 @@
     "serve": "node web/server.mjs",
     "report:completeness": "node scripts/analytics/field-completeness.mjs",
     "report:alerts": "node scripts/analytics/tender-alerts.mjs",
+    "verify:audit": "node scripts/analytics/verify-audit.mjs",
+    "checkpoint:anchor": "node scripts/analytics/checkpoint-anchor.mjs",
     "harvest:gaps": "node scripts/analytics/harvest-gaps.mjs",
     "design:hawkers": "node scripts/design/hawkers-offline.mjs",
     "start:legacy": "node scripts/legacy/crawlers/csi-crawler-v9.mjs",

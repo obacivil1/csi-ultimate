@@ -7,9 +7,14 @@
  *  الكتابة تتم تزايدياً أثناء العمل: أي انقطاع لا يضيع ما تمّ تحصيله،
  *  ويستأنف الجريان التالي من حيث توقف (يأخذ الناقصين فقط بالترتيب).
  *
+ *  المناعة: القيم المُحصّلة تُخزَّن دائماً في gap-harvested.json
+ *  ({attempted, phones}) — وهي مصدر الحقيقة؛ أي إعادة استيراد للقاعدة
+ *  لا تمسّ الشرح (db-import يعيد تطبيق phones بعد كل استيراد).
+ *
  *  التشغيل:
- *    node scripts/analytics/harvest-gaps.mjs --limit 50 --concurrency 4   (جريان جاف: يعرض ما سيتغيير)
- *    node scripts/analytics/harvest-gaps.mjs --limit 2000 --write        (تحديث csi.db فعلياً)
+ *    node scripts/analytics/harvest-gaps.mjs --limit 50 --concurrency 4     (جريان جاف)
+ *    node scripts/analytics/harvest-gaps.mjs --limit 2000 --write          (تحديث csi.db فعلياً)
+ *    node scripts/analytics/harvest-gaps.mjs --limit 2000 --write --force  (إعادة زيارة المسؤولين ولو قد عُرِفوا)
  *
  *  ملاحظة: كتابة قاعدة البيانات تحدث فقط عند تمرير --write؛ الافتراضي مخرجات فقط.
  */
@@ -23,11 +28,23 @@ import { mineContacts } from "../../core/contact-miner.mjs";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DB_PATH = path.resolve(__dirname, "..", "..", "data", "csi.db");
 const STATE_DIR = path.resolve(__dirname, "..", "..", "state", "analytics");
-const ATTEMPTED_FILE = path.join(STATE_DIR, "gap-harvested.json");
+const STATE_FILE = path.join(STATE_DIR, "gap-harvested.json");
 
-/** ids سبق محاولتها (نجحت أو لا بيانات) — تُستبعد كي لا نعيد سؤال muqawil بلا فائدة. */
-function loadAttempted() {
-  try { return new Set(JSON.parse(fs.readFileSync(ATTEMPTED_FILE, "utf8"))); } catch { return new Set(); }
+/** دولة دائمة: attempted (ids مسؤول عنها) + phones (id → قيمة مكتشفة) — مصدر حقيقة الشرح. */
+function loadState() {
+  try {
+    const raw = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
+    if (Array.isArray(raw)) {
+      const attemptedArr = raw;
+      return { attempted: new Set(attemptedArr), phones: {} }; // صيغة قديمة: مخزنة هكذا
+    }
+    return { attempted: new Set(raw.attempted || []), phones: raw.phones || {} };
+  } catch { return { attempted: new Set(), phones: {} }; }
+}
+
+function saveState(state) {
+  fs.mkdirSync(STATE_DIR, { recursive: true });
+  fs.writeFileSync(STATE_FILE, JSON.stringify({ attempted: [...state.attempted].sort(), phones: state.phones }, null, 1), "utf8");
 }
 
 const argOf = (name) => {
@@ -38,6 +55,7 @@ const args = process.argv.slice(2);
 const limit = Number(argOf("--limit") ?? 10);
 const concurrency = Math.min(Number(argOf("--concurrency") ?? 4), 8);
 const write = args.includes("--write");
+const force = args.includes("--force");
 
 /**
  * يستخرج هاتفاً/بريداً من نص صفحة muqawil التفصيلي — يكمل نص سكربت muqawil-phones
@@ -73,9 +91,9 @@ function extractFromText(text) {
   return out;
 }
 
-async function harvestContractor(db, ids, write) {
+async function harvestContractor(db, ids, write, phones) {
   const results = [];
-  let newPhone = 0, newEmail = 0;
+  let newPhone = 0, newEmail = 0, restoredPhone = 0;
   const update = db.prepare("UPDATE contractors SET phone = COALESCE(NULLIF(phone, ''), ?), email = COALESCE(NULLIF(email, ''), ?) WHERE id = ?");
   const queue = [...ids];
   async function worker() {
@@ -85,11 +103,14 @@ async function harvestContractor(db, ids, write) {
       const r = await httpFetch(url, { timeout: 10000 });
       if (!r.ok || !r.text) { results.push({ id, url, status: r.status, skipped: r.kind || "no_content" }); continue; }
       const { phone, email } = extractFromText(r.text);
-      const found = Boolean(phone) || Boolean(email);
-      results.push({ id, url, status: r.status, phone, email, newPhone: Boolean(phone), newEmail: Boolean(email), found });
+      const known = phones[id] && !force;
+      const freshPhone = Boolean(phone) && !known;
+      const found = freshPhone || Boolean(email);
+      results.push({ id, url, status: r.status, phone: phone || "", email, newPhone: freshPhone, restored: Boolean(phone) && known, found });
       if (write && found) {
         update.run(phone || null, email || null, String(id)); // تزايدي: يحفظ فوراً
-        if (phone) newPhone++;
+        if (freshPhone) newPhone++;
+        if (Boolean(phone) && known) restoredPhone++;
         if (email) newEmail++;
         process.stdout.write(`✓ ${id} P`);
       } else if (write) {
@@ -98,35 +119,46 @@ async function harvestContractor(db, ids, write) {
     }
   }
   await Promise.all(Array.from({ length: concurrency }, worker));
-  return { results, newPhone, newEmail };
+  return { results, newPhone, newEmail, restoredPhone };
 }
 
 async function main() {
   const db = new Database(DB_PATH);
-  const attempted = loadAttempted();
+  const state = loadState();
+  const { attempted, phones } = state;
+
   const candidates = db.prepare(
     `SELECT id FROM contractors
-     WHERE ((phone IS NULL OR phone = '') OR (email IS NULL OR email = ''))
+     WHERE (phone IS NULL OR phone = '')
        AND id IS NOT NULL AND CAST(id AS TEXT) LIKE '200%'
      ORDER BY id ASC`,
   ).all();
-  const missing = candidates.filter((r) => !attempted.has(String(r.id))).slice(0, Math.min(limit, 50000));
 
-  if (!missing.length) { console.log("✗ لا يوجد مقاول ناقص لم يُسأل بعد"); db.close(); return; }
+  // معتلى إلى الشرح الدائم (قيم معروفة) أو مُجرب من قبل دون قيمة معروفة — يُمرَّر عندما force
+  const ids = force
+    ? candidates.map((r) => String(r.id)).slice(0, Math.min(limit, 50000))
+    : candidates.filter((r) => !attempted.has(String(r.id)) || phones[String(r.id)])
+        .map((r) => String(r.id)).slice(0, Math.min(limit, 50000));
 
-  console.log(`\n📡 حصاد ${missing.length} مقاول عبر HTTP-first (${concurrency} تزامن) ${write ? "(كتابة تزايدية)" : "(جريان جاف)"} — سبق سؤال ${attempted.size}، المتبقي ${candidates.length}\n`);
+  if (!ids.length) { console.log("✗ لا يوجد مقاول ناقص لم يُسأل بعد"); db.close(); return; }
+
+  console.log(`\n📡 حصاد ${ids.length} مقاول عبر HTTP-first (${concurrency} تزامن) ${write ? "(كتابة تزايدية)" : "(جريان جاف)"} ${force ? "— إعادة زيارة قسرية" : ""} — مسؤول عنها ${attempted.size}، قيم محفوظة ${Object.keys(phones).length}\n`);
   const started = Date.now();
-  const { results, newPhone, newEmail } = await harvestContractor(db, missing.map((r) => r.id), write);
+  const { results, newPhone, newEmail, restoredPhone } = await harvestContractor(db, ids, write, phones);
   const elapsed = Math.round((Date.now() - started) / 1000);
 
-  for (const r of results) attempted.add(String(r.id));
-  fs.mkdirSync(STATE_DIR, { recursive: true });
-  fs.writeFileSync(ATTEMPTED_FILE, JSON.stringify([...attempted].sort()), "utf8");
+  for (const r of results) {
+    if (r.id !== undefined && r.id !== null) attempted.add(String(r.id));
+    if (r.phone) phones[String(r.id)] = r.phone; // القيمة تبقى في المخازن الدائم ولو أُعيد استيراد القاعدة
+  }
+  saveState(state);
 
-  db.close();
-  const outFile = path.join(STATE_DIR, "gap-harvest.json");
-  fs.writeFileSync(outFile, JSON.stringify({ generatedAt: new Date().toISOString(), written: write, count: results.length, attempted: attempted.size, elapsedSec: elapsed, results }, null, 2), "utf8");
-  console.log(`\n\n✓ جدد: ${newPhone} هاتف / ${newEmail} بريد (من أصل ${results.length} في ${elapsed}s, ~${((elapsed / results.length) || 0).toFixed(1)}s/سجل)`);
+  // نتائج مُطوّقة بزمن حتى لا تُكتب فوق السابقة (تاريخ قابل للتتبع)
+  const stamp = new Date().toISOString().replace(/[:T]/g, "-").slice(0, 19);
+  const outFile = path.join(STATE_DIR, `gap-harvest-${stamp}.json`);
+  fs.mkdirSync(STATE_DIR, { recursive: true });
+  fs.writeFileSync(outFile, JSON.stringify({ generatedAt: new Date().toISOString(), written: write, force, count: results.length, attempted: attempted.size, phonesStored: Object.keys(phones).length, elapsedSec: elapsed, results }, null, 2), "utf8");
+  console.log(`\n\n✓ جدد: ${newPhone} هاتف / ${newEmail} بريد (من أصل ${results.length} في ${elapsed}s, ~${((elapsed / results.length) || 0).toFixed(1)}s/سجل)${restoredPhone ? `، أُعيد تطبيق ${restoredPhone} معروفاً` : ""}`);
   console.log(`✓ سجل مكتوب: ${outFile}`);
 }
 

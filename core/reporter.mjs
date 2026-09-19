@@ -24,6 +24,7 @@
 
 import { writeFileSync, readFileSync, existsSync, mkdirSync, readdirSync } from "fs";
 import { resolve, dirname }                                                 from "path";
+import { signFiles }                                                        from "./audit-chain.mjs";
 
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
@@ -307,6 +308,12 @@ export class SessionReporter {
     this._reportPath = resolve(this._dir, filename);
     writeFileSync(this._reportPath, JSON.stringify(report, null, 2), "utf8");
     console.log(`💾 تقرير محفوظ: ${this._reportPath}`);
+
+    // توقيع الملف تلقائياً
+    try {
+      const auditPath = resolve(this._dir, filename.replace(/\.json$/, ".audit.json"));
+      signFiles([this._reportPath], auditPath, { label: `session:${this._name}` });
+    } catch { /* يتجاهل */ }
 
     return this._reportPath;
   }

@@ -100,6 +100,12 @@ export const env = {
     PASS: get("CSI_AUTH_PASS") || get("CSI_PASS"),
     TOKEN: get("CSI_AUTH_TOKEN") || get("CSI_TOKEN"),
   },
+  AI: {
+    ENDPOINT: get("CSI_AI_ENDPOINT"),
+    MODEL: get("CSI_AI_MODEL", "bigpickle-v2"),
+    KEY: get("CSI_AI_KEY"),
+    TIMEOUT: num("CSI_AI_TIMEOUT", 60000),
+  },
   DEBUG: flag("DEBUG"),
   VA_DEBUG: flag("VA_DEBUG"),
   validate,

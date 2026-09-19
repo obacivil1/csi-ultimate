@@ -8,6 +8,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import open from "../core/db.mjs";
 
 const DATA = path.resolve("data");
@@ -43,7 +44,11 @@ const STATUS_LABELS = {
 function toTender(r) {
   const id = cleanId(r.tenderId ?? r.referenceNumber ?? r.tenderName);
   // الاسم قد يكون خالياً في التدفق — النوع هو المرجع الأوثق
-  const status = r.tenderStatusName || STATUS_LABELS[r.tenderStatusId] || r.status || "";
+  let status = r.tenderStatusName || STATUS_LABELS[r.tenderStatusId] || r.status || "";
+  if (!status && r.lastOfferPresentationDate && r.currentDateTime) {
+    // معرفات حالات غير مسمّاة في السجل: معنى تشغيلي مستدل من الموعد مقابل لحظة الأرشفة
+    status = new Date(r.lastOfferPresentationDate) < new Date(r.currentDateTime) ? "منتهية" : "نشطة";
+  }
   // الرابط المباشر للتفاصيل (زائر) يُبنى من المعرّف عند غياب رابط UGRP
   const detailUrl = r.ugrpRfxUrl || r.url
     || (r.tenderIdString ? `https://tenders.etimad.sa/Tender/DetailsForVisitor?STenderId=${encodeURIComponent(r.tenderIdString)}` : "");
@@ -77,15 +82,18 @@ function toContractor(r) {
 }
 
 function toAward(r) {
+  const winNames = Array.isArray(r.winners)
+    ? r.winners.map((w) => w?.name || w?.winner || "").filter(Boolean)
+    : [];
   return {
     id: cleanId(r.tenderId ?? r.awardId ?? r.id),
     title: r.tenderName || r.title || r.awardName || "",
-    winner: r.winner || r.winnerContractor || "",
+    winner: r.winner || r.winnerContractor || winNames.join("، "),
     value: r.awardedValue || r.value || null,
     currency: "SAR",
     entity: r.agencyName || r.entity || "",
     bidders: Array.isArray(r.bidders) ? JSON.stringify(r.bidders) : (r.bidders || ""),
-    date: r.awardDate || r.date || "",
+    date: r.awardDate || r.date || r.publishDate || r.lastDate || "",
     url: r.url || "",
     source: "etimad",
     scraped_at: NOW,
@@ -119,4 +127,18 @@ for (const { file, name, map } of PLAN) {
   console.log(`[db] ${name}: imported ${rows.length} rows`);
 }
 console.log("[db] totals:", JSON.stringify(db.stats()));
+
+// مناعة الشرح: بعد أي استيراد نعيد تطبيق القيم المُحصّلة (هواتف المقاولين)
+// المخزونة في state/analytics/gap-harvested.json — كي لا يمسح upsert ما تمّ حصده.
+const stateFile = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "state", "analytics", "gap-harvested.json");
+try {
+  const raw = JSON.parse(fs.readFileSync(stateFile, "utf8"));
+  const phones = Array.isArray(raw) ? {} : (raw.phones || {});
+  let restored = 0;
+  const apply = db.prepare("UPDATE contractors SET phone = ? WHERE id = ? AND (phone IS NULL OR phone = '')");
+  for (const [id, phone] of Object.entries(phones)) {
+    if (phone) { apply.run(phone, id); restored++; }
+  }
+  if (restored) console.log(`[db] enrich-restore: أعيد تطبيق ${restored} رقم هاتف محصود من gap-harvested.json`);
+} catch { /* لا مخزن بعد — أول جريان */ }
 db.close();

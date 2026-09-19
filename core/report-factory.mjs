@@ -7,6 +7,8 @@
 import fs from "fs";
 import path from "path";
 import * as XLSX from "xlsx";
+import { signFiles } from "./audit-chain.mjs";
+import { anchorCertificate } from "./anchor-ledger.mjs";
 
 const TOPIC_LABELS = {
   business: "أعمال", news: "أخبار", sports: "رياضة", tech: "تقنية", health: "صحة",
@@ -241,5 +243,23 @@ export function writeReportFiles(report, outputDir) {
   XLSX.utils.book_append_sheet(wb, ws, "Docs");
   XLSX.writeFile(wb, xlsxPath);
 
-  return { dir: outputDir, json: jsonPath, html: htmlPath, deck: deckPath, csv: csvPath, xlsx: xlsxPath };
+  const auditPath = `${base}.audit.json`;
+  let audit = null;
+  let ledgerBlock = null;
+  try {
+    audit = signFiles([jsonPath, htmlPath, deckPath, csvPath, xlsxPath], auditPath, { label: `report:${report.meta.title}` });
+    // ثبّت جذر الشهادة في سجل الـ Anchors المتسلسل (نمط v3.22)
+    try {
+      ledgerBlock = anchorCertificate(audit.path, { label: `report:${report.meta.title}` }).block;
+    } catch { /* التثبيت اختياري — يتجاهل دون كسر التقرير */ }
+  } catch { /* توقيع اختياري — يتجاهل فشل */ }
+
+  const out = {
+    dir: outputDir, json: jsonPath, html: htmlPath, deck: deckPath,
+    csv: csvPath, xlsx: xlsxPath,
+    audit: audit?.path ?? auditPath,
+  };
+  // مرجع كتلة الأنكرس (نمط v3.22) — متاح للقراءة كـ files.ledgerBlock لكنه ليس مساراً
+  Object.defineProperty(out, "ledgerBlock", { value: ledgerBlock ?? null, enumerable: false });
+  return out;
 }

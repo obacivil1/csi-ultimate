@@ -1,0 +1,48 @@
+# scope.yaml
+engagement:
+  client_name: "Test Client"
+  client_contact: "test@example.com"
+  tester_name: "Pen Tester"
+  tester_email: "test@pentest.local"
+  start_date: "2025-01-15"
+  end_date: "2025-01-15"
+  contract_number: "TEST-2025-001"
+  authorization_confirmed: true
+
+scope:
+  target_url: "https://test.acme.com"
+  allowed_domains:
+    - "test.acme.com"
+  allowed_ips:
+    - "1.2.3.4"
+  excluded:
+    - "/admin/delete"
+    - "/api/v1/payments"
+    - "/users/*/delete"
+
+testing:
+  # شدة الاختبار
+  intensity: "normal"
+
+  # نافذة الاختبار (ساعات العمل)
+  allowed_hours: "00:00-24:00"
+
+  # حد الطلبات
+  max_requests_per_second: 1000
+
+  # مسموحات
+  forbidden:
+    - "dos"
+    - "social_engineering"
+    - "physical"
+    - "destructive"
+
+  # فحص سلامة
+  safety_checks:
+    - "stop_on_server_error"
+    - "stop_on_waf_block"
+    - "stop_on_data_exposure"
+
+contacts:
+  emergency: "+966-xxx-xxxx"
+  escalation: "ciso@acme.com"

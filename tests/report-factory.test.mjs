@@ -58,6 +58,7 @@ test("writeReportFiles يكتب الصيغ الخمس", () => {
   for (const k of ["json", "html", "deck", "csv", "xlsx"]) {
     assert.ok(fs.existsSync(files[k]), `${k} missing: ${files[k]}`);
   }
+  assert.ok(fs.existsSync(files.audit), `audit missing: ${files.audit}`);
   const csv = fs.readFileSync(files.csv, "utf8");
   assert.ok(csv.split("\n")[0].includes("url"));
   const parsed = JSON.parse(fs.readFileSync(files.json, "utf8"));

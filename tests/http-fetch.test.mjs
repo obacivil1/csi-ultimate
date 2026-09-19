@@ -104,3 +104,38 @@ test("http-fetch: httpFetchDocument يُفشل بهدوء عند الحجب (م�
     assert.equal(out.reason, "http_403");
   } finally { srv.close(); }
 });
+
+test("http-fetch: قراءة سلبية — tech + security تُرافق الاستجابة", async () => {
+  const { srv, port } = await startServer((req, res) => {
+    res.writeHead(200, {
+      "Content-Type": "text/html",
+      "X-Powered-By": "PHP/8.1",
+      "X-Frame-Options": "DENY",
+    });
+    res.end('<html><head><title>T</title><link rel="stylesheet" href="/wp-content/x.css"></head><body><h1>H</h1></body></html>');
+  });
+  try {
+    const out = await httpFetch(urlOf(port, "/"));
+    assert.equal(out.ok, true);
+    assert.match(out.tech.map((t) => t.tech).join(","), /WordPress/);
+    assert.ok(Array.isArray(out.tech));
+    assert.ok(out.security.present.includes("X-Frame-Options"));
+    assert.ok(out.security.score >= 0 && out.security.score <= 100);
+  } finally { srv.close(); }
+});
+
+test("http-fetch: استجابة حجب تحمل اقتراح شذوذ معبّر (anomaly)", async () => {
+  const { srv, port } = await startServer((req, res) => {
+    res.writeHead(429);
+    res.end("Too Many Requests");
+  });
+  try {
+    const out = await httpFetch(urlOf(port, "/"));
+    assert.equal(out.ok, false);
+    assert.ok(out.anomaly, "missing anomaly field");
+    assert.ok(out.anomaly.score >= 0 && out.anomaly.score <= 1);
+    assert.ok(out.anomaly.score > 0.5, `score=${out.anomaly.score}`);
+    assert.ok(["step_up", "deny"].includes(out.anomaly.decision));
+    assert.ok(Array.isArray(out.anomaly.explanation) && out.anomaly.explanation.length > 0);
+  } finally { srv.close(); }
+});
