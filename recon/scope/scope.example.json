@@ -1,0 +1,25 @@
+{
+  "program_name": "Example Public Bug Bounty",
+  "program_url": "https://hackerone.com/example",
+  "authorized_by": "Example Security Team",
+  "authorization_document": "authorization.pdf",
+  "authorization_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "not_before": "2026-01-01T00:00:00Z",
+  "expires_at": "2026-12-31T23:59:59Z",
+  "contact_email": "researcher@example.com",
+  "allowed_hosts": [
+    "example.com",
+    "www.example.com",
+    "api.example.com"
+  ],
+  "allowed_schemes": ["https"],
+  "allowed_ports": [443],
+  "denied_paths": [
+    "/admin",
+    "/internal",
+    "/api/v1/billing"
+  ],
+  "max_requests_per_host": 2000,
+  "max_requests_per_second": 2.0,
+  "user_agent": "ExampleRecon/1.0 (+contact: researcher@example.com)"
+}
