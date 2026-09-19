@@ -1,0 +1,26 @@
+{
+  "audit_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "findings": [],
+  "finished_at": "2026-09-19T17:15:46.753417+00:00",
+  "program": {
+    "authorized_by": "Local Test (myself)",
+    "name": "Local Test — httpbin.org",
+    "url": "https://httpbin.org/",
+    "valid_until": "2027-12-31T23:59:59+00:00"
+  },
+  "scope": {
+    "denied_paths": [],
+    "hosts": [
+      "httpbin.org"
+    ]
+  },
+  "started_at": "2026-09-19T17:15:09.909505+00:00",
+  "stats": {
+    "per_host": {},
+    "requests_total": 0
+  },
+  "tool": {
+    "name": "ReconModule",
+    "version": "1.0"
+  }
+}

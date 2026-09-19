@@ -1,0 +1,8 @@
+https://httpbin.org/forms/post [[32m200[0m] [[35mPython,gunicorn:19.9.0[0m]
+https://httpbin.org/flasgger_static/github.com/necolas/normalize.css [[31m404[0m] [[36m404 Not Found[0m] [[35mPython,gunicorn:19.9.0[0m]
+https://httpbin.org/ [[32m200[0m] [[36mhttpbin.org[0m] [[35mPython,React,Swagger UI,gunicorn:19.9.0,jQuery[0m]
+https://httpbin.org/spec.json [[32m200[0m] [[35mPython,gunicorn:19.9.0[0m]
+https://httpbin.org/flasgger_static/swagger-ui.css [[32m200[0m] [[35mPython,gunicorn:19.9.0[0m]
+https://httpbin.org/flasgger_static/swagger-ui-standalone-preset.js [[32m200[0m] [[35mPython,gunicorn:19.9.0[0m]
+https://httpbin.org/flasgger_static/swagger-ui-bundle.js [[32m200[0m] [[35mPython,React,gunicorn:19.9.0[0m]
+https://httpbin.org/flasgger_static/lib/jquery.min.js [[32m200[0m] [[35mPython,gunicorn:19.9.0[0m]

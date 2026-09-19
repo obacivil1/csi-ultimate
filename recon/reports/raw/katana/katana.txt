@@ -1,0 +1,8 @@
+https://httpbin.org/
+https://httpbin.org/forms/post
+https://httpbin.org/spec.json
+https://httpbin.org/flasgger_static/swagger-ui.css
+https://httpbin.org/flasgger_static/github.com/necolas/normalize.css
+https://httpbin.org/flasgger_static/swagger-ui-standalone-preset.js
+https://httpbin.org/flasgger_static/swagger-ui-bundle.js
+https://httpbin.org/flasgger_static/lib/jquery.min.js

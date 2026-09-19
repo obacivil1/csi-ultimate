@@ -117,3 +117,17 @@ Constraints: C1–C12 (master spec) + C13 ZERO network, C14 no 237 scraper tests
 
 All 10 modules delivered and verified: 65 tests green with zero live network activity, scoped strictly to MockTransport. The recon system is fail-closed, hash-chained, and honest-UA only — ready for your authorized bug bounty scope. Review recon/OVERNIGHT_LOG.md and run pytest recon/tests -v to confirm, then git add recon/ when satisfied.
 
+---
+
+## Weaknesses to fix (recorded 2026-09-19, NOT fixed — fix later only)
+
+### W1 — External tool requests not counted
+الأدوات الخارجية (katana, httpx, nuclei, subfinder) لا تمر عبر HttpClient، لذا العداد في التقرير لا يعكسها.
+Discovered during: Phase 5 first safe run against httpbin.org (report showed requests_total=0 despite katana finding 8 URLs).
+Proposed fix (later): parse tool outputs and count requests from them.
+
+### W2 — External tool activity not written to audit_log
+الأدوات الخارجية لا تكتب في سجل التدقيق، لذا البصمة لا تغطيها.
+Discovered during: Phase 5 first safe run against httpbin.org (audit_log_sha256 was the empty-file hash).
+Proposed fix (later): after each external tool, log: the command, the time, output count, output file hash.
+
