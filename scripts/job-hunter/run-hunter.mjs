@@ -17,15 +17,27 @@ function arg(name, dflt) {
   return i === -1 ? dflt : args[i + 1]
 }
 
-const BUDGET_MS = parseInt(arg("--budget", "420000"), 10)
+const BUDGET_MS = parseInt(arg("--budget", String(JOB_DEFAULTS.globalBudgetMs)), 10)
+const CONCURRENCY = parseInt(arg("--concurrency", String(JOB_DEFAULTS.concurrency)), 10)
+const SKIP_INDEED = args.includes("--skip-indeed")
 
 function prefilterStale(records, days) {
-  return (Array.isArray(records) ? records : []).filter(r => {
+  const kept = []
+  const dropped = []
+  for (const r of Array.isArray(records) ? records : []) {
     let ts = r.ts
     if (ts == null || ts === 0) ts = parseDate(r.date || r.title || "")
-    if (ts == null || ts === 0) return false
-    return isWithinWindow(ts, days) !== false
-  })
+    if (ts == null || Number.isNaN(ts)) {
+      dropped.push({ link: r.link, title: r.title, reason: "unparseable-date" })
+      continue
+    }
+    if (isWithinWindow(ts, days) === false) {
+      dropped.push({ link: r.link, title: r.title, reason: `older-than-${days}d` })
+      continue
+    }
+    kept.push({ ...r, ts })
+  }
+  return { kept, dropped }
 }
 
 async function main() {
@@ -33,20 +45,22 @@ async function main() {
   let existingRaw = []
   try { if (existsSync(OUT_FILE)) existingRaw = JSON.parse(readFileSync(OUT_FILE, "utf8")) } catch {}
   const existing = Array.isArray(existingRaw) ? existingRaw : (existingRaw.results || [])
-  console.log(`[ENGINE] budget=${BUDGET_MS}ms  prevResults=${existing.length}`)
+  console.log(`[ENGINE] budget=${BUDGET_MS}ms concurrency=${CONCURRENCY} skipIndeed=${SKIP_INDEED}  prevResults=${existing.length}`)
 
-  const fresh = await runJobHunt(existing, { budgetMs: BUDGET_MS })
+  const fresh = await runJobHunt(existing, { budgetMs: BUDGET_MS, concurrency: CONCURRENCY, skipIndeed: SKIP_INDEED })
 
-  const merged = prefilterStale(existing, JOB_DEFAULTS.days)
+  const { kept: merged, dropped: staleDropped } = prefilterStale(existing, JOB_DEFAULTS.days)
   const seen = new Set(merged.map(r => r.link).filter(Boolean))
   for (const r of fresh) if (!seen.has(r.link)) merged.push(r)
 
   const valid = []
-  const badEmail = merged.filter(r => !Array.isArray(r.emails) || !r.emails.some(validateEmail))
+  const droppedNoEmail = []
   for (const r of merged) {
     const em = (r.emails || []).filter(validateEmail)
     if (em.length) { r.emails = em; valid.push(r) }
+    else droppedNoEmail.push({ link: r.link, title: r.title, reason: "no-valid-email" })
   }
+  const badEmail = droppedNoEmail
 
   const allMx = await verifyEmailsParallel(
     [...new Set(valid.flatMap(r => r.emails))],
@@ -54,10 +68,31 @@ async function main() {
   )
   for (const r of valid) {
     r.mx = r.emails.map(e => allMx[e] || "?")
-    r.verified = r.mx.every(m => m === "MX") ? "MX-OK" : r.mx.some(m => m === "MX") ? "MX-PARTIAL" : "NO-MX"
+    const unknown = r.mx.some(m => m === "?")
+    r.verified = unknown
+      ? "MX-UNKNOWN"
+      : r.mx.every(m => m === "MX") ? "MX-OK" : "NO-MX"
+    r.mxNote = "MX = domain accepts mail; not proof the mailbox exists"
   }
 
+  const reportDrop = (label, rows) => {
+    if (!rows.length) return
+    const byReason = {}
+    for (const d of rows) byReason[d.reason] = (byReason[d.reason] || 0) + 1
+    console.log(`[DROP:${label}] ${rows.length} → ${JSON.stringify(byReason)}`)
+    for (const d of rows.slice(0, 10)) console.log(`   - [${d.reason}] ${String(d.title || d.link || "").slice(0, 70)}`)
+  }
+
+  reportDrop("stale", staleDropped)
+  reportDrop("no-email", badEmail)
+
+  valid.sort((a, b) => (b.ts || 0) - (a.ts || 0))
+
   mkdirSync(DATA_DIR, { recursive: true })
+  if (valid.length === 0 && existing.length > 0) {
+    console.error(`[ENGINE] لا نتيجة صالحة، ولم يُكتب الملف (حماية من إفراغ ${existing.length} سجل سابق).`)
+    process.exit(2)
+  }
   writeFileSync(OUT_FILE, JSON.stringify(valid, null, 2), "utf8")
   console.log(`[ENGINE] saved ${valid.length} valid results (dropped ${badEmail.length} w/o email) to ${OUT_FILE}`)
 

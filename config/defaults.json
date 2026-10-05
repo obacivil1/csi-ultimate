@@ -33,7 +33,7 @@
     "cloudflareWaitMs": 35000
   },
   "scoring": {
-    "jobHunterBudgetMs": 420000,
+    "jobHunterBudgetMs": 540000,
     "emailScoreMin": 30,
     "leadScoreThreshold": 65,
     "verifiedLeadMinScore": 65

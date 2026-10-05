@@ -1,4 +1,4 @@
-node_modules/
+﻿node_modules/
 state/
 output/
 *.log
@@ -10,6 +10,7 @@ web/data/contact_messages.json
 
 # Personal report/presentation generators (root-level, non-scraper)
 /*.py
+
 /*.pdf
 /*.pptx
 /*.xlsx
@@ -24,8 +25,16 @@ web/data/contact_messages.json
 /deliverables/
 /_ref/
 /_ocr_txt/
-/__pycache__/
+# بلا شرطة بادئة: لتجاهل __pycache__ في كل المستويات (recon/ مثلًا)،
+# فالقاعدة السابعة والثلاثون كانت تغطي الجذر فقط فيظهر البناء كملف جديد.
+__pycache__/
+*.pyc
+*.pyo
+.mypy_cache/
+# raw recon captures hold target data — never commit
+local-lab/recon/reports/raw/
 /archive/
+
 /server.err
 
 # Databases, runtime data, scratch & logs
@@ -92,3 +101,24 @@ data/??????_*.csv
 sessions/*.json
 reports/*.json
 checkpoints/*.json
+# recon outputs contain crawled third-party URLs + audit trails — never commit.
+# (Patterns above are root-anchored and did NOT protect recon/reports/.)
+recon/reports/
+recon/state/
+# مخرجات المختبر: audit.jsonl hash-chain، بطاقات bounty، لقطات watch،
+# وسجل الطلبات اليدوية. 100+ ملف حسّاس — local-lab غير متتبَّع ككل،
+# فأي `git add local-lab/` كان سيطحنها كلها في التاريخ.
+local-lab/reports/
+recon/scope/*.json
+recon/scope/*auth*.txt
+# pentest_tool run artifacts (reports + logs with target data).
+reports/pentest_*.json
+reports/pentest_*.md
+pentest.log
+
+# pentest_tool جزء من منتج الأمن لا من مولّدات التقارير الشخصية، فيجب
+# أن يُدار بالإصدار. الاستثناء يجب أن يأتي بعد /*.py لأن آخر قاعدة
+# مطابقة تفوز، فبدون ذلك لا يساوي شيء.
+!/pentest_tool.py
+!/test_pentest_tool_scope.py
+

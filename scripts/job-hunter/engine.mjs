@@ -2,7 +2,8 @@ import { chromium } from "playwright-extra"
 import stealth from "puppeteer-extra-plugin-stealth"
 chromium.use(stealth())
 
-import { JOB_DEFAULTS, PLANNING_RE } from "./config.mjs"
+import { JOB_DEFAULTS, PLANNING_RE, regionGate, isJobSeeker, isServiceOffer, isTargetRole, NON_ROLE_RE } from "./config.mjs"
+import { normalizeLoc, OFF_DOMAIN_RE } from "../../core/job-scan.mjs"
 import { Session } from "./nav.mjs"
 import { parseDate, isWithinWindow } from "./dates.mjs"
 import { extractEmails, extractPhones } from "./contacts.mjs"
@@ -38,12 +39,14 @@ export class Engine {
   async dispose() { for (const b of [this.browser]) try { await b.close() } catch {} }
 }
 
-export async function runJobHunt(existingResults, { budgetMs, verbose = true } = {}) {
+export async function runJobHunt(existingResults, { budgetMs, verbose = true, concurrency = JOB_DEFAULTS.concurrency, skipIndeed = false } = {}) {
   const eng = new Engine({ budgetMs })
+  const CONC = Math.max(1, Math.min(6, parseInt(concurrency, 10) || 1))
   await eng.init()
   const out = []
   const seen = new Set(existingResults.map(r => r.link).filter(Boolean))
   const log = (...a) => { if (verbose) { const t = new Date().toLocaleTimeString(); console.log(`[${t}]`, ...a) } }
+  log(`[ENGINE] budget=${budgetMs}ms concurrency=${CONC} skipIndeed=${skipIndeed}`)
 
   try {
     // partner-agnostic: expatriates listing
@@ -66,11 +69,13 @@ export async function runJobHunt(existingResults, { budgetMs, verbose = true } =
         const planning = ads.filter(a => PLANNING_RE.test(a.text))
         log(`[expat] ${cat} pg${pg + 1}: ${ads.length} ads, ${planning.length} planning`)
 
-        for (const a of planning) {
-          if (seen.has(a.href)) continue
-          if (eng.timeLeft() < 4000) break
+        // Visit planning ads with bounded parallelism (JOB_DEFAULTS.concurrency)
+        // Shared page budget: never start a visit without enough time left.
+        const visitOne = async (a) => {
+          if (seen.has(a.href)) return
+          if (eng.timeLeft() < 4000 * CONC) return
           const rv = await eng.fetch(a.href, { host: "www.expatriates.com", tries: 3 })
-          if (!rv.ok) { log(`[expat] visit FAILED ${a.href}`); continue }
+          if (!rv.ok) { eng.advisor.record("expatriates", false, "visit-failed"); log(`[expat] visit FAILED ${a.href}`); return }
           const data = await rv.page.evaluate(() => {
             const body = document.body?.innerText || ""
             const dm = body.match(/Posted:\s*(.+)/)
@@ -80,18 +85,35 @@ export async function runJobHunt(existingResults, { budgetMs, verbose = true } =
             const title = document.querySelector("h1")?.innerText?.trim() || ""
             return { title, post: dm ? dm[1].trim() : "", region: regM ? regM[1].trim() : "", body: body.substring(0, 3000), mailto, tel }
           }).catch(() => ({ title: "", post: "", region: "", body: "", mailto: [], tel: [] }))
-          const region = data.region || (data.body.match(/riyadh|الرياض/i)?.[0] || "")
+          const region = normalizeLoc(data.region || (data.body.match(/riyadh|الرياض/i)?.[0] || ""))
           const ts = parseDate(data.post)
-          if (ts === null || isWithinWindow(ts, JOB_DEFAULTS.days) === false) continue
+          if (ts === null || isWithinWindow(ts, JOB_DEFAULTS.days) === false) return
+          if (isJobSeeker(data.title || a.text)) { log(`[expat] SKIP job-seeker (${a.href.slice(-12)})`); return }
+          if (isServiceOffer(data.title || a.text)) { log(`[expat] SKIP service-offer (${a.href.slice(-12)})`); return }
+          if (NON_ROLE_RE.test((data.title || a.text) + " " + data.body.substring(0, 300))) { log(`[expat] SKIP non-role (${a.href.slice(-12)})`); return }
+          if (OFF_DOMAIN_RE.test((data.title || a.text) + " " + data.body.substring(0, 300))) { eng.advisor.record("expatriates", false, "off-domain"); log(`[expat] SKIP off-domain (${a.href.slice(-12)}) ${(data.title || a.text).slice(0, 50)}`); return }
+          const gate = regionGate(region + " " + data.body + " " + data.title)
+          if (!gate.ok) { eng.advisor.record("expatriates", false, gate.reason); log(`[expat] SKIP other-city (${a.href.slice(-12)}) ${gate.reason}`); return }
           let emails = data.mailto.length ? data.mailto : (/email|e-mail|mail|بريد|إيميل|تواصل|cv|سيرة|راسل/i.test(data.body) ? extractEmails(data.body) : [])
           emails = [...new Set(emails.filter(e => !/@expatriates\.(com|net)/i.test(e)))]
-          if (!emails.length) { log(`[expat] (${a.href.slice(-12)}) ${data.title || a.text} no-email`); continue }
+          if (!emails.length) { log(`[expat] (${a.href.slice(-12)}) ${data.title || a.text} no-email`); return }
           const rec = { link: a.href, title: data.title || a.text, emails, phones: data.tel, date: data.post, ts, loc: region, source: "expatriates", match: "recent" }
           eng.advisor.record("expatriates", true, data.title || a.text)
           eng.deduper.mark(a.href)
           out.push(rec); seen.add(a.href)
           log(`[expat] ✓ ${data.title || a.text} | ${emails.join("; ")}`)
         }
+
+        // Worker pool: N concurrent visits, respecting the budget
+        const queue = [...planning]
+        const workers = Array.from({ length: CONC }, async () => {
+          while (queue.length) {
+            if (eng.timeLeft() < 4000) break
+            const a = queue.shift()
+            await visitOne(a).catch(() => {})
+          }
+        })
+        await Promise.all(workers)
         await new Promise(rr => setTimeout(rr, 500))
       }
     }
@@ -101,10 +123,10 @@ export async function runJobHunt(existingResults, { budgetMs, verbose = true } =
       const qs = [
         `site:expatriates.com planning engineer riyadh`,
         `"planning engineer" riyadh job saudi`,
-        `"planning engineer" sala saudi abab riyadh email apply cv`,
-        `"planning manager" riyadh expatriates mail`,
-        `"scheduler" riyadh job expatriates hvac`,
-        `planning engineer job riyadh 2026 ar مشروع `,
+        `"senior planning engineer" riyadh job` ,
+        `"planning manager" riyadh expatriates`,
+        `"project control" lead riyadh job`,
+        `"scheduler" riyadh job expatriates`,
       ]
       for (const q of qs) {
         if (eng.timeLeft() < 25000) break
@@ -117,38 +139,72 @@ export async function runJobHunt(existingResults, { budgetMs, verbose = true } =
           if (eng.timeLeft() < 8000) break
           const expatLink = res.url.match(/expatriates\.com\/cls\/(\d+)\.html/)
           const isPlanner = PLANNING_RE.test(res.title + " " + res.snippet)
-          if (!expatLink || !isPlanner || seen.has(res.url)) continue
-          const rv = await eng.fetch(res.url, { host: "www.expatriates.com", tries: 3 })
-          if (!rv.ok) continue
-          const data = await rv.page.evaluate(() => { const b = document.body?.innerText || ""; const dm = b.match(/Posted:\s*(.+)/); return { body: b.substring(0, 3000), post: dm ? dm[1].trim() : "" } }).catch(() => ({ body: "", post: "" }))
-          const ts = parseDate(data.post)
-          if (ts === null || isWithinWindow(ts, JOB_DEFAULTS.days) === false) continue
-          const emails = extractEmails(data.body).filter(e => !/@expatriates\.(com|net)/i.test(e))
-          if (emails.length) {
-            const rec = { link: res.url, title: res.title, emails, phones: [], date: data.post, ts, loc: "Riyadh", source: "bing", match: "recent" }
-            eng.advisor.record("bing", true, res.title)
-            eng.deduper.mark(res.url)
-            out.push(rec); seen.add(res.url)
-            log(`[bing] ✓ ${res.title} | ${emails.join("; ")}`)
+          const isNoise = NON_ROLE_RE.test(res.title + " " + (res.snippet || ""))
+          if (expatLink && isPlanner && !isNoise && !seen.has(res.url) && !isJobSeeker(res.title)) {
+            const rv = await eng.fetch(res.url, { host: "www.expatriates.com", tries: 3 })
+            if (!rv.ok) { eng.advisor.record("bing", false, "visit-failed"); continue }
+            const data = await rv.page.evaluate(() => { const b = document.body?.innerText || ""; const dm = b.match(/Posted:\s*(.+)/); const regM = b.match(/Region:\s*(.+)/); return { body: b.substring(0, 3000), post: dm ? dm[1].trim() : "", region: regM ? regM[1].trim() : "" } }).catch(() => ({ body: "", post: "", region: "" }))
+            const ts = parseDate(data.post)
+            if (ts === null || isWithinWindow(ts, JOB_DEFAULTS.days) === false) continue
+            if (isServiceOffer(res.title + " " + data.body)) { log(`[bing] SKIP service-offer ${res.url}`); continue }
+            if (NON_ROLE_RE.test(res.title + " " + data.body)) { log(`[bing] SKIP non-role ${res.url}`); continue }
+            if (OFF_DOMAIN_RE.test(res.title + " " + data.body)) { eng.advisor.record("bing", false, "off-domain"); log(`[bing] SKIP off-domain ${res.url}`); continue }
+            const loc = normalizeLoc(data.region || (data.body.match(/riyadh|الرياض/i)?.[0] || "Riyadh"))
+            const gate = regionGate(loc + " " + data.body + " " + res.title)
+            if (!gate.ok) { eng.advisor.record("bing", false, gate.reason); log(`[bing] SKIP other-city ${res.url} (${gate.reason})`); continue }
+            const emails = extractEmails(data.body).filter(e => !/@expatriates\.(com|net)/i.test(e))
+            if (emails.length) {
+              const rec = { link: res.url, title: res.title, emails, phones: [], date: data.post, ts, loc, source: "bing", match: "recent" }
+              eng.advisor.record("bing", true, res.title)
+              eng.deduper.mark(res.url)
+              out.push(rec); seen.add(res.url)
+              log(`[bing] ✓ ${res.title} | ${emails.join("; ")}`)
+            }
           }
         }
       }
     }
 
-    // Indeed via core API (4-strategy chain bypasses the HTML block)
-    if (eng.timeLeft() > 35000) {
+    // Indeed via core API (4-strategy chain bypasses the HTML block).
+    // It answers 403 on every strategy right now, so it is opt-out via --skip-indeed.
+    if (!skipIndeed && eng.timeLeft() > 35000) {
       log("[indeed] trying core indeed-api chain…")
-      const jobs = await fetchIndeedJobs("planning engineer", "Riyadh").catch(() => [])
-      log(`[indeed] API chain returned ${jobs?.length || 0} jobs`)
-      for (const job of jobs || []) {
-        if (seen.has(job.url)) continue
-        const title = job.title || ""
-        const isPlanner = PLANNING_RE.test(title + " " + (job.description || ""))
-        if (!isPlanner || !/riyadh|الرياض/i.test((job.location || "") + title)) continue
-        seen.add(job.url)
-        eng.advisor.record("indeed", true, title)
-        out.push({ link: job.url, title, emails: [], phones: [], date: job.postedAt || "", ts: job.postedAt ? Date.parse(job.postedAt) : null, loc: job.location || "Riyadh", source: "indeed", match: "recent", note: "via core indeed-api; no direct email on Indeed" })
-        log(`[indeed] ${title} | ${job.location}`)
+      const queries = ["planning engineer", "project control lead", "senior planning engineer", "cost control engineer", "planning manager"]
+      const seenIndeed = new Set()
+      for (const q of queries) {
+        if (eng.timeLeft() < 20000) break
+        const jobs = await fetchIndeedJobs(q, "Riyadh").catch(() => [])
+        log(`[indeed] "${q}" → ${jobs?.length || 0} jobs`)
+        for (const job of jobs || []) {
+          if (!job?.url || seenIndeed.has(job.url) || seen.has(job.url)) continue
+          const title = job.title || ""
+          const blob = title + " " + (job.description || "")
+          if (!PLANNING_RE.test(blob)) continue
+          if (!/riyadh|الرياض/i.test((job.location || "") + " " + title)) continue
+          if (isJobSeeker(title)) { log(`[indeed] SKIP job-seeker (${title.slice(0, 40)})`); continue }
+          if (isServiceOffer(title + " " + (job.description || ""))) { log(`[indeed] SKIP service-offer (${title.slice(0, 40)})`); continue }
+          if (!regionGate((job.location || "") + " " + title + " " + (job.company || "")).ok) { eng.advisor.record("indeed", false, "off-region"); log(`[indeed] SKIP off-region (${title.slice(0, 40)})`); continue }
+          if (OFF_DOMAIN_RE.test(blob)) { eng.advisor.record("indeed", false, "off-domain"); log(`[indeed] SKIP off-domain (${title.slice(0, 40)})`); continue }
+          const emails = extractEmails(job.description || "").filter(e => !/@expatriates\.(com|net)/i.test(e))
+          if (!emails.length) {
+            eng.advisor.record("indeed", false, "no-email")
+            log(`[indeed] SKIP no-email (${title.slice(0, 40)}) — will be dropped downstream anyway`)
+            continue
+          }
+          seenIndeed.add(job.url)
+          eng.advisor.record("indeed", true, title)
+          eng.deduper.mark(job.url)
+          out.push({
+            link: job.url, title,
+            emails, phones: extractPhones(job.description || ""),
+            date: job.postedAt || "", ts: job.postedAt ? Date.parse(job.postedAt) : null,
+            loc: job.location || "Riyadh", source: "indeed", match: "recent",
+            company: job.company || "",
+            note: emails.length ? "via core indeed-api" : "via core indeed-api; no direct email on Indeed",
+          })
+          seen.add(job.url)
+          log(`[indeed] ✓ ${title} | ${job.location || ""} | ${emails.length ? emails.join("; ") : "no email"}`)
+        }
       }
     }
   } finally {

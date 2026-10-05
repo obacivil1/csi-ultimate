@@ -15,8 +15,22 @@ export function parseDate(text) {
   if (/\bأمس\b|\byesterday\b/i.test(clean) && clean.length < 60) return t - 86400000
 
   const withOffsets = (m, d, y) => {
-    const ts = new Date(y, m, d).getTime()
+    const ts = new Date(y, m, d, hh, mi, ss).getTime()
     return Number.isNaN(ts) ? null : ts
+  }
+
+  const tm = clean.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(am|pm|ص|م)?/i)
+  let hh = 0, mi = 0, ss = 0
+  if (tm) {
+    hh = +tm[1]
+    mi = +tm[2]
+    ss = tm[3] ? +tm[3] : 0
+    const mer = (tm[4] || "").toLowerCase()
+    if (mer === "pm" || mer === "م") { if (hh < 12) hh += 12 }
+    else if (mer === "am" || mer === "ص") { if (hh === 12) hh = 0 }
+    if (hh > 23) hh = 23
+    if (mi > 59) mi = 59
+    if (ss > 59) ss = 59
   }
 
   let m

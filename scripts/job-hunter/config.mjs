@@ -1,12 +1,18 @@
+import { PLANNING_RE, ROLE_PHRASE_RE, OTHER_CITY_RE, FOREIGN_CITY_RE, JOB_SEEKER_RE, NON_ROLE_RE, TARGET_ROLE_PHRASES, regionGate, isTargetRole, isJobSeeker, isServiceOffer, isBlockedPage } from "../../core/job-scan.mjs"
+
 export const JOB_DEFAULTS = {
   location: "Riyadh",
   locationRe: /riyadh|الرياض/i,
   keywords: ["planning engineer", "scheduling engineer", "مهندس تخطيط"],
-  days: 2,
-  expatLimits: { jobs: 12, "temp-jobs": 6 },
+  days: 4,
+  // jobs carries the planning/control ads; the other categories only produced
+  // "no ads" pages, so they cost time and yielded nothing.
+  expatLimits: { jobs: 10, "temp-jobs": 3 },
   globalBudgetMs: 540_000,
   sourceBudgetMs: 150_000,
   visitBudgetMs: 120_000,
+  // 1 = serial visits. 3 got us HTTP 403 from Indeed and failed visits on
+  // expatriates. Raise with --concurrency only if nothing gets blocked.
   concurrency: 1,
   mxTtlMs: 7 * 24 * 3600 * 1000,
 }
@@ -22,7 +28,7 @@ export const MONTHS_AR = {
 }
 export const WEEKDAYS = /(?:mon|tue|wed|thu|fri|sat|sun|الاحد|الاثنين|الثلاثاء|الاربعاء|الأربعاء|الخميس|الجمعة|السبت)[a-z]*/i
 
-export const PLANNING_RE = /planning|تخطيط|schedul|planner|controls|مهندس تخطيط|شيتول|التخطيط|primavera|schedule|جدولة/i
+export { PLANNING_RE, ROLE_PHRASE_RE, OTHER_CITY_RE, FOREIGN_CITY_RE, JOB_SEEKER_RE, NON_ROLE_RE, TARGET_ROLE_PHRASES, regionGate, isTargetRole, isJobSeeker, isServiceOffer, isBlockedPage }
 export const JOBSEEKER_DOMAIN_RE = /gmail|yahoo|hotmail|outlook|icloud|protonmail|zoho/i
 export const HARD_BAD_EMAIL_RE = /@expatriates\.(com|net)|noreply|no-reply|example|domain\.com|site\.com|yourdomain|@\[|unknown|\.png|\.jpg|\.jpeg|\.gif|@\d/i
 export const MAIL_CTX_RE = /email|e-mail|mail|contact|send.*cv|cv.*(?:to|on)|apply|recruit|hr[.\s]|تواصل|إيميل|بريد|cv|سيرة|قدم|ترسل|راسل|قبول|\bhr\b/i
