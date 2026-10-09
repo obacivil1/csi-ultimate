@@ -46,6 +46,15 @@ class Scope(BaseModel):
     allowed_ports: list[int] = Field(default_factory=lambda: [443])
     denied_paths: list[str] = Field(default_factory=list)
 
+    # Subdomain enumeration via subfinder. Default False = it never runs.
+    # Why this is opt-in and separate from allowed_hosts: subfinder issues
+    # DNS queries for *sibling* names (api./dev./staging.<domain>), which is
+    # traffic outside the authorization even when every result is later
+    # filtered out. allowed_hosts stays an exact allowlist (no wildcards);
+    # this flag only lets the client opt in to the discovery traffic, and
+    # discovered hosts must still pass the exact-match allowlist to be used.
+    allow_subdomain_enum: bool = False
+
     max_requests_per_host: int = Field(ge=1, le=1_000_000)
     max_requests_per_second: float = Field(gt=0, le=100)
 
@@ -138,6 +147,24 @@ class ScopeValidator:
 
         self._check_time_window()
         self._check_authorization_document()
+        # Operator confirmation starts unconfirmed. The ONLY legitimate way to
+        # confirm is require_operator_confirmation() below (interactive gate).
+        # Tests simulate it by calling the real function with patched input.
+        self._confirmed = False
+
+    def mark_confirmed(self) -> None:
+        """Record that the operator explicitly confirmed this scope.
+
+        Called by require_operator_confirmation() after a correct answer.
+        HttpClient refuses to send any packet while confirmed is False,
+        so confirmation can no longer be bypassed by constructing the
+        client directly.
+        """
+        self._confirmed = True
+
+    @property
+    def confirmed(self) -> bool:
+        return self._confirmed
 
     def _check_time_window(self) -> None:
         if self._now < self.scope.not_before:
@@ -163,13 +190,6 @@ class ScopeValidator:
                 "authorization document hash mismatch. "
                 f"expected {self.scope.authorization_sha256}, got {digest}"
             )
-
-    def allows(self, url: str) -> bool:
-        try:
-            self._assert_allowed(url)
-            return True
-        except ScopeError:
-            return False
 
     def _assert_allowed(self, url: str) -> None:
         parsed = urlparse(url)
@@ -239,3 +259,7 @@ def require_operator_confirmation(
     answer = input_fn("Type 'I CONFIRM' to continue: ").strip()
     if answer != "I CONFIRM":
         raise ScopeError("operator did not confirm; aborting")
+    # Correct answer: record confirmation on the scope itself so that every
+    # downstream client (HttpClient, Orchestrator) enforces it — the gate can
+    # no longer live only in the CLI layer.
+    scope.mark_confirmed()

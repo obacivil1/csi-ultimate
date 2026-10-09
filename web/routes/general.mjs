@@ -6,6 +6,8 @@ import { enqueueJob, getJob, listQueue, cancelJob } from "../../core/job-manager
 import { classifyText } from "../../core/topic-classifier.mjs";
 import { crawlUrls, summarizeDocuments } from "../../core/general-crawl.mjs";
 import { runMission } from "../../core/general-mission.mjs";
+import { assertPublicUrl, safeFetch } from "../../core/ssrf-guard.mjs";
+import { authenticate } from "../middleware/auth.mjs";
 import { logger } from "../../core/logger.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -31,10 +33,23 @@ function persistJob(record) {
 
 export const generalRouter = Router();
 
-generalRouter.post("/crawl", (req, res) => {
+const SAFE_ID_RE = /^[A-Za-z0-9_-]{1,120}$/
+function validateIdParam(req, res, next) {
+  if (req.params.id !== undefined && !SAFE_ID_RE.test(req.params.id)) {
+    return res.status(400).json({ error: "Invalid identifier" });
+  }
+  next();
+}
+generalRouter.param("id", validateIdParam);
+generalRouter.use(authenticate);
+
+generalRouter.post("/crawl", async (req, res) => {
   const { urls = [], opts = {} } = req.body || {};
   if (!Array.isArray(urls) || urls.length === 0) {
     return res.status(400).json({ error: "urls مطلوب (مصفوفة روابط واحدة على الأقل)" });
+  }
+  for (const u of urls) {
+    try { await assertPublicUrl(u) } catch { return res.status(400).json({ error: `Blocked or invalid URL: ${u}` }) }
   }
   const depth = Math.max(0, Math.min(3, parseInt(opts.depth) || 0));
   const maxPages = Math.max(1, Math.min(100, parseInt(opts.maxPages) || 20));
@@ -88,10 +103,13 @@ generalRouter.post("/jobs/:id/cancel", (req, res) => {
   res.json({ ok: true });
 });
 
-generalRouter.post("/mission", (req, res) => {
+generalRouter.post("/mission", async (req, res) => {
   const { urls = [], topics = [], title, description, opts = {} } = req.body || {};
   if (!Array.isArray(urls) || urls.length === 0) {
     return res.status(400).json({ error: "urls مطلوب (مصفوفة روابط واحدة على الأقل)" });
+  }
+  for (const u of urls) {
+    try { await assertPublicUrl(u) } catch { return res.status(400).json({ error: `Blocked or invalid URL: ${u}` }) }
   }
   const depth = Math.max(0, Math.min(3, parseInt(opts.depth) || 0));
   const maxPages = Math.max(1, Math.min(100, parseInt(opts.maxPages) || 20));

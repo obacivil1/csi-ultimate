@@ -266,7 +266,7 @@ export async function httpFetch(url, opts = {}) {
         decision: composite >= 0.6 ? "healthy" : composite >= 0.3 ? "caution" : "at-risk",
         factors: {
           anomaly: Number(anomaly.score.toFixed(2)),
-          tech: Number((techQuality || 0.5).toFixed(2)),
+          tech: Number(((tech ? (tech.confidence || 0.5) : 0.5)).toFixed(2)),
           ban: Number((1 - (block.banned ? 1 : 0)).toFixed(2)),
         },
       },
@@ -361,7 +361,7 @@ export async function httpFetch(url, opts = {}) {
           decision: composite >= 0.6 ? "healthy" : composite >= 0.3 ? "caution" : "at-risk",
           factors: {
             anomaly: Number(anomaly.score.toFixed(2)),
-            tech: Number((techQuality || 0.5).toFixed(2)),
+            tech: Number(((tech ? (tech.confidence || 0.5) : 0.5)).toFixed(2)),
             ban: Number((1 - (block.banned ? 1 : 0)).toFixed(2)),
           },
         },

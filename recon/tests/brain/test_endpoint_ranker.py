@@ -71,7 +71,8 @@ def test_result_shape():
 
 
 def test_saved_httpbin_crawl_ranks_without_network(tmp_path=None):
-    saved = pathlib.Path("recon/reports/raw/katana/katana.txt")
+    saved = (pathlib.Path(__file__).resolve().parent.parent.parent
+             / "reports" / "raw" / "katana" / "katana.txt")
     if not saved.exists():
         import pytest
 

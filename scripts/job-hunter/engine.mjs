@@ -10,7 +10,7 @@ import { extractEmails, extractPhones } from "./contacts.mjs"
 import { parseBingResults } from "./nav.mjs"
 import { Deduper } from "./deduper.mjs"
 import { Advisor } from "./advisor.mjs"
-import { fetchIndeedJobs } from "../../core/indeed-api.mjs"
+import { harvestBoards } from "./boards.mjs"
 
 export class Engine {
   constructor({ budgetMs = JOB_DEFAULTS.globalBudgetMs } = {}) {
@@ -165,47 +165,15 @@ export async function runJobHunt(existingResults, { budgetMs, verbose = true, co
       }
     }
 
-    // Indeed via core API (4-strategy chain bypasses the HTML block).
-    // It answers 403 on every strategy right now, so it is opt-out via --skip-indeed.
-    if (!skipIndeed && eng.timeLeft() > 35000) {
-      log("[indeed] trying core indeed-api chain…")
-      const queries = ["planning engineer", "project control lead", "senior planning engineer", "cost control engineer", "planning manager"]
-      const seenIndeed = new Set()
-      for (const q of queries) {
-        if (eng.timeLeft() < 20000) break
-        const jobs = await fetchIndeedJobs(q, "Riyadh").catch(() => [])
-        log(`[indeed] "${q}" → ${jobs?.length || 0} jobs`)
-        for (const job of jobs || []) {
-          if (!job?.url || seenIndeed.has(job.url) || seen.has(job.url)) continue
-          const title = job.title || ""
-          const blob = title + " " + (job.description || "")
-          if (!PLANNING_RE.test(blob)) continue
-          if (!/riyadh|الرياض/i.test((job.location || "") + " " + title)) continue
-          if (isJobSeeker(title)) { log(`[indeed] SKIP job-seeker (${title.slice(0, 40)})`); continue }
-          if (isServiceOffer(title + " " + (job.description || ""))) { log(`[indeed] SKIP service-offer (${title.slice(0, 40)})`); continue }
-          if (!regionGate((job.location || "") + " " + title + " " + (job.company || "")).ok) { eng.advisor.record("indeed", false, "off-region"); log(`[indeed] SKIP off-region (${title.slice(0, 40)})`); continue }
-          if (OFF_DOMAIN_RE.test(blob)) { eng.advisor.record("indeed", false, "off-domain"); log(`[indeed] SKIP off-domain (${title.slice(0, 40)})`); continue }
-          const emails = extractEmails(job.description || "").filter(e => !/@expatriates\.(com|net)/i.test(e))
-          if (!emails.length) {
-            eng.advisor.record("indeed", false, "no-email")
-            log(`[indeed] SKIP no-email (${title.slice(0, 40)}) — will be dropped downstream anyway`)
-            continue
-          }
-          seenIndeed.add(job.url)
-          eng.advisor.record("indeed", true, title)
-          eng.deduper.mark(job.url)
-          out.push({
-            link: job.url, title,
-            emails, phones: extractPhones(job.description || ""),
-            date: job.postedAt || "", ts: job.postedAt ? Date.parse(job.postedAt) : null,
-            loc: job.location || "Riyadh", source: "indeed", match: "recent",
-            company: job.company || "",
-            note: emails.length ? "via core indeed-api" : "via core indeed-api; no direct email on Indeed",
-          })
-          seen.add(job.url)
-          log(`[indeed] ✓ ${title} | ${job.location || ""} | ${emails.length ? emails.join("; ") : "no email"}`)
-        }
+    // Board sources: Bayt, NaukriGulf, GulfTalent via the browser session,
+    // Indeed via the FlareSolverr sidecar (its own endpoints answer 403 to plain fetch).
+    if (eng.timeLeft() > 60000) {
+      const boards = await harvestBoards(eng, log, { skipIndeed })
+      for (const rec of boards) {
+        if (seen.has(rec.link)) continue
+        out.push(rec); seen.add(rec.link)
       }
+      log(`[boards] ${boards.length} records (${boards.filter(r => r.emails.length).length} with email)`)
     }
   } finally {
     await eng.dispose()

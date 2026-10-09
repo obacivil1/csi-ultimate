@@ -72,6 +72,9 @@ async def test_scan_missing_tool_continues(tmp_path):
     from recon.core.scope_validator import ScopeValidator
 
     scope = ScopeValidator(sf)
+    # cmd_scan would confirm via the real interactive gate; simulate it here
+    # (the gate itself is tested in test_scope_validator).
+    scope.mark_confirmed()
     out = tmp_path / "reports"
     # tools missing -> should be skipped but not raise
     with patch("recon.cli.require_operator_confirmation", return_value=None):
@@ -80,6 +83,91 @@ async def test_scan_missing_tool_continues(tmp_path):
             # check report exists
             reports = list(out.glob("report_*.json"))
             assert len(reports) == 1
+            # brain + decider must be wired into the pipeline, not dead code
+            assert (out / "brain.json").exists()
+            assert (out / "decision.json").exists()
+            rep = json.loads(reports[0].read_text(encoding="utf-8"))
+            assert rep["recon"]["strategy"] == "balanced"
+            assert rep["recon"]["brain"]["endpoints_count"] == 0
+            assert rep["audit_chain_valid"] is True
+
+
+@pytest.mark.asyncio
+async def test_scan_reads_feedback_memory(tmp_path, monkeypatch):
+    """الذاكرة كانت مقطوعة الطرفين: record بلا مستدعٍ، و decide بلا feedback.
+
+    هذا يثبت أن مسار الإنتاج يقرأ السجل فعلًا (adjustment يظهر في
+    decision.json كـadjusted_value بدل القيمة الخام).
+    """
+    from recon.cli import _feedback_path, _run_scan
+    from recon.core.scope_validator import ScopeValidator
+    from recon.decider.feedback_loop import FeedbackLoop
+
+    mem = tmp_path / "feedback.jsonl"
+    monkeypatch.setenv("RECON_FEEDBACK_PATH", str(mem))
+    assert _feedback_path() == mem
+
+    data = _valid_scope_dict(tmp_path)
+    sf = tmp_path / "scope.json"
+    sf.write_text(json.dumps(data), encoding="utf-8")
+    scope = ScopeValidator(sf)
+    scope.mark_confirmed()
+
+    ep = tmp_path / "endpoints.txt"
+    ep.write_text("https://example.com/api/user/1\n", encoding="utf-8")
+    fb = FeedbackLoop(mem)
+    for _ in range(3):
+        fb.record("https://example.com/api/user/1", "idor", False, "وهم")
+
+    out = tmp_path / "reports"
+    # endpoints تُقرأ من مخرجات katana؛ الأداة مفقودة هنا، فنزرع الملف
+    # مسبقًا ليمرّ نفس مسار القراءة بدل مسار فارغ.
+    kat = out / "raw" / "katana" / "katana.txt"
+    kat.parent.mkdir(parents=True, exist_ok=True)
+    kat.write_text(ep.read_text(encoding="utf-8"), encoding="utf-8")
+    with patch("recon.cli.require_operator_confirmation", return_value=None):
+        with patch("shutil.which", return_value=None):
+            await _run_scan(scope, "https://example.com/", ["katana"], out)
+
+    decision = json.loads((out / "decision.json").read_text(encoding="utf-8"))
+    hyps = [t for p in decision["plans"] for t in p.get("target_hypotheses", [])]
+    hyps += decision.get("rejected", [])
+    assert hyps, "لا فروض في القرار"
+    hit = [h for h in hyps if h.get("adjusted_value") is not None]
+    assert hit, "الذاكرة لم تُطبَّق: adjusted_value غائبة"
+    # ثلاث أحكام وهمية → تعديل 0.5 كحد أدنى
+    assert any(h["adjusted_value"] < h["value"] for h in hit), \
+        f"التعديل لم يخفض القيمة: {hit}"
+
+
+def test_feedback_command_records_and_reads(tmp_path, monkeypatch, capsys):
+    """الطرف الآخر: أمر يكتب حكم المشغّل، والقراءة تعكسه فورًا."""
+    from recon.cli import main
+
+    mem = tmp_path / "feedback.jsonl"
+    monkeypatch.setenv("RECON_FEEDBACK_PATH", str(mem))
+
+    main(["feedback", "--url", "https://example.com/a", "--category", "idor",
+          "--real", "--notes", "تحقق يدوي"])
+    main(["feedback", "--url", "https://example.com/b", "--category", "xss",
+          "--false"])
+    out = capsys.readouterr().out
+    assert "recorded" in out
+
+    main(["feedback", "--stats"])
+    stats = json.loads(capsys.readouterr().out)
+    assert stats["total"] == 2
+    assert stats["per_category"]["idor"]["real"] == 1
+    assert stats["per_category"]["xss"]["false"] == 1
+
+
+def test_feedback_command_requires_a_verdict(monkeypatch, tmp_path):
+    from recon.cli import main
+
+    monkeypatch.setenv("RECON_FEEDBACK_PATH", str(tmp_path / "fb.jsonl"))
+    with pytest.raises(SystemExit) as exc:
+        main(["feedback", "--url", "https://example.com/a"])
+    assert exc.value.code == 2
 
 
 @pytest.mark.asyncio
@@ -89,6 +177,9 @@ async def test_idor_one_endpoint_produces_one_finding(tmp_path):
     sf.write_text(json.dumps(data), encoding="utf-8")
     from recon.core.scope_validator import ScopeValidator
     scope = ScopeValidator(sf)
+    # _run_idor is called directly here (bypassing cmd_idor); simulate the
+    # confirmation cmd_idor would have collected.
+    scope.mark_confirmed()
     # endpoints file
     ep = tmp_path / "endpoints.txt"
     ep.write_text("https://example.com/api/123\n", encoding="utf-8")

@@ -47,7 +47,10 @@ def _make_scope(tmp_path: pathlib.Path, extra=None):
         data.update(extra)
     scope_file = tmp_path / "scope.json"
     scope_file.write_text(json.dumps(data), encoding="utf-8")
-    return ScopeValidator(scope_file)
+    scope = ScopeValidator(scope_file)
+    # Simulate the operator having confirmed (the real gate is tested separately).
+    scope.mark_confirmed()
+    return scope
 
 
 @pytest.mark.asyncio
@@ -278,9 +281,64 @@ async def test_redirect_out_of_scope_not_followed(tmp_path):
 
 
 def test_forbidden_no_randomization():
-    src = pathlib.Path("recon/core/http_client.py").read_text(encoding="utf-8")
+    src = (pathlib.Path(__file__).resolve().parent.parent / "core" / "http_client.py").read_text(encoding="utf-8")
     assert "random" not in src.lower()
     assert "dnt" not in src.lower() or '"dnt"' not in src.lower()
     # ensure UA rotation not present
     assert "rotate" not in src.lower()
     assert "user_agent" in src.lower()
+
+
+@pytest.mark.asyncio
+async def test_unconfirmed_scope_sends_zero_packets(tmp_path):
+    """Regression: direct HttpClient construction must NOT bypass confirmation.
+
+    An unconfirmed scope raises ScopeError from get()/head() before any
+    scope/robots/limiter logic — zero HTTP calls reach the transport.
+    """
+    scope = _make_scope(tmp_path)
+    # Simulate a fresh, never-confirmed scope (helper marks confirmed by default).
+    scope._confirmed = False
+    assert scope.confirmed is False
+    calls = [0]
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls[0] += 1
+        return httpx.Response(200, text="must never be reached")
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as raw:
+        robots = RobotsCache(raw, user_agent=scope.user_agent)
+        limiter = RateLimiter(max_rps=100, max_per_host=10, burst=10)
+        audit = AuditLog(tmp_path / "audit.jsonl")
+        hc = HttpClient(scope=scope, limiter=limiter, robots=robots, audit=audit, transport=transport)
+        async with hc:
+            from recon.core.scope_validator import ScopeError
+
+            with pytest.raises(ScopeError):
+                await hc.get("https://example.com/")
+            with pytest.raises(ScopeError):
+                await hc.head("https://example.com/")
+    assert calls[0] == 0
+
+
+@pytest.mark.asyncio
+async def test_confirmed_scope_sends_normally(tmp_path):
+    """Sanity: after mark_confirmed, requests flow as before."""
+    scope = _make_scope(tmp_path)
+    scope.mark_confirmed()
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if str(req.url).endswith("/robots.txt"):
+            return httpx.Response(404, text="not found")
+        return httpx.Response(200, text="ok")
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as raw:
+        robots = RobotsCache(raw, user_agent=scope.user_agent)
+        limiter = RateLimiter(max_rps=100, max_per_host=10, burst=10)
+        audit = AuditLog(tmp_path / "audit.jsonl")
+        hc = HttpClient(scope=scope, limiter=limiter, robots=robots, audit=audit, transport=transport)
+        async with hc:
+            resp = await hc.get("https://example.com/")
+            assert resp is not None and resp.status_code == 200

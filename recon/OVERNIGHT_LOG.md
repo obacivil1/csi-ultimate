@@ -131,3 +131,14 @@ Proposed fix (later): parse tool outputs and count requests from them.
 Discovered during: Phase 5 first safe run against httpbin.org (audit_log_sha256 was the empty-file hash).
 Proposed fix (later): after each external tool, log: the command, the time, output count, output file hash.
 
+
+---
+
+## Operator Confirmations (I CONFIRM chain)
+
+### 2026-09-19 — ahladalil forum scan
+- User message time: 2026-09-19 (chat)
+- Message text (verbatim): I CONFIRM
+- Standalone: yes. Written by operator, not by agent.
+- Command that followed: python -m recon.cli scan --scope recon/scope/ahladalil.json --target https://engineer.ahladalil.com/ --tools katana,httpx --out recon/reports/
+- Scope: recon/scope/ahladalil.json (allowed_hosts: engineer.ahladalil.com only)

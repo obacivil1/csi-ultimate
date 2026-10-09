@@ -625,7 +625,7 @@ async function loadCities() {
     const select = document.getElementById('filterCity');
     if (res && res.length) {
       select.innerHTML = '<option value="">كل المدن</option>' +
-        res.map(c => `<option value="${c.name}">${c.name} (${c.count})</option>`).join('');
+        res.map(c => `<option value="${esc(c.name)}">${esc(c.name)} (${c.count})</option>`).join('');
     }
   } catch(e) {}
 }
@@ -693,7 +693,7 @@ async function loadRegions() {
     const select = document.getElementById('filterRegion');
     if (res && res.length) {
       select.innerHTML = '<option value="">كل المناطق</option>' +
-        res.map(r => `<option value="${r.name}">${r.name} (${r.count})</option>`).join('');
+        res.map(r => `<option value="${esc(r.name)}">${esc(r.name)} (${r.count})</option>`).join('');
     }
   } catch(e) {}
 }
@@ -1113,11 +1113,11 @@ function selectPlan(planId, el) {
       btn.innerHTML = isAdmin ? `
         <div style="text-align:center;">
           <p style="margin:10px 0;font-size:0.9em;">🧪 اختبار عملية الدفع — سيتم محاكاة الدفع بدون خصم</p>
-          <button class="btn" onclick="mockPay('${planId}')" style="background:#0070BA;">🔁 تجربة الدفع</button>
+          <button class="btn" onclick="mockPay('${planId}','${r.orderId}')" style="background:#0070BA;">🔁 تجربة الدفع</button>
         </div>
       ` : `
         <p style="color:#FFA500;margin:10px 0;font-size:0.9em;">⚠️ PayPal غير مهيأ — للاختبار، اضغط تأكيد</p>
-        <button class="btn" onclick="mockPay('${planId}')" style="background:#28A745;">✅ تأكيد الاشتراك (وهمي)</button>
+        <button class="btn" onclick="mockPay('${planId}','${r.orderId}')" style="background:#28A745;">✅ تأكيد الاشتراك (وهمي)</button>
       `;
     } else if (typeof paypal !== 'undefined') {
       btn.innerHTML = '<div id="paypalBtnContainer"></div>';
@@ -1155,10 +1155,10 @@ function renderPayPalBtn(planId) {
   }).render('#paypalBtnContainer');
 }
 
-async function mockPay(planId) {
+async function mockPay(planId, orderId) {
   const btn = document.querySelector('#paypalButton .btn');
   btn.disabled = true; btn.innerHTML = 'جاري التفعيل... <span class="spinner"></span>';
-  const r = await API.post('/api/payments/capture-order', { orderId: 'MOCK-' + Date.now(), planId });
+  const r = await API.post('/api/payments/capture-order', { orderId: orderId || ('MOCK-' + Date.now()), planId });
   if (r.success) {
     closeModal('upgradeModal');
     showToast('✅ تم تفعيل الاشتراك (وهمي)', 'success');

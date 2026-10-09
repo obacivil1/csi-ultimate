@@ -41,7 +41,10 @@ def _scope(tmp_path):
     }
     sf = tmp_path / "scope.json"
     sf.write_text(json.dumps(data), encoding="utf-8")
-    return ScopeValidator(sf)
+    scope = ScopeValidator(sf)
+    # Simulate the operator having confirmed (the real gate is tested separately).
+    scope.mark_confirmed()
+    return scope
 
 
 def _make_probe(tmp_path, handler):
@@ -169,7 +172,7 @@ async def test_http_failure_returns_none(tmp_path):
 
 
 def test_probe_result_contains_no_body():
-    src = pathlib.Path("recon/core/idor_probe.py").read_text(encoding="utf-8")
+    src = (pathlib.Path(__file__).resolve().parent.parent / "core" / "idor_probe.py").read_text(encoding="utf-8")
     # ensure ProbeResult does not have body field
     assert "body_a_sha256" in src
     assert "body_b_sha256" in src

@@ -197,6 +197,22 @@ class HttpClient:
             # any other status: return
             return resp
 
+    def _require_confirmation(self) -> None:
+        """Fail closed: no packet leaves without operator confirmation.
+
+        The confirmation lives on the scope (set only by
+        require_operator_confirmation after a correct 'I CONFIRM'), so
+        constructing HttpClient directly can no longer bypass the gate —
+        every public request method calls this first.
+        """
+        from recon.core.scope_validator import ScopeError
+
+        if not getattr(self._scope, "confirmed", False):
+            raise ScopeError(
+                "operator confirmation required before any request; "
+                "call require_operator_confirmation(scope) first"
+            )
+
     async def get(
         self,
         url: str,
@@ -204,6 +220,7 @@ class HttpClient:
         session_name: str | None = None,
         allow_redirects: bool = True,
     ) -> httpx.Response | None:
+        self._require_confirmation()
         # scope gate
         self._scope.assert_allowed(url)
         # robots gate
@@ -254,6 +271,7 @@ class HttpClient:
         *,
         session_name: str | None = None,
     ) -> httpx.Response | None:
+        self._require_confirmation()
         self._scope.assert_allowed(url)
         if not await self._robots.can_fetch(url):
             self._do_audit("HEAD", url, None, None, session_name)

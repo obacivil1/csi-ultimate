@@ -84,7 +84,7 @@ def test_used_and_snapshot():
 def test_forbidden_no_http_or_url_parsing():
     import pathlib
 
-    src = pathlib.Path("recon/core/rate_limiter.py").read_text(encoding="utf-8")
+    src = (pathlib.Path(__file__).resolve().parent.parent / "core" / "rate_limiter.py").read_text(encoding="utf-8")
     assert "httpx" not in src
     assert "urllib" not in src
     assert "http" not in src.lower() or "httpx" not in src  # no http imports

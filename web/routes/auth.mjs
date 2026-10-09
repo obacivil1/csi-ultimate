@@ -3,10 +3,37 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 import { loadUsers, saveUsers, JWT_SECRET, getPlanLimits } from '../middleware/auth.mjs';
+import { env } from '../../config/env.mjs';
+import { isTurnstileConfigured, verifyTurnstile } from '../../core/turnstile.mjs';
 
 export const authRouter = Router();
 
 const BCRYPT_ROUNDS = 10;
+
+// Hardened session cookie: httpOnly (no JS access), sameSite=strict (CSRF
+// mitigation) and secure in production.
+function authCookieOptions() {
+  const opts = { httpOnly: true, sameSite: 'strict', path: '/', maxAge: 30 * 24 * 60 * 60 * 1000 };
+  if (env.NODE_ENV === 'production') opts.secure = true;
+  return opts;
+}
+
+// Bot protection — no-op unless TURNSTILE_SECRET_KEY is configured.
+async function requireTurnstile(req, res, next) {
+  if (!isTurnstileConfigured()) return next();
+  const token = req.body?.turnstileToken || req.headers?.['cf-turnstile-response'];
+  const ok = await verifyTurnstile(token, req.ip);
+  if (!ok) return res.status(400).json({ error: 'فشل التحقق من أنك لست روبوتاً. أعد المحاولة.' });
+  next();
+}
+
+// Public config for the frontend (site key is public by design).
+authRouter.get('/config', (req, res) => {
+  res.json({
+    turnstileEnabled: isTurnstileConfigured(),
+    turnstileSiteKey: env.TURNSTILE.SITE_KEY || null,
+  });
+});
 
 function isBcrypt(hash) {
   return hash.startsWith('$2b$') || hash.startsWith('$2a$') || hash.startsWith('$2y$');
@@ -29,7 +56,7 @@ function generateId() {
 }
 
 // Register with 7-day free trial
-authRouter.post('/register', async (req, res) => {
+authRouter.post('/register', requireTurnstile, async (req, res) => {
   const { name, email, password, phone, company } = req.body;
   if (!email || !password || !name) {
     return res.status(400).json({ error: 'الاسم، البريد الإلكتروني وكلمة المرور مطلوبة' });
@@ -58,9 +85,7 @@ authRouter.post('/register', async (req, res) => {
   const trialEnd = new Date();
   trialEnd.setDate(trialEnd.getDate() + 7);
 
-  const cookieOpts = { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 30 * 24 * 60 * 60 * 1000 };
-  if (process.env.NODE_ENV === 'production') cookieOpts.secure = true;
-  res.cookie('token', token, cookieOpts);
+  res.cookie('token', token, authCookieOptions());
   res.json({
     token, user: {
       id: user.id, name: user.name, email: user.email,
@@ -70,7 +95,7 @@ authRouter.post('/register', async (req, res) => {
 });
 
 // Login
-authRouter.post('/login', async (req, res) => {
+authRouter.post('/login', requireTurnstile, async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'البريد الإلكتروني وكلمة المرور مطلوبة' });
 
@@ -95,9 +120,7 @@ authRouter.post('/login', async (req, res) => {
     trialDaysLeft = Math.max(0, Math.ceil((trialEnd - new Date()) / (1000 * 60 * 60 * 24)));
   }
 
-  const cookieOpts = { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 30 * 24 * 60 * 60 * 1000 };
-  if (process.env.NODE_ENV === 'production') cookieOpts.secure = true;
-  res.cookie('token', token, cookieOpts);
+  res.cookie('token', token, authCookieOptions());
   res.json({
     token, user: {
       id: user.id, name: user.name, email: user.email,

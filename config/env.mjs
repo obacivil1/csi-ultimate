@@ -22,6 +22,15 @@ function loadDotEnv() {
 
 const REQUIRED = ["JWT_SECRET"];
 const SECRETS = ["JWT_SECRET", "PAYPAL_CLIENT_SECRET", "SMTP_PASS", "CSI_CAPTCHA_API_KEY", "CSI_AUTH_TOKEN", "CSI_AUTH_PASS"];
+// Weak-secret patterns that must never be accepted, in ANY environment (CWE-798).
+const WEAK_SECRET_RE = /^(change[-_]?me|secret|password|default|example|test|dev|admin|123456|qwerty|letmein)/i;
+
+function secretStrengthOk(v) {
+  if (!v) return false;
+  if (WEAK_SECRET_RE.test(v.trim())) return false;
+  if (v.trim().length < 32) return false;
+  return new Set(v).size >= 12; // must not be one repeated char / trivial pattern
+}
 
 const fileEnv = loadDotEnv();
 for (const [k, v] of Object.entries(fileEnv)) {
@@ -33,11 +42,18 @@ function isProd() {
 }
 
 function validate() {
-  const missing = REQUIRED.filter((k) => !process.env[k] && isProd());
+  const missing = REQUIRED.filter((k) => !process.env[k]);
   if (missing.length) {
-    throw new Error(`[env] Missing required env vars in production: ${missing.join(", ")}. Check .env`);
+    throw new Error(`[env] Missing required env vars: ${missing.join(", ")}. Check .env`);
   }
-  const unsafe = SECRETS.filter((k) => ["change-me-please", ""].includes(process.env[k] ?? "") && isProd());
+  // Strength gate applies in ALL environments (a weak JWT secret breaks every account in dev too)
+  if (!secretStrengthOk(process.env.JWT_SECRET)) {
+    throw new Error(
+      "[env] Weak JWT_SECRET — must be >= 32 chars, not a known default word, and non-trivial. " +
+      "Generate one with: node -e \"console.log(require('crypto').randomBytes(64).toString('hex'))\""
+    );
+  }
+  const unsafe = SECRETS.filter((k) => k !== "JWT_SECRET" && (process.env[k] ?? "") === "" && isProd());
   if (unsafe.length) {
     throw new Error(`[env] Insecure/default secrets in production: ${unsafe.join(", ")}. Set real values.`);
   }
@@ -61,6 +77,9 @@ export const env = {
   ROOT,
   NODE_ENV: get("NODE_ENV", "development"),
   PORT: num("PORT", 3000),
+  // Number of reverse-proxy hops to trust (Render = 1, +Cloudflare = 2). Never use
+  // a permissive value: it would let clients spoof X-Forwarded-For / req.ip.
+  TRUST_PROXY: num("TRUST_PROXY", 1),
   CSI_PORT: num("CSI_PORT", 3030),
   SCRAPER_UI_PORT: num("SCRAPER_UI_PORT", 3456),
   JWT_SECRET: get("JWT_SECRET"),
@@ -78,7 +97,17 @@ export const env = {
     CLIENT_SECRET: get("PAYPAL_CLIENT_SECRET"),
     SANDBOX: get("PAYPAL_SANDBOX", "true") === "true",
   },
+  // Cloudflare Turnstile — optional bot protection. When SECRET_KEY is unset the
+  // auth routes skip verification (so local/dev flows keep working).
+  TURNSTILE: {
+    SITE_KEY: get("TURNSTILE_SITE_KEY"),
+    SECRET_KEY: get("TURNSTILE_SECRET_KEY"),
+  },
   CACHE_TTL: num("CACHE_TTL", 3600000),
+  // In-process node-cron is disabled by default: on Render's ephemeral/sleeping
+  // instances it is unreliable. Data updates run in GitHub Actions instead.
+  // Set ENABLE_SCHEDULER=1 only for long-lived hosts with persistent storage.
+  SCHEDULER: flag("ENABLE_SCHEDULER"),
   ALLOWED_ORIGINS: get("ALLOWED_ORIGINS"),
   LOG_LEVEL: get("CSI_LOG_LEVEL", "INFO").toUpperCase(),
   UAT: flag("CSI_UAT"),

@@ -2,6 +2,8 @@ FROM node:22
 
 WORKDIR /app
 
+# Browser-based scraping runs in GitHub Actions (see .github/workflows/update-tenders.yml),
+# not in this image — keep it lean and deploy only the web server + shipped data.
 COPY package.json package-lock.json ./
 RUN npm ci
 

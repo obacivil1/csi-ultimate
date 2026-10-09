@@ -1,0 +1,38 @@
+[project]
+name = "locallab-nitaq"
+version = "5.0.0"
+description = "مختبر اختبار اختراق محلي مرخّص: هدف + ماسح + واجهة + تقارير (loopback أولًا)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "LicenseRef-LocalLab-Educational-Use-Only"
+authors = [{ name = "LocalLab" }]
+dependencies = [
+  "flask>=3.0",
+]
+optional-dependencies = { pdf = ["reportlab", "arabic-reshaper", "python-bidi"], tls = ["cryptography"] }
+
+[project.scripts]
+local-lab-scan = "scanner.local_scan:main"
+
+[tool.setuptools.packages.find]
+include = ["scanner", "engine", "recon_lab", "report", "util", "learn",
+           "plugins", "api", "gui"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.13"
+explicit_package_bases = true
+follow_imports = "skip"
+ignore_missing_imports = true
+show_error_codes = true

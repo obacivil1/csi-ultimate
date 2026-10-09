@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getPlanLimits } from '../middleware/auth.mjs';
+import { getPlanLimits, optionalAuth } from '../middleware/auth.mjs';
 import { getJSON } from '../cache.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -25,13 +25,19 @@ function setCache(res, ttl) {
 }
 
 // GET /api/tenders - List with filters
-tendersRouter.get('/', (req, res) => {
+// Guests (unauthenticated) receive a small public sample only; the full dataset
+// requires a valid session. Hard-caps the page size to prevent bulk harvesting.
+const GUEST_SAMPLE = 20;
+const MAX_LIMIT = 100;
+tendersRouter.get('/', optionalAuth, (req, res) => {
   setCache(res, 180); // 3 min browser cache
   const tenders = loadTenders();
   let filtered = [...tenders];
 
   // Filters
-  const { search, activity, agency, type, status, region, construction, expiring, maxDays, minDays, dateFrom, dateTo, page = 1, limit = 24 } = req.query;
+  const { search, activity, agency, type, status, region, construction, expiring, maxDays, minDays, dateFrom, dateTo, page = 1 } = req.query;
+  const requestedLimit = Number(req.query.limit) || 24;
+  const limit = Math.min(Math.max(1, requestedLimit), MAX_LIMIT);
   if (!status) filtered = filtered.filter(t => t.tenderStatusId !== 8);
 
   if (search) {
@@ -84,16 +90,20 @@ tendersRouter.get('/', (req, res) => {
   }
 
   // Pagination
+  // Anonymous visitors only ever see a small sample; members see data by plan.
+  if (!req.user && filtered.length > GUEST_SAMPLE) {
+    filtered = filtered.slice(0, GUEST_SAMPLE);
+  }
   let total = filtered.length;
   const limits = getPlanLimits(req.user?.subscription || 'trial', req.user?.email);
   if (limits.maxTenders > 0 && total > limits.maxTenders) {
     total = limits.maxTenders;
     filtered = filtered.slice(0, total);
   }
-  const totalPages = Math.ceil(total / Number(limit));
+  const totalPages = Math.ceil(total / limit);
   const p = Number(page);
-  const start = (p - 1) * Number(limit);
-  const data = filtered.slice(start, start + Number(limit));
+  const start = (p - 1) * limit;
+  const data = filtered.slice(start, start + limit);
 
   // Clean data for response (remove large fields)
   const clean = data.map(t => ({

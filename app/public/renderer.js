@@ -79,6 +79,11 @@ function addResults(rows) {
 
 function renderResults() {
   const container = $('resultsContainer');
+  const esc = (s) => {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+  };
+  const safeUrl = (s) => /^https?:\/\//i.test(String(s || '').trim()) ? String(s || '').trim() : '';
   if (results.length === 0) {
     container.innerHTML = `<div class="results-empty"><div><div class="icon">📊</div><p>لا توجد نتائج</p></div></div>`;
     $('resultCount').textContent = '0';
@@ -102,11 +107,17 @@ function renderResults() {
         if (val === undefined || val === null) val = '';
         val = String(val);
         if (key === 'url' && val) {
-          val = `<a class="title-cell" href="${val}" target="_blank" title="${val.replace(/"/g, '&quot;')}">${truncate(val, 40)}</a>`;
+          const href = safeUrl(val);
+          let linkText = truncate(val, 40);
+          if (href) {
+            val = `<a class="title-cell" href="${esc(href)}" target="_blank" rel="noopener" title="${esc(val)}">${esc(linkText)}</a>`;
+          } else {
+            val = `<span class="title-cell">${esc(linkText)}</span>`;
+          }
         } else if (key === 'title' && val) {
-          val = `<span class="title-cell">${truncate(val, 60)}</span>`;
+          val = `<span class="title-cell">${esc(truncate(val, 60))}</span>`;
         } else {
-          val = truncate(val, 50);
+          val = esc(truncate(val, 50));
         }
         html += `<td>${val}</td>`;
       }

@@ -1,9 +1,13 @@
-name: تحديث المنافسات
+name: تحديث البيانات
 
 on:
   schedule:
     - cron: '0 */6 * * *'
   workflow_dispatch:
+
+# Without write access the default GITHUB_TOKEN cannot push the refreshed data.
+permissions:
+  contents: write
 
 jobs:
   scrape:
@@ -15,17 +19,23 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Playwright
+      - name: Install Playwright + xml2js
         run: |
-          npm install playwright
+          npm install playwright xml2js
           npx playwright install --with-deps chromium
 
-      - name: تشغيل التحديث السريع
+      - name: تحديث المنافسات (Etimad)
         run: node scripts/lead-gen/etimad-update.mjs
+
+      - name: تحديث المشاريع (SaudiGulf RSS)
+        run: node scripts/lead-gen/scrape-saudi-gulf-projects.mjs
+
+      - name: بناء قاعدة بيانات المشاريع
+        run: node scripts/lead-gen/build-projects-database.mjs
 
       - name: رفع التحديثات
         run: |
           git config user.name 'CSI Bot'
           git config user.email 'bot@csi-ultimate.com'
-          git add data/etimad_all_tenders.json
-          git diff --staged --quiet || (git commit -m 'تحديث تلقائي للمنافسات' && git push)
+          git add data
+          git diff --staged --quiet || (git commit -m 'تحديث تلقائي للبيانات' && git push)

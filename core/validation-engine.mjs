@@ -180,7 +180,14 @@ export function generateSiteVerification(site, category, records, crawlStats = {
   }
 }
 
+const SAFE_ID_RE = /^[A-Za-z0-9_-]{1,120}$/
+
+export function isSafeRecordId(id) {
+  return typeof id === "string" && SAFE_ID_RE.test(id)
+}
+
 export function loadCrawlRecords(jobId) {
+  if (!isSafeRecordId(jobId)) return null
   const fp = resolve(STATE_DIR, "records", `${jobId}.json`)
   if (!existsSync(fp)) return null
   return JSON.parse(readFileSync(fp, "utf8"))

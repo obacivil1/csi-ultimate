@@ -6,6 +6,7 @@ import { Advisor } from "./advisor.mjs"
 import { validateEmail, verifyEmailsParallel } from "./contacts.mjs"
 import { isWithinWindow, parseDate } from "./dates.mjs"
 import { JOB_DEFAULTS } from "./config.mjs"
+import { mergeTwins } from "./deduper.mjs"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DATA_DIR = join(__dirname, "..", "..", "data")
@@ -40,6 +41,13 @@ function prefilterStale(records, days) {
   return { kept, dropped }
 }
 
+// Bayt/NaukriGulf/GulfTalent/Indeed apply through the platform itself, so a
+// missing mailbox is not a defect — it goes to the apply-leads file instead.
+const BOARD_SOURCES = new Set(["bayt", "naukri", "gulf", "indeed"])
+function isBoardApply(r) {
+  return BOARD_SOURCES.has(String(r.source || "")) && !r.note?.includes("no-email")
+}
+
 async function main() {
   const t0 = Date.now()
   let existingRaw = []
@@ -52,12 +60,17 @@ async function main() {
   const { kept: merged, dropped: staleDropped } = prefilterStale(existing, JOB_DEFAULTS.days)
   const seen = new Set(merged.map(r => r.link).filter(Boolean))
   for (const r of fresh) if (!seen.has(r.link)) merged.push(r)
+  const allRows = mergeTwins(merged)
+  const mergedCount = merged.length - allRows.length
+  if (mergedCount > 0) console.log(`[MERGE] ${mergedCount} وظيفة مكررة بين المصادر دُمجت`)
 
   const valid = []
+  const applyLeads = []
   const droppedNoEmail = []
-  for (const r of merged) {
+  for (const r of allRows) {
     const em = (r.emails || []).filter(validateEmail)
     if (em.length) { r.emails = em; valid.push(r) }
+    else if (r.link && isBoardApply(r)) applyLeads.push({ ...r, emails: [] })
     else droppedNoEmail.push({ link: r.link, title: r.title, reason: "no-valid-email" })
   }
   const badEmail = droppedNoEmail
@@ -96,9 +109,24 @@ async function main() {
   writeFileSync(OUT_FILE, JSON.stringify(valid, null, 2), "utf8")
   console.log(`[ENGINE] saved ${valid.length} valid results (dropped ${badEmail.length} w/o email) to ${OUT_FILE}`)
 
+  if (applyLeads.length) {
+    applyLeads.sort((a, b) => (b.ts || 0) - (a.ts || 0))
+    const LEADS_FILE = join(DATA_DIR, "job_hunter_apply_leads.json")
+    writeFileSync(LEADS_FILE, JSON.stringify(applyLeads, null, 2), "utf8")
+    console.log(`[ENGINE] saved ${applyLeads.length} apply-leads (بدون بريد — التقديم عبر المنصة) to ${LEADS_FILE}`)
+  }
+
   console.log("\n=== RESULTS ===")
   for (const r of valid) {
     console.log(`- ${r.title}  (${r.source}/${r.match})\n    ${r.link}\n    ${r.emails.join("; ")}\n    ${r.date || "n/a"}\n`)
+  }
+
+  if (applyLeads.length) {
+    console.log(`\n=== APPLY LEADS (${applyLeads.length}) — التقديم عبر المنصة ===`)
+    for (const r of applyLeads) {
+      console.log(`- ${r.title}  (${r.source})\n    ${r.link}\n    ${r.company || ""} | ${r.loc || ""} | ${r.date || "n/a"}`)
+      if (r.alsoOn?.length) console.log(`    ↳ أيضاً على: ${r.alsoOn.join(" | ")}`)
+    }
   }
 
   console.log(`\n[ADVISOR] ${JSON.stringify(new Advisor().summary())}`)

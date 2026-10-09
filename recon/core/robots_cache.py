@@ -121,7 +121,3 @@ class RobotsCache:
             return bool(parser.can_fetch(self._ua, url))
         except Exception:
             return False
-
-    def invalidate(self, origin: str) -> None:
-        """Invalidate cache for origin."""
-        self._cache.pop(origin, None)

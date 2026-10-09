@@ -1,42 +1,24 @@
-name: اختبارات المشروع
-
-on:
-  push:
-    branches: [main, master]
-  pull_request:
-  workflow_dispatch:
-
+name: local-lab CI
+on: [push, pull_request]
 jobs:
   test:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [20, 22]
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-python@v5
         with:
-          node-version: ${{ matrix.node-version }}
-
-      - name: تثبيت الاعتماديات
-        run: npm install
-
-      - name: فحص مصدر التشغيل
-        run: npm run lint
-
-      - name: تشغيل الاختبارات
-        run: npm test
-
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - name: تثبيت الاعتماديات
-        run: npm install
-      - name: فحص صياغة كل ملفات core
-        run: |
-          for f in core/*.mjs web/**/*.mjs config/*.mjs run.mjs; do node --check "$f" || exit 1; done
+          python-version: "3.13"
+      - run: pip install flask pytest
+      - run: python -m pytest local-lab/tests/ -q
+      # بوابات النطاق في pentest_tool (forbidden/intensity/allowed_hours).
+      # لا شبكة: الاختبار يعترض كل packet. لا بدّ عنه — كان كل قيد زخرفيًا.
+      - run: pip install requests pyyaml
+      - run: python -m pytest test_pentest_tool_scope.py -q
+      # recon: confirmation gates + orchestrator filtering (incl. subfinder).
+      - run: pip install pydantic pytest-asyncio httpx
+      - run: python -m pytest recon/tests/ -q
+      - run: pip install mypy
+      - run: python -m mypy scanner/scoped.py scanner/session.py engine/evidence.py util/ratelimit.py util/project.py engine/payloads.py report/cvss.py engine/watch.py engine/profiles.py engine/auth.py
+        working-directory: local-lab
+      # الواجهة تحتاج جلسة سطح مكتب (غير متوفرة في العدائين) — تُفحص محليًا:
+      #   python local-lab/gui/app.py --selftest

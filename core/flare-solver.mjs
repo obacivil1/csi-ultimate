@@ -19,6 +19,7 @@
  *   docker compose up -d flaresolverr
  */
 import { extractAdContentFromHtml } from "./crawler-core.mjs"
+import { assertPublicUrl } from "./ssrf-guard.mjs"
 import { env } from "../config/env.mjs"
 
 const FLARE_URL = env.FLARE.URL
@@ -50,12 +51,16 @@ function cachePut(url, html) {
 export async function fetchWithFlareSolverr(url, opts = {}) {
   if (DISABLED) return { ok: false, error: "FlareSolverr disabled via CSI_FLARE_DISABLED" }
   if (!url) return { ok: false, error: "No URL" }
+  try { await assertPublicUrl(url) } catch { return { ok: false, error: "Blocked or invalid URL" } }
 
   const cached = htmlCache.get(url)
   if (cached) return { ok: true, html: cached, status: 200, cached: true }
 
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
+  // The outer abort must outlast the solver's own maxTimeout, otherwise a slow
+  // challenge is cancelled by us before FlareSolverr can finish it.
+  const budgetMs = opts.maxTimeout ? opts.maxTimeout + 20000 : TIMEOUT_MS
+  const timer = setTimeout(() => controller.abort(), budgetMs)
 
   try {
     const res = await fetch(`${FLARE_URL}/v1`, {
@@ -65,7 +70,12 @@ export async function fetchWithFlareSolverr(url, opts = {}) {
       body: JSON.stringify({
         cmd: "request.get",
         url,
-        maxTimeout: Math.min(TIMEOUT_MS - 5000, 55000),
+        // Indeed's Turnstile round takes ~80s the first time; callers that know
+        // the target is slow can ask for more, everything else stays on 55s.
+        maxTimeout: Math.min(
+          opts.maxTimeout || TIMEOUT_MS - 5000,
+          opts.maxTimeout || 55000,
+        ),
         session: opts.session || undefined,
       }),
     })

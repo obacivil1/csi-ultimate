@@ -49,6 +49,22 @@ export function authenticate(req, res, next) {
   }
 }
 
+// Like authenticate, but never blocks: sets req.user when a valid session is
+// present, otherwise continues as an anonymous (guest) request. Used by public
+// endpoints that return a reduced payload for guests and full data for members.
+export function optionalAuth(req, res, next) {
+  const token = req.cookies?.token || req.headers?.authorization?.replace('Bearer ', '');
+  if (!token) return next();
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const users = loadUsers();
+    const user = users.find(u => u.id === decoded.id);
+    if (user) req.user = user;
+  } catch {}
+  next();
+}
+
 export function requireSubscription(...plans) {
   return (req, res, next) => {
     if (!plans.includes(req.user.subscription)) {

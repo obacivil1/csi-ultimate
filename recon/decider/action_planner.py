@@ -6,8 +6,15 @@
 """
 from __future__ import annotations
 
-# حدود الاستراتيجيات: كم فرضية نأخذ من الأعلى
-_STRATEGY_LIMITS = {"fast": 5, "balanced": 15, "thorough": 50}
+from recon.decider.strategy import get_strategy
+
+# حدود الاستراتيجيات مشتقة من المصدر الوحيد strategy.STRATEGIES
+# (كانت نسخة مكررة هنا تتعارض معه صامتًا عند أي تغيير مستقبلي).
+
+
+def _strategy_limit(strategy: str) -> int:
+    """كم فرضية نأخذ من الأعلى حسب الاستراتيجية (اسم مجهول → رفض صريح)."""
+    return int(get_strategy(strategy)["max_hypotheses"])
 
 # أسماء الفئات بالعربية للخطط
 _CATEGORY_AR = {
@@ -35,9 +42,7 @@ def build_plans(
 ) -> list[dict]:
     """ابن خطط عمل مرتبة من الفروض (المدخلات يفترض أنها مرتبة بالأولوية)."""
     # استراتيجية مجهولة → رفض صريح (فشل مغلق: لا نخمن)
-    if strategy not in _STRATEGY_LIMITS:
-        raise ValueError(f"استراتيجية مجهولة: {strategy!r} (المسموح: fast/balanced/thorough)")
-    limit = _STRATEGY_LIMITS[strategy]
+    limit = _strategy_limit(strategy)
     selected = list(ranked_hypotheses or [])[:limit]
 
     # التجميع حسب الفئة مع الحفاظ على ترتيب الأولوية داخل كل مجموعة

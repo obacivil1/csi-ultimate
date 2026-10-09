@@ -45,6 +45,7 @@
         <label>كلمة المرور</label>
         <input type="password" id="loginPassword" required placeholder="********">
       </div>
+      <div id="loginTurnstile" class="turnstile-slot"></div>
       <button type="submit" class="btn" id="loginBtn">تسجيل الدخول</button>
     </form>
     <div class="switch-link">ما عندك حساب؟ <a onclick="switchModal('register')">سجّل الآن مجاناً</a></div>
@@ -76,6 +77,7 @@
         <label>كلمة المرور</label>
         <input type="password" id="regPassword" required minlength="6" placeholder="6 أحرف على الأقل">
       </div>
+      <div id="registerTurnstile" class="turnstile-slot"></div>
       <button type="submit" class="btn" id="registerBtn">ابدأ الفترة المجانية</button>
     </form>
     <div class="switch-link">عندك حساب؟ <a onclick="switchModal('login')">تسجيل دخول</a></div>
@@ -298,6 +300,8 @@ const API = {
   }
 };
 
+function esc(s) { if (s == null) return ''; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+
 // ── Live Clock (user's timezone) ──
 (function() {
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Riyadh';
@@ -338,6 +342,34 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
   m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); });
 });
 
+// ── Turnstile (optional bot protection) ──
+let turnstileSiteKey = null, loginWidgetId = null, registerWidgetId = null;
+function turnstileToken(widgetId) {
+  if (!turnstileSiteKey || !window.turnstile || widgetId === null) return undefined;
+  return window.turnstile.getResponse(widgetId) || '';
+}
+function resetTurnstile() {
+  if (!window.turnstile) return;
+  if (loginWidgetId !== null) window.turnstile.reset(loginWidgetId);
+  if (registerWidgetId !== null) window.turnstile.reset(registerWidgetId);
+}
+(async function initTurnstile() {
+  try {
+    const cfg = await API.get('/api/auth/config');
+    if (!cfg || !cfg.turnstileEnabled || !cfg.turnstileSiteKey) return;
+    turnstileSiteKey = cfg.turnstileSiteKey;
+    await new Promise((resolve, reject) => {
+      window.onTurnstileLoad = resolve;
+      const s = document.createElement('script');
+      s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad';
+      s.async = true; s.defer = true; s.onerror = reject;
+      document.head.appendChild(s);
+    });
+    loginWidgetId = window.turnstile.render('#loginTurnstile', { sitekey: turnstileSiteKey });
+    registerWidgetId = window.turnstile.render('#registerTurnstile', { sitekey: turnstileSiteKey });
+  } catch (e) { /* optional — never block auth if Turnstile fails to load */ }
+})();
+
 // ── Auth ──
 async function handleLogin(e) {
   e.preventDefault();
@@ -345,9 +377,10 @@ async function handleLogin(e) {
   btn.disabled = true; btn.innerHTML = 'جاري... <span class="spinner"></span>';
   const res = await API.post('/api/auth/login', {
     email: document.getElementById('loginEmail').value,
-    password: document.getElementById('loginPassword').value
+    password: document.getElementById('loginPassword').value,
+    turnstileToken: turnstileToken(loginWidgetId)
   });
-  if (res.error) { showToast(res.error, 'error'); btn.disabled = false; btn.textContent = 'تسجيل الدخول'; return; }
+  if (res.error) { showToast(res.error, 'error'); btn.disabled = false; btn.textContent = 'تسجيل الدخول'; resetTurnstile(); return; }
   closeModal('loginModal');
   showToast('مرحباً ' + res.user.name + '!', 'success');
   updateAuthUI(res.user);
@@ -363,9 +396,10 @@ async function handleRegister(e) {
     email: document.getElementById('regEmail').value,
     phone: document.getElementById('regPhone').value,
     company: document.getElementById('regCompany').value,
-    password: document.getElementById('regPassword').value
+    password: document.getElementById('regPassword').value,
+    turnstileToken: turnstileToken(registerWidgetId)
   });
-  if (res.error) { showToast(res.error, 'error'); btn.disabled = false; btn.textContent = 'ابدأ الفترة المجانية'; return; }
+  if (res.error) { showToast(res.error, 'error'); btn.disabled = false; btn.textContent = 'ابدأ الفترة المجانية'; resetTurnstile(); return; }
   closeModal('registerModal');
   showToast('✅ تم التسجيل! الفترة المجانية 7 أيام', 'success');
   updateAuthUI(res.user);
@@ -443,13 +477,16 @@ async function loadSampleTenders() {
     if (res.data && res.data.length) {
       tbody.innerHTML = res.data.map(t => {
         const urgent = t.remainingDays !== undefined && t.remainingDays <= 3;
-        const highlighted = search ? t.name.replace(new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'), m => `<mark>${m}</mark>`) : (t.name || '');
+        const escName = esc(t.name);
+        const highlighted = search
+          ? escName.replace(new RegExp(esc(search).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'), m => `<mark>${m}</mark>`)
+          : escName;
         return `<tr>
           <td>${highlighted}</td>
-          <td>${t.agency || ''}</td>
-          <td>${t.activity || ''}</td>
-          <td>${t.lastDate || ''}</td>
-          <td${urgent ? ' style="color:#DC3545;font-weight:700;"' : ''}>${t.remainingDays !== undefined ? (t.remainingDays + ' يوم' + (urgent ? ' 🔥' : '')) : ''}</td>
+          <td>${esc(t.agency)}</td>
+          <td>${esc(t.activity)}</td>
+          <td>${esc(t.lastDate)}</td>
+          <td${urgent ? ' style="color:#DC3545;font-weight:700;"' : ''}>${t.remainingDays !== undefined ? (esc(t.remainingDays) + ' يوم' + (urgent ? ' 🔥' : '')) : ''}</td>
         </tr>`;
       }).join('');
     } else {

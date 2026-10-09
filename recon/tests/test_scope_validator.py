@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from recon.core.scope_validator import ScopeError, ScopeValidator
+from recon.core.scope_validator import ScopeError, ScopeValidator, require_operator_confirmation
 
 
 def _write_scope(tmp_path: pathlib.Path, overrides=None):
@@ -73,8 +73,10 @@ def test_allowed_url_passes(tmp_path):
     sf = _write_scope(tmp_path)
     sv = ScopeValidator(sf)
     sv.assert_allowed("https://example.com/public/page")
-    assert sv.allows("https://example.com/public/page") is True
-    assert sv.allows("https://evil.com") is False
+    # كان allows() واجهة ثانية للتحقق بنفس المنطق، فحذفناها ليُختبر
+    # المسار الإنتاجي assert_allowed نفسه بدل نسخة موازية.
+    with pytest.raises(Exception):
+        sv.assert_allowed("https://evil.com")
 
 
 def test_hash_mismatch_raises(tmp_path):
@@ -83,3 +85,29 @@ def test_hash_mismatch_raises(tmp_path):
     (tmp_path / "auth.pdf").write_bytes(b"different")
     with pytest.raises(ScopeError, match="hash mismatch"):
         ScopeValidator(sf)
+
+
+def test_scope_starts_unconfirmed(tmp_path):
+    sv = ScopeValidator(_write_scope(tmp_path))
+    assert sv.confirmed is False
+
+
+def test_correct_confirm_marks_scope(tmp_path):
+    from unittest.mock import patch
+
+    sv = ScopeValidator(_write_scope(tmp_path))
+    # NOTE: input_fn must be passed explicitly — the def-time default binds
+    # the real builtin and would ignore the patch.
+    with patch("builtins.input", return_value="I CONFIRM"):
+        require_operator_confirmation(sv, input_fn=input)
+    assert sv.confirmed is True
+
+
+def test_wrong_confirm_raises_and_stays_unconfirmed(tmp_path):
+    from unittest.mock import patch
+
+    sv = ScopeValidator(_write_scope(tmp_path))
+    with patch("builtins.input", return_value="yes"):
+        with pytest.raises(ScopeError, match="did not confirm"):
+            require_operator_confirmation(sv, input_fn=input)
+    assert sv.confirmed is False

@@ -1,0 +1,1011 @@
+PHASE 1 — CONTROLLED IMPLEMENTATION DIRECTIVE
+
+Project: SPECIALIZED VULNERABILITY DETECTION ENGINE
+Specializations: Race Conditions / TOCTOU + Advanced Authorization
+Phase: PHASE 1 — FOUNDATION / CONTRACTS
+Status: AUTHORITATIVE
+Mode: CONTROLLED IMPLEMENTATION
+Prerequisite: PHASE 0 — ARCHITECTURE DISCOVERY — APPROVED
+Implementation Policy: ADDITIVE, REVERSIBLE, MINIMAL-DIFF
+Primary Rule: Build the security-engine foundation. Do not implement vulnerability detectors in this phase.
+
+1. MANDATE
+
+Implement Phase 1 only.
+
+The purpose of this phase is to establish the minimum stable foundation required for later development of:
+
+Advanced Authorization Engine.
+Race / TOCTOU Engine.
+Workflow / State Intelligence.
+Evidence and finding validation.
+Cross-engine correlation.
+
+Phase 1 is not a detector implementation phase.
+
+The implementation must be additive and isolated from existing application behavior.
+
+The resulting architecture must allow future security detectors to consume normalized security objects without modifying the existing crawler, recon, scope, reporting, authentication, or detector implementations.
+
+2. PHASE 1 OBJECTIVE
+
+Create a new isolated security-engine foundation containing:
+
+normalized security-domain models;
+Identity and Session contracts;
+Target / Endpoint / Request / Response contracts;
+Resource / Workflow / State contracts;
+Observation / Evidence / Finding contracts;
+correlation-ID support;
+unified security-engine scope-gate interface;
+detector registry contract;
+execution contract;
+differential-analysis contract;
+minimal storage-independent interfaces;
+tests proving the contracts and safety boundaries work.
+
+The foundation must be usable by both future engines:
+
+                    SECURITY ENGINE
+                          │
+          ┌───────────────┴────────────────┐
+          │                                │
+ Authorization Engine                Race Engine
+          │                                │
+          └───────────────┬────────────────┘
+                          │
+                Shared Security Model
+                          │
+       Target / Endpoint / Request / Response
+       Identity / Session / Resource / State
+       Observation / Evidence / Finding
+                          │
+                Existing Infrastructure
+3. NON-GOALS — STRICTLY PROHIBITED
+
+Do NOT implement any of the following during Phase 1:
+
+BOLA detector.
+BFLA detector.
+IDOR detector rewrite.
+Cross-tenant attack logic.
+Role-escalation attack logic.
+Race-condition detector.
+TOCTOU detector.
+synchronized race execution.
+login automation.
+credential harvesting.
+target-specific authentication flows.
+workflow crawler redesign.
+state-machine discovery implementation.
+new vulnerability payload libraries.
+database migration or rewrite.
+replacement of core/db.mjs.
+replacement of existing HTTP clients.
+replacement of existing scope systems.
+replacement of existing report builders.
+modification of existing detector call sites.
+modification of pentest_tool.py.
+modification of existing authentication routes.
+broad refactoring of unrelated modules.
+framework migration.
+TypeScript migration.
+new external dependencies unless absolutely required and explicitly justified.
+production enablement of any new detector.
+
+If implementation pressure appears to require any prohibited item, STOP and report the blocker instead of expanding scope.
+
+4. ARCHITECTURAL PRINCIPLE
+
+The security engine must be:
+
+ADDITIVE
+
+It must sit above existing infrastructure rather than replace it.
+
+Conceptually:
+
+Existing Infrastructure
+        │
+        ├── HTTP
+        ├── Browser
+        ├── Scope
+        ├── SSRF protection
+        ├── Rate limiting
+        ├── Audit
+        └── Reporting
+                │
+                ▼
+        security-engine/
+                │
+        ┌───────┴────────┐
+        │                │
+ Authorization       Race Engine
+   Future              Future
+
+Existing behavior must remain unchanged.
+
+5. PROTECTED COMPONENTS
+
+The following are protected during Phase 1.
+
+Do not modify their semantics.
+
+Scope / Safety
+core/ssrf-guard.mjs
+existing Node scope enforcement
+recon/core/scope_validator.py
+existing Python scope enforcement
+authorization confirmation semantics
+Existing application authentication
+web/routes/auth.mjs
+web/middleware/auth.mjs
+
+These authenticate users of the application itself.
+
+They are NOT target-security identities.
+
+Existing data layer
+core/db.mjs
+core/db.mjs::migrate()
+
+Do not modify the existing database schema.
+
+Existing detectors
+
+Do not modify detector behavior or existing detector call sites.
+
+Existing monolith
+pentest_tool.py
+
+Do not extend or refactor it.
+
+Existing orchestration
+
+Do not modify:
+
+recon orchestrator wiring;
+existing crawler wiring;
+existing production route behavior.
+Existing HTTP behavior
+
+Do not replace or alter the semantics of:
+
+core/http-fetch.mjs
+core/ssrf-guard.mjs
+recon/core/http_client.py
+
+The new engine may consume them through adapters/interfaces.
+
+6. BASELINE FREEZE — FIRST ACTION
+
+Before modifying any file:
+
+Inspect git status.
+Record the current working-tree state.
+Run the existing Node test suite.
+Run the existing Python test suite.
+Record results.
+Do not include unrelated pre-existing modifications in Phase 1 changes.
+
+The current Phase 0 baseline reported:
+
+Node tests: 270/270 PASS
+
+Do not assume the baseline remains unchanged.
+
+If the baseline cannot be reproduced, STOP before implementation and report:
+
+exact failure;
+command;
+affected tests;
+whether failure is pre-existing.
+
+Do not repair unrelated baseline failures.
+
+7. PACKAGE LOCATION
+
+Create the new additive package:
+
+security-engine/
+
+Keep all Phase 1 implementation inside this package unless an adapter/test integration is strictly required.
+
+Do not scatter new security-engine logic throughout core/, recon/, web/, or root scripts.
+
+Preferred structure:
+
+security-engine/
+├── models/
+├── scope/
+├── identity/
+├── execution/
+├── comparison/
+├── registry/
+├── evidence/
+├── findings/
+├── adapters/
+├── tests/
+└── index/
+
+Exact filenames may differ if a better minimal structure is demonstrated, but the architectural separation must remain.
+
+8. LANGUAGE POLICY
+
+The repository currently uses:
+
+Node.js ESM / .mjs
+Python / .py
+
+Do not introduce TypeScript.
+
+For Phase 1:
+
+Node implementation should use .mjs.
+Python implementation should use .py only where required.
+Data contracts must be language-agnostic.
+JSON-compatible representations are preferred for cross-language exchange.
+
+Do not create two conflicting definitions of the same security concept.
+
+Where both languages require a model, the semantic contract must be identical even if implementation syntax differs.
+
+9. CORE SECURITY DOMAIN MODEL
+
+Implement contracts/models for the following concepts.
+
+9.1 Target
+
+Minimum conceptual fields:
+
+target_id
+base_url
+scope_reference
+environment
+metadata
+
+The model must not silently imply authorization.
+
+Authorization status must be represented explicitly.
+
+9.2 Endpoint
+
+Minimum conceptual fields:
+
+endpoint_id
+target_id
+scheme
+host
+port
+path
+method
+parameters
+authentication_context
+resource_reference
+metadata
+
+Do not assume every endpoint is authenticated.
+
+Do not assume every endpoint is state-changing.
+
+9.3 Request
+
+Minimum conceptual fields:
+
+request_id
+correlation_id
+endpoint_id
+method
+url
+headers_metadata
+parameters_metadata
+body_hash
+identity_reference
+timestamp
+
+Secrets must not be stored in cleartext by default.
+
+Cookies, authorization headers, passwords, tokens, and credentials must be represented through safe references or redacted metadata.
+
+9.4 Response
+
+Minimum conceptual fields:
+
+response_id
+request_id
+correlation_id
+status
+headers_metadata
+body_hash
+content_type
+body_length
+timing
+state_indicators
+
+Do not store full response bodies by default.
+
+The architecture must allow secure evidence references later.
+
+10. IDENTITY MODEL
+
+Create a first-class Identity contract.
+
+Minimum conceptual fields:
+
+identity_id
+label
+role
+tenant_id
+authorization_context
+session_reference
+metadata
+
+Examples:
+
+User-A
+User-B
+Admin
+Tenant-A-User
+Tenant-B-User
+
+These are conceptual identities only.
+
+Phase 1 must NOT implement target login automation.
+
+11. SESSION MODEL
+
+Create a Session contract capable of representing future authenticated target sessions.
+
+Minimum conceptual fields:
+
+session_id
+identity_id
+target_id
+authentication_method
+created_at
+expires_at
+status
+credential_reference
+cookie_jar_reference
+header_reference
+metadata
+
+Security requirement:
+
+Never expose or persist raw passwords, bearer tokens, session cookies, or equivalent secrets in normal logs.
+
+The contract must support session isolation.
+
+A session belonging to Identity A must never be implicitly reused as Identity B.
+
+12. RESOURCE / OBJECT MODEL
+
+Create a Resource/Object abstraction.
+
+Minimum conceptual fields:
+
+resource_id
+resource_type
+external_identifier
+owner_identity
+tenant_id
+endpoint_references
+state_reference
+metadata
+
+The model must support later analysis of:
+
+ownership
+tenant isolation
+role boundaries
+object identifiers
+state transitions
+
+Do not implement BOLA detection yet.
+
+13. WORKFLOW / STATE CONTRACTS
+
+Create contracts for future workflow intelligence.
+
+Workflow
+workflow_id
+target_id
+name
+steps
+metadata
+State
+state_id
+workflow_id
+name
+indicators
+metadata
+Transition
+transition_id
+from_state
+to_state
+trigger_request
+preconditions
+postconditions
+metadata
+
+These are contracts only.
+
+Do not implement automatic state discovery.
+
+14. OBSERVATION MODEL
+
+Create a normalized Observation object.
+
+Minimum conceptual fields:
+
+observation_id
+correlation_id
+target_id
+endpoint_id
+identity_id
+request_reference
+response_reference
+timestamp
+state_before
+state_after
+signals
+metadata
+
+An Observation represents what happened.
+
+It must not itself imply that a vulnerability exists.
+
+15. EVIDENCE MODEL
+
+Create a first-class Evidence abstraction.
+
+Evidence must be traceable to observations.
+
+Minimum conceptual fields:
+
+evidence_id
+observation_id
+type
+description
+reference
+hash
+redaction_status
+truncated
+metadata
+
+Important:
+
+If evidence is truncated, the model must explicitly record:
+
+truncated = true
+
+Never silently truncate security evidence.
+
+16. FINDING MODEL
+
+Create a generic security Finding contract suitable for both future engines.
+
+Minimum required fields:
+
+finding_id
+finding_type
+title
+target_id
+endpoint_reference
+identity_references
+resource_reference
+expected_boundary
+observed_behavior
+security_relevance
+state_before
+state_after
+evidence_references
+reproduction_reference
+confidence
+impact
+severity
+scope_status
+metadata
+
+The finding model must explicitly separate:
+
+Confidence
+Impact
+Severity
+
+Do not collapse them into one score.
+
+A finding must also distinguish:
+
+candidate
+validated
+rejected
+
+or an equivalent lifecycle.
+
+17. CORRELATION ID
+
+Introduce correlation IDs at the security-engine layer.
+
+Every security execution, request observation, evidence item, and finding must be traceable to a correlation context.
+
+Minimum requirements:
+
+correlation_id
+execution_id
+request_id
+observation_id
+
+IDs must be generated deterministically enough for traceability but unique enough to prevent collisions.
+
+Do not alter the existing global logger architecture in Phase 1.
+
+18. SECURITY SCOPE GATE
+
+Create a security-engine scope interface.
+
+It must provide a single conceptual entry point such as:
+
+assertAuthorizedTarget(...)
+
+The adapter must verify the applicable existing scope controls.
+
+Requirements:
+
+deny ambiguous scope;
+deny missing authorization context;
+deny expired authorization where the existing scope model supports validity;
+deny excluded hosts/paths;
+preserve existing SSRF protections;
+preserve existing scope semantics.
+
+Do not rewrite the existing scope validators.
+
+The new gate is an adapter/orchestration boundary.
+
+19. DETECTOR REGISTRY
+
+Create a detector registry contract.
+
+The registry must support:
+
+register
+unregister
+enable
+disable
+list
+resolve
+execute
+
+A detector definition should identify at minimum:
+
+detector_id
+name
+version
+specialization
+required_capabilities
+scope_requirements
+status
+
+Phase 1 requirement:
+
+No vulnerability detector may be enabled by default.
+
+The registry must be capable of operating with zero detectors.
+
+Do not implement Race/BOLA/BFLA detectors in this phase.
+
+20. EXECUTION CONTRACT
+
+Create a generic execution contract that future detectors can use.
+
+The execution layer must understand:
+
+target
+scope
+identity
+endpoint
+request
+budget
+timeout
+correlation
+
+It must not yet implement synchronized race dispatch.
+
+It must provide a future-compatible abstraction for:
+
+sequential execution
+bounded parallel execution
+synchronized execution
+
+but only the minimal foundation required for Phase 1 should be implemented.
+
+Do not build the Race Engine here.
+
+21. DIFFERENTIAL ANALYSIS CONTRACT
+
+Create a minimal comparison abstraction capable of comparing two or more observations.
+
+It should support comparison categories such as:
+
+status
+headers
+response structure
+selected fields
+body hash
+timing
+state indicators
+resource state
+
+The result must distinguish:
+
+same
+different
+inconclusive
+
+Do not implement vulnerability decisions.
+
+The differential engine answers:
+
+"What changed?"
+
+It does not answer:
+
+"Is this a vulnerability?"
+
+22. STORAGE POLICY
+
+Phase 1 must be storage-independent.
+
+Do not create a new permanent database unless strictly required.
+
+Prefer interfaces such as:
+
+EndpointStore
+IdentityStore
+SessionStore
+ObservationStore
+EvidenceStore
+FindingStore
+
+A minimal in-memory implementation is acceptable for Phase 1 tests.
+
+The architecture must allow a persistent backend later without changing detector contracts.
+
+Do not modify data/csi.db.
+
+23. ADAPTER POLICY
+
+Where existing infrastructure is consumed, use adapters.
+
+Examples:
+
+Existing HTTP client
+        ↓
+HTTP adapter
+        ↓
+Security Request/Response model
+Existing scope system
+        ↓
+Scope adapter
+        ↓
+Security Scope Gate
+
+Do not duplicate:
+
+HTTP clients;
+SSRF checks;
+rate limiters;
+audit chains;
+browser security controls.
+
+Reuse existing infrastructure through controlled interfaces.
+
+24. SECURITY / SECRET HANDLING
+
+The new models and logs must not leak:
+
+passwords;
+bearer tokens;
+session cookies;
+API keys;
+authorization headers;
+credentials.
+
+Evidence must support hashes/references rather than requiring plaintext secrets.
+
+Redaction must occur before persistence or logging.
+
+If existing redaction utilities are insufficient for the new model, add the smallest isolated adapter necessary.
+
+Do not weaken existing privacy controls.
+
+25. TEST REQUIREMENTS
+
+Phase 1 is not complete without tests.
+
+At minimum, add tests for:
+
+Models
+valid object creation;
+required-field rejection;
+invalid references;
+lifecycle states.
+Identity
+identity isolation;
+session-to-identity binding;
+no implicit identity substitution.
+Scope
+authorized target accepted;
+unauthorized target rejected;
+ambiguous scope rejected;
+protected path rejected.
+Evidence
+evidence references observation;
+hashes preserved;
+truncation explicitly recorded.
+Finding
+expected boundary represented;
+observed behavior represented;
+confidence/impact/severity remain separate;
+lifecycle transitions valid.
+Registry
+register;
+disable;
+enable;
+resolve;
+zero-detector state.
+Differential analysis
+same responses;
+different responses;
+inconclusive comparison.
+Correlation
+execution → request → observation → evidence → finding traceability.
+Secret safety
+sensitive headers/tokens/cookies do not appear in normal serialized output.
+26. REGRESSION REQUIREMENT
+
+After implementation:
+
+Run the existing baseline suites.
+
+At minimum:
+
+npm test
+
+and the complete applicable Python test suite.
+
+The final report must state:
+
+Baseline result
+Final result
+New tests
+Failures
+Skipped tests
+Warnings
+
+No existing regression may be dismissed as unrelated unless it is demonstrated to be pre-existing.
+
+27. CHANGE CONTROL
+
+Before completion, produce an exact change inventory:
+
+Files added
+Files modified
+Files deleted
+Dependencies added
+Dependencies removed
+Config changed
+Database schema changed
+Existing call sites changed
+
+Expected Phase 1:
+
+Existing detector call sites changed: 0
+Database migration changed: 0
+pentest_tool.py changed: 0
+Existing scope semantics changed: 0
+Existing authentication semantics changed: 0
+
+If any protected area changes, STOP and report it before continuing.
+
+28. NO SILENT FALLBACKS
+
+Do not implement:
+
+missing dependency → pretend success
+missing identity → use default identity
+missing session → use anonymous silently
+missing scope → assume allowed
+missing evidence → mark validated
+
+Security-engine failures must fail closed.
+
+An unavailable prerequisite must produce an explicit state such as:
+
+blocked
+not_ready
+inconclusive
+
+not:
+
+success
+29. DEFINITION OF DONE
+
+Phase 1 is complete only when all are true:
+
+Security-engine package exists.
+
+Core models are implemented.
+
+Identity and Session contracts exist.
+
+Endpoint / Request / Response contracts exist.
+
+Resource / Workflow / State contracts exist.
+
+Observation / Evidence / Finding contracts exist.
+
+Correlation IDs work.
+
+Scope-gate adapter exists.
+
+Detector registry exists.
+
+Execution contract exists.
+
+Differential-analysis contract exists.
+
+Storage interfaces exist without database migration.
+
+Secret handling tests pass.
+
+Negative controls pass.
+
+Existing tests remain green.
+
+No protected component was modified semantically.
+
+No vulnerability detector was implemented.
+
+No target-specific login automation was implemented.
+
+Exact change inventory is documented.
+
+Architecture remains additive and reversible.
+
+30. HARD STOP CONDITIONS
+
+Immediately stop implementation if any of the following occurs:
+
+Existing scope semantics must be changed.
+Existing SSRF protection must be changed.
+core/db.mjs migration must be modified.
+pentest_tool.py must be modified.
+Existing detector call sites must be modified.
+Existing authentication routes must be modified.
+A new permanent database becomes necessary for Phase 1.
+A new external dependency becomes necessary without strong justification.
+Target login automation becomes necessary.
+The implementation requires a Race/BOLA/BFLA detector to prove the foundation.
+Existing tests regress.
+The implementation requires broad refactoring outside security-engine/.
+
+When a stop condition occurs:
+
+Do not work around it silently.
+
+Report the blocker and wait for review.
+
+31. REQUIRED FINAL REPORT
+
+Do not return a generic statement such as:
+
+"Phase 1 completed successfully."
+
+Return a structured implementation report containing:
+
+A. Status
+PASS
+CONDITIONAL PASS
+BLOCKED
+FAIL
+B. Implemented Components
+
+List every component created.
+
+C. Files Changed
+
+Exact paths and purpose.
+
+D. Protected Files Verified Unchanged
+
+Explicitly verify:
+
+core/db.mjs
+pentest_tool.py
+existing scope validators
+core/ssrf-guard.mjs
+existing detector call sites
+web/routes/auth.mjs
+web/middleware/auth.mjs
+E. Tests
+
+Provide exact commands and results.
+
+F. Architecture
+
+Explain the resulting dependency direction:
+
+security-engine
+      ↓
+adapters
+      ↓
+existing infrastructure
+
+and confirm that existing infrastructure does not depend on the new engine.
+
+G. Security Review
+
+State how:
+
+scope enforcement;
+identity isolation;
+session isolation;
+secret handling;
+evidence integrity;
+fail-closed behavior
+
+were validated.
+
+H. Deviations
+
+List every deviation from this directive.
+
+If none:
+
+NONE
+I. Remaining Blockers
+
+List anything required before Phase 2.
+
+J. Recommendation
+
+One of:
+
+READY FOR PHASE 2 REVIEW
+NOT READY — FIX REQUIRED
+BLOCKED — ARCHITECTURAL DECISION REQUIRED
+
+Do not proceed automatically to Phase 2.
+
+32. FINAL OPERATING RULE
+
+The AI implementation agent must follow:
+
+OBSERVE
+→ PLAN
+→ IMPLEMENT
+→ TEST
+→ VERIFY
+→ REPORT
+
+Not:
+
+IMPLEMENT
+→ EXPAND SCOPE
+→ REFACTOR
+→ ADD FEATURES
+→ REPORT
+
+Phase 1 success is measured by:
+
+architectural correctness, isolation, reversibility, testability, and security-boundary integrity — not code volume.
+
+AUTHORIZATION
+
+This document authorizes PHASE 1 ONLY.
+
+It does NOT authorize Phase 2, Phase 3, Race Engine implementation, Authorization Engine implementation, or target-specific vulnerability testing.
+
+After completing this phase, stop and return the required final report for independent review.

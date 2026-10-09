@@ -1,10 +1,12 @@
 import express from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { chromium } from 'playwright';
 import { generateKeywords, detectFamily, JOB_FAMILIES } from './keywordGenerator.js';
+import { assertPublicUrl } from '../core/ssrf-guard.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -66,9 +68,21 @@ function randomUA() {
 
 // ── Express Setup ──
 const app = express();
-app.use(cors());
+// Do not advertise the framework/version to scanners (CWE-200)
+app.disable('x-powered-by');
+app.use(cors({ origin: false }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Rate limit the expensive search/crawl entry points (browser-heavy, CPU/IO bound)
+const searchLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 40,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'طلبات بحث كثيرة. حاول بعد 15 دقيقة.' },
+});
+app.use(['/search', '/api/search', '/scrape', '/api/scrape', '/run', '/api/run'], searchLimiter);
 
 let browser = null;
 let sseClients = [];
@@ -89,7 +103,6 @@ app.get('/api/stream', (req, res) => {
     'Content-Type': 'text/event-stream; charset=utf-8',
     'Cache-Control': 'no-cache',
     'Connection': 'keep-alive',
-    'Access-Control-Allow-Origin': '*',
   });
   const c = { id: Date.now(), res };
   sseClients.push(c);
@@ -932,6 +945,11 @@ app.get('/api/learning', (req, res) => {
 app.post('/api/scrape/start', async (req, res) => {
   const { url, search, maxPages = 10, maxAds = 100, generateKeywords: genMode, visitPages } = req.body || {};
   if (!url) return res.json({ error: 'الرجاء إدخال رابط الموقع' });
+  try {
+    await assertPublicUrl(url);
+  } catch {
+    return res.json({ error: 'الرابط محظور أو غير صالح' });
+  }
 
   // Auto-generate keywords if requested
   let finalSearch = search;

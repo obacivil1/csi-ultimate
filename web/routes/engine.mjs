@@ -12,9 +12,25 @@ import { extractAdData as scrapeAd } from "../../core/extractor.mjs"
 import { createPage } from "../../core/anti-detect.mjs"
 import { executeSearch } from "../../core/run.mjs"
 import { enqueueJob, cancelJob, listQueue } from "../../core/job-manager.mjs"
+import { assertPublicUrl, installPlaywrightSsrfGuard } from "../../core/ssrf-guard.mjs"
+import { authenticate } from "../middleware/auth.mjs"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export const engineRouter = Router()
+
+const SAFE_ID_RE = /^[A-Za-z0-9_-]{1,120}$/
+function validateIdParam(req, res, next) {
+  for (const key of ["id", "jobId"]) {
+    const v = req.params[key]
+    if (v !== undefined && (!SAFE_ID_RE.test(v) || v.includes("."))) {
+      return res.status(400).json({ error: "Invalid identifier" })
+    }
+  }
+  next()
+}
+engineRouter.param("id", validateIdParam)
+engineRouter.param("jobId", validateIdParam)
+engineRouter.use(authenticate)
 
 const STATE_DIR = path.resolve(__dirname, "../..", "state")
 const CRAWLS_DIR = path.join(STATE_DIR, "crawls")
@@ -76,6 +92,7 @@ function broadcastProgress(job, data) {
 
 async function runCrawl(jobId, siteConfig, category) {
   const { browser, context, page } = await createPage()
+  await installPlaywrightSsrfGuard(page)
 
   try {
     const job = activeCrawls[jobId]
@@ -242,6 +259,12 @@ engineRouter.post("/crawl", async (req, res) => {
   ensureSites()
   const { url, search } = req.body
   if (!url) return res.status(400).json({ error: "URL required" })
+
+  try {
+    await assertPublicUrl(url)
+  } catch {
+    return res.status(400).json({ error: "Blocked or invalid URL" })
+  }
 
   let targetSite = null
   let targetCategory = null
@@ -438,7 +461,8 @@ engineRouter.get("/search/:id/export", (req, res) => {
     res.setHeader("Content-Disposition", `attachment; filename="search_results_${req.params.id}.${format}"`)
     res.sendFile(filePath)
   } catch (e) {
-    res.status(500).json({ error: e.message })
+    logger.error(`Search export ${req.params.id} failed: ${e.message}`)
+    res.status(500).json({ error: "Export failed" })
   }
 })
 
@@ -592,7 +616,8 @@ engineRouter.get("/crawl/:id/export", (req, res) => {
     res.setHeader("Content-Disposition", `attachment; filename="crawl_${req.params.id}.${format}"`)
     res.sendFile(filePath)
   } catch (e) {
-    res.status(500).json({ error: e.message })
+    logger.error(`Crawl export ${req.params.id} failed: ${e.message}`)
+    res.status(500).json({ error: "Export failed" })
   }
 })
 

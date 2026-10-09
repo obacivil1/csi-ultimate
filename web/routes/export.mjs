@@ -47,7 +47,7 @@ function handleExport(req, res, file, cacheKey, filters, mapFn, filename) {
     sendCSV(res, data, filename);
   } catch (e) {
     console.error('Export error:', e);
-    res.status(500).json({ error: 'خطأ في التصدير: ' + e.message });
+    res.status(500).json({ error: 'خطأ في التصدير' });
   }
 }
 

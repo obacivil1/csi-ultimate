@@ -1,0 +1,2 @@
+[console_scripts]
+local-lab-scan = scanner.local_scan:main

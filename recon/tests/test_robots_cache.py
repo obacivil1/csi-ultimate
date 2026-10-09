@@ -125,7 +125,7 @@ async def test_parallel_same_origin_one_fetch():
 def test_forbidden_no_body_logging():
     import pathlib
 
-    src = pathlib.Path("recon/core/robots_cache.py").read_text(encoding="utf-8")
+    src = (pathlib.Path(__file__).resolve().parent.parent / "core" / "robots_cache.py").read_text(encoding="utf-8")
     # Should not retain response object beyond function; basic check
     assert "MockTransport" not in src
     # Ensure we don't log body

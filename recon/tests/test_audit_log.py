@@ -78,7 +78,7 @@ def test_corrupt_line_verify_false(tmp_path: pathlib.Path):
 
 
 def test_forbidden_no_pii_helpers():
-    src = pathlib.Path("recon/core/audit_log.py").read_text(encoding="utf-8")
+    src = (pathlib.Path(__file__).resolve().parent.parent / "core" / "audit_log.py").read_text(encoding="utf-8")
     assert "password" not in src.lower()
     # should not have helpers that clean bodies
     assert "def clean" not in src.lower()

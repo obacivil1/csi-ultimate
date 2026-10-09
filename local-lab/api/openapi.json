@@ -1,0 +1,93 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "LocalLab REST API",
+    "version": "5.0.0",
+    "description": "واجهة محلية (127.0.0.1) للفحص والزحف بمهام. الأهداف الخارجية تتطلب confirm='أؤكد'."
+  },
+  "servers": [{ "url": "http://127.0.0.1:5051" }],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "summary": "نبض الخدمة",
+        "responses": { "200": { "description": "ok" } }
+      }
+    },
+    "/api/checks": {
+      "get": {
+        "summary": "قائمة الفحوصات",
+        "responses": { "200": { "description": "checks" } }
+      }
+    },
+    "/api/scan": {
+      "post": {
+        "summary": "بدء فحص (مهمة غير متزامنة)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["target"],
+                "properties": {
+                  "target": { "type": "string", "example": "http://127.0.0.1:5001/" },
+                  "mode": { "type": "string", "enum": ["detect", "verify"], "default": "verify" },
+                  "confirm": { "type": "string", "example": "أؤكد" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": { "description": "job created" },
+          "400": { "description": "bad input/scope" },
+          "403": { "description": "confirm required" }
+        }
+      }
+    },
+    "/api/crawl": {
+      "post": {
+        "summary": "بدء زحف (مهمة غير متزامنة)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["target"],
+                "properties": {
+                  "target": { "type": "string" },
+                  "confirm": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": { "description": "job created" },
+          "400": { "description": "bad input/scope" },
+          "403": { "description": "confirm required" }
+        }
+      }
+    },
+    "/api/jobs/{jid}": {
+      "get": {
+        "summary": "حالة مهمة ونتيجتها",
+        "parameters": [
+          { "name": "jid", "in": "path", "required": true,
+            "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "job" },
+          "404": { "description": "unknown job" }
+        }
+      }
+    },
+    "/api/openapi.json": {
+      "get": {
+        "summary": "هذه المواصفة نفسها",
+        "responses": { "200": { "description": "openapi" } }
+      }
+    }
+  }
+}

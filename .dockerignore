@@ -1,5 +1,13 @@
 node_modules
-data
+# Ship the datasets the app serves; runtime writes stay ephemeral on Render.
+data/*
+!data/etimad_all_tenders.json
+!data/etimad_all_awards.json
+!data/etimad_sample_awards.json
+!data/etimad_sample.json
+!data/muqawil_all_regions.json
+!data/projects_database.json
+!data/saudi_gulf_projects.json
 state
 output
 *.log

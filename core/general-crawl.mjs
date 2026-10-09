@@ -6,6 +6,7 @@
  */
 import { JSDOM } from "jsdom";
 import { mineContacts } from "./contact-miner.mjs";
+import { assertPublicUrl, safeFetch, installPlaywrightSsrfGuard } from "./ssrf-guard.mjs";
 
 // أضف فاصل مسافة بين النصوص المتجاورة عند التسطيح — يمنع الالتصاق
 // (مثل "gmail.comtalent") الذي يضيع حدود العناصر عبر textContent المدمج.
@@ -175,21 +176,22 @@ export async function crawlUrls(urls, opts = {}) {
   const queue = urls.map((u) => ({ url: u, level: 0 }));
 
   const httpFetch = async (url) => {
-    const res = await fetch(url, {
+    const res = await safeFetch(url, {
       headers: {
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
         accept: "text/html,application/xhtml+xml",
         "accept-language": "en,ar;q=0.8",
       },
-      redirect: "follow",
     });
     return await res.text();
   };
 
   const browserFetch = async (url) => {
+    await assertPublicUrl(url);
     const { createPage } = await import("./anti-detect.mjs");
     const { page, browser } = await createPage();
     try {
+      await installPlaywrightSsrfGuard(page);
       await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
       await page.waitForTimeout(600);
       return await page.content();
@@ -201,6 +203,7 @@ export async function crawlUrls(urls, opts = {}) {
   const perHost = {};
   for (let i = 0; i < queue.length && docs.length < maxPages; i++) {
     const { url, level } = queue[i];
+    try { await assertPublicUrl(url) } catch { continue }
     const host = (() => { try { return new URL(url).hostname; } catch { return "?"; } })();
     if (perHost[host] >= maxPerHost) continue;
     if (seen.has(url)) continue;

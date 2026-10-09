@@ -11,6 +11,7 @@
 
 import fs from 'fs'
 import path from 'path'
+import { JOB_SEEKER_RE as JOB_SEEKER_TITLE_RE, NON_ROLE_RE } from '../core/job-scan.mjs'
 
 /* ─── Constants ─── */
 
@@ -34,7 +35,10 @@ const SCORE_THRESHOLD = 65
 const ROLE_TIERS = [
   { keywords: ['project controls engineer', 'project controls lead', 'project controls manager'], pts: 100 },
   { keywords: ['planning & controls', 'planning and controls', 'planning & cost controls'],       pts: 100 },
+  { keywords: ['senior planning & cost control lead', 'senior planning and cost control lead'],    pts: 100 },
   { keywords: ['senior planning engineer', 'planning lead', 'senior planner'],                   pts: 95 },
+  { keywords: ['senior planning lead', 'senior planning & scheduling', 'senior planning and scheduling'], pts: 98 },
+  { keywords: ['senior control lead', 'project control lead', 'cost control lead', 'controls lead'], pts: 95 },
   { keywords: ['planning engineer', 'project planner'],                                          pts: 90 },
   { keywords: ['controls engineer', 'project control engineer', 'cost control engineer'],        pts: 85 },
   { keywords: ['scheduling engineer', 'senior scheduler', 'lead scheduler'],                     pts: 85 },
@@ -68,6 +72,7 @@ const PENALTY_KEYWORDS = [
   'marketing', 'content writer', 'sales', 'software engineer',
   'data scientist', 'machine learning', 'devops', 'accountant',
 ]
+const OFF_REGION_RE = /manama|المنامة|bahrain|البحرين|doha|قطر|dubai|دبي|kuwait|الكويت|oman|عمان|muscat|مسقط|abudhabi|أبوظبي|أبو ظبي/i
 
 /* ─── Helpers ─── */
 
@@ -208,7 +213,8 @@ function scoreJob(title, description) {
   const breakdown = []
   let score = 0
 
-  for (const wl of ['planning engineer', 'project controls engineer', 'scheduling engineer', 'project planner', 'controls engineer', 'primavera p6 engineer']) {
+  for (const wl of ['planning engineer', 'project controls engineer', 'scheduling engineer', 'project planner', 'controls engineer', 'primavera p6 engineer',
+    'senior planning', 'senior control lead', 'project control lead', 'cost control lead', 'controls lead', 'planning lead', 'senior planner', 'cost control engineer']) {
     if (t.includes(wl)) { score = Math.max(score, 80); breakdown.push(`whitelist:${wl}=80`); break }
   }
 
@@ -240,7 +246,16 @@ function scoreJob(title, description) {
     if (t.includes(pen)) { score -= 65; breakdown.push(`penalty:${pen}=-65`); break }
   }
 
+  if (JOB_SEEKER_TITLE_RE.test(t)) { score = 0; breakdown.push('penalty:job-seeker=HARD-REJECT') }
+
+  if (NON_ROLE_RE.test(t)) { score = 0; breakdown.push('penalty:non-role=HARD-REJECT') }
+
   return { score, breakdown: breakdown.join('|') }
+}
+
+export function scoreJobTitle(title, description = '') {
+  const { score, breakdown } = scoreJob(title, description)
+  return { score, breakdown, approved: score >= SCORE_THRESHOLD }
 }
 
 /* ─── Main Pipeline ─── */
@@ -248,6 +263,7 @@ function scoreJob(title, description) {
 export async function runPipeline({ rawJobs = [], seenJobs = [], crm = {}, config = {} }) {
   const dataDir = config.dataDir || path.resolve('data')
   const n8nDir = config.n8nDir || path.resolve('n8n-workflow')
+  const regionFilterRe = config.regionRe instanceof RegExp ? config.regionRe : null
 
   // 1. Parse rawJobs into unified format
   // rawJobs = [{ type: 'rss_xml', label: 'Indeed KSA', body: '<xml>' }]
@@ -280,6 +296,9 @@ export async function runPipeline({ rawJobs = [], seenJobs = [], crm = {}, confi
     const { score, breakdown } = scoreJob(j.title, j.description || '')
     return { ...j, score, scoreBreakdown: breakdown, approved: score >= SCORE_THRESHOLD }
   }).filter(j => j.approved)
+    .filter(j => !JOB_SEEKER_TITLE_RE.test(j.title))
+    .filter(j => !OFF_REGION_RE.test(j.location + ' ' + (j.title || '')))
+    .filter(j => !regionFilterRe || regionFilterRe.test(j.location + ' ' + (j.title || '')))
   scored.sort((a, b) => b.score - a.score)
 
   // 4. Extract valid emails

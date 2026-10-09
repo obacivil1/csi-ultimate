@@ -43,7 +43,10 @@ def _scope(tmp_path: pathlib.Path):
     }
     sf = tmp_path / "scope.json"
     sf.write_text(json.dumps(data), encoding="utf-8")
-    return ScopeValidator(sf)
+    scope = ScopeValidator(sf)
+    # Simulate the operator having confirmed (the real gate is tested separately).
+    scope.mark_confirmed()
+    return scope
 
 
 @pytest.mark.asyncio

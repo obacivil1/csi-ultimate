@@ -94,7 +94,7 @@ export async function runMission(opts = {}) {
 
   const docs = _docs && Array.isArray(_docs) && _docs.length
     ? _docs
-    : await crawlUrls(Array.isArray(urls) ? urls : [urls], { depth, maxPages, fetchMode, extract });
+    : await crawlUrls(Array.isArray(urls) ? urls : [urls], { depth, maxPages, fetchMode, extract: undefined });
 
   // Apply privacy masking if opt-in enabled (Deny by default: privacy:false = no masking)
   let maskedDocs = docs;

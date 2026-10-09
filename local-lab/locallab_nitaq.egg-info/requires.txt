@@ -1,0 +1,9 @@
+flask>=3.0
+
+[pdf]
+reportlab
+arabic-reshaper
+python-bidi
+
+[tls]
+cryptography

@@ -1,20 +1,24 @@
-# scope.yaml
+# scope.yaml — نطاق pentest_tool.py
+# الهدف الافتراضي: المختبر المحلي المصاب عمدًا (local-lab/target/app.py).
+# شغّله أولًا:  python local-lab/run_target.py
+# قاعدة: loopback فقط افتراضيًا. أي هدف خارجي يتطلب تفويض مالك مكتوب
+# وتحديث allowed_domains + authorization_confirmed يدويًا.
 engagement:
-  client_name: "Test Client"
-  client_contact: "test@example.com"
+  client_name: "LocalLab (intentionally vulnerable training target)"
+  client_contact: "local-lab@localhost"
   tester_name: "Pen Tester"
   tester_email: "test@pentest.local"
-  start_date: "2025-01-15"
-  end_date: "2025-01-15"
-  contract_number: "TEST-2025-001"
+  start_date: "2026-09-27"
+  end_date: "2026-12-31"
+  contract_number: "LOCAL-LAB-001"
   authorization_confirmed: true
 
 scope:
-  target_url: "https://test.acme.com"
+  target_url: "http://127.0.0.1:5001"
   allowed_domains:
-    - "test.acme.com"
+    - "127.0.0.1"
   allowed_ips:
-    - "1.2.3.4"
+    - "127.0.0.1"
   excluded:
     - "/admin/delete"
     - "/api/v1/payments"
@@ -27,8 +31,12 @@ testing:
   # نافذة الاختبار (ساعات العمل)
   allowed_hours: "00:00-24:00"
 
-  # حد الطلبات
-  max_requests_per_second: 1000
+  # حد الطلبات — 1000 السابقة كانت تعطّل المقيّد عمليًا؛ 5 حقيقية للمختبر.
+  max_requests_per_second: 5
+
+  # PUT/DELETE مغيّرة للحالة: محظورة افتراضيًا حتى على المختبر.
+  # للتفعيل: true هنا أو راية --allow-state-changing.
+  allow_state_changing_methods: false
 
   # مسموحات
   forbidden:
@@ -37,12 +45,13 @@ testing:
     - "physical"
     - "destructive"
 
-  # فحص سلامة
+  # فحص سلامة — الآن منفّذة فعليًا (كانت تحذيرات فقط):
+  # توقف بعد 3 أخطاء خادم، وتوقف عند حظر WAF.
   safety_checks:
     - "stop_on_server_error"
     - "stop_on_waf_block"
     - "stop_on_data_exposure"
 
 contacts:
-  emergency: "+966-xxx-xxxx"
-  escalation: "ciso@acme.com"
+  emergency: "local-lab@localhost"
+  escalation: "local-lab@localhost"

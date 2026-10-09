@@ -464,10 +464,11 @@ export function exportToXLSX(records, filePath) {
 }
 
 export function exportAll(records, label, outputDir) {
+  const cleanLabel = String(label || "export").replace(/[\\/:*?"<>|]/g, "_").replace(/\.\./g, "_").slice(0, 120)
   const clean = records.map(r => toCanonical(r, r.site || "", r.category || ""))
-  const jsonPath = resolve(outputDir, `${label}.json`)
-  const csvPath = resolve(outputDir, `${label}.csv`)
-  const xlsxPath = resolve(outputDir, `${label}.xlsx`)
+  const jsonPath = resolve(outputDir, `${cleanLabel}.json`)
+  const csvPath = resolve(outputDir, `${cleanLabel}.csv`)
+  const xlsxPath = resolve(outputDir, `${cleanLabel}.xlsx`)
   if (!existsSync(outputDir)) mkdirSync(outputDir, { recursive: true })
   writeFileSync(jsonPath, JSON.stringify({ total: clean.length, records: clean, generatedAt: new Date().toISOString() }, null, 2), "utf8")
   exportToCSV(clean, csvPath)

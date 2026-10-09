@@ -82,6 +82,6 @@ def test_duplicate_deduplicated(tmp_path):
 
 
 def test_pure_no_io():
-    src = pathlib.Path("recon/core/js_extractor.py").read_text(encoding="utf-8")
+    src = (pathlib.Path(__file__).resolve().parent.parent / "core" / "js_extractor.py").read_text(encoding="utf-8")
     assert "httpx" not in src
     assert "open(" not in src

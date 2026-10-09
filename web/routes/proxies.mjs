@@ -21,7 +21,8 @@ proxiesRouter.post("/check", async (_req, res) => {
     const results = await checkProxies(undefined, { force: true });
     res.json({ checked: results.length, results });
   } catch (e) {
-    res.status(500).json({ error: e && e.message ? e.message : String(e) });
+    console.error('proxies check failed:', e);
+    res.status(500).json({ error: 'فشل فحص البروكسيات' });
   }
 });
 

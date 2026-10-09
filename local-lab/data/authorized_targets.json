@@ -1,0 +1,16 @@
+[
+  {
+    "target": "http://demo.testfire.net:80",
+    "base": "http://demo.testfire.net/",
+    "note": "IBM Altoro Mutual demo banking - built for security scanner testing",
+    "confirm": "أؤكد",
+    "added_at": "2026-09-20T21:40:48Z"
+  },
+  {
+    "target": "http://testaspnet.vulnweb.com:80",
+    "base": "http://testaspnet.vulnweb.com/",
+    "note": "Acunetix ASP.NET test site - built for security scanner testing",
+    "confirm": "أؤكد",
+    "added_at": "2026-09-21T17:55:13Z"
+  }
+]
