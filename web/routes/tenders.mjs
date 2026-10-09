@@ -89,6 +89,21 @@ tendersRouter.get('/', optionalAuth, (req, res) => {
     filtered = filtered.filter(t => t._remainingDays !== null && t._remainingDays >= 0 && t._remainingDays >= min);
   }
 
+  // Default: hide tenders whose deadline has passed and show the nearest
+  // deadline first. Pass includeExpired=true (or a status filter) to see all.
+  const includeExpired = req.query.includeExpired === 'true' || !!status;
+  if (!includeExpired) {
+    filtered = filtered.filter(t => t._remainingDays === null || t._remainingDays >= 0);
+  }
+  filtered.sort((a, b) => {
+    const da = a._remainingDays, db = b._remainingDays;
+    if (da === null) return 1;
+    if (db === null) return -1;
+    const ea = da < 0 ? 1 : 0, eb = db < 0 ? 1 : 0;
+    if (ea !== eb) return ea - eb;          // live tenders before expired
+    return ea === 0 ? da - db : db - da;    // live: soonest first; expired: latest first
+  });
+
   // Pagination
   // Anonymous visitors only ever see a small sample; members see data by plan.
   if (!req.user && filtered.length > GUEST_SAMPLE) {
