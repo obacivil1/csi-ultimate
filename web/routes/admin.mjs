@@ -22,6 +22,28 @@ adminRouter.get('/users', authenticate, (req, res) => {
   res.json(users);
 });
 
+adminRouter.get('/stats', authenticate, (req, res) => {
+  if (!isAdmin(req.user?.email)) return res.status(403).json({ error: 'غير مصرح' });
+  const users = loadUsers();
+  const byPlan = { trial: 0, basic: 0, professional: 0, enterprise: 0, expired: 0 };
+  for (const u of users) byPlan[u.subscription] = (byPlan[u.subscription] || 0) + 1;
+  const msgs = loadMessages();
+  const recentSignups = users
+    .map(({ password, ...u }) => u)
+    .sort((a, b) => new Date(b.createdAt || b.trialStart || 0) - new Date(a.createdAt || a.trialStart || 0))
+    .slice(0, 5);
+  res.json({
+    totalUsers: users.length,
+    paidUsers: (byPlan.basic || 0) + (byPlan.professional || 0) + (byPlan.enterprise || 0),
+    trialUsers: byPlan.trial || 0,
+    expiredUsers: byPlan.expired || 0,
+    byPlan,
+    totalMessages: msgs.length,
+    unreadMessages: msgs.filter(m => !m.read).length,
+    recentSignups
+  });
+});
+
 adminRouter.post('/users/:id/plan', authenticate, (req, res) => {
   if (!isAdmin(req.user?.email)) return res.status(403).json({ error: 'غير مصرح' });
   const { plan, expiryDays } = req.body;

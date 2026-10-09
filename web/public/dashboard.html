@@ -301,6 +301,11 @@
     <div class="dash-panel" id="panelAdmin">
       <div style="background:var(--bg-card);border-radius:12px;padding:20px;box-shadow:0 2px 8px var(--shadow);">
         <h3 style="margin-bottom:15px;color:var(--accent-hover);">👑 لوحة الأدمن</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px;" id="adminStats"></div>
+        <div style="border:1px solid var(--border-light);border-radius:10px;padding:14px;margin-bottom:18px;">
+          <h4 style="margin-bottom:6px;color:var(--accent-hover);">🕒 آخر التسجيلات</h4>
+          <div id="adminRecentBody"></div>
+        </div>
         <div style="overflow-x:auto;">
           <table class="data-table" style="width:100%;font-size:0.85em;">
             <thead>
@@ -1002,7 +1007,38 @@ async function loadAnalytics() {
 }
 
 // ── Admin Panel ──
+async function loadStats() {
+  try {
+    const s = await API.get('/api/admin/stats');
+    const box = document.getElementById('adminStats');
+    if (s.error) { box.innerHTML = ''; return; }
+    const cards = [
+      ['👥 إجمالي المشتركين', s.totalUsers, ''],
+      ['💳 مدفوع', s.paidUsers, ''],
+      ['🎁 تجريبي', s.trialUsers, ''],
+      ['⏰ منتهي', s.expiredUsers, ''],
+      ['✉️ غير مقروء', s.unreadMessages, s.unreadMessages > 0 ? 'color:var(--danger);' : '']
+    ];
+    box.innerHTML = cards.map(([icon, val, st]) =>
+      '<div style="background:var(--bg-card);border:1px solid var(--border-light);border-radius:10px;padding:14px;text-align:center;">' +
+        '<div style="font-size:0.85em;color:var(--text-muted);margin-bottom:6px;">' + icon + '</div>' +
+        '<div style="font-size:1.6em;font-weight:700;' + st + '">' + (val ?? 0) + '</div>' +
+      '</div>'
+    ).join('');
+
+    const planNames = { trial: 'تجربة', basic: 'أساسية', professional: 'احترافية', enterprise: 'شاملة', expired: 'منتهية' };
+    const body = document.getElementById('adminRecentBody');
+    body.innerHTML = s.recentSignups.length ? s.recentSignups.map(u =>
+      '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--border-light);">' +
+        '<span><strong>' + esc(u.name) + '</strong> <span style="color:var(--text-muted);font-size:0.85em;">' + esc(u.email) + '</span></span>' +
+        '<span style="font-size:0.85em;"><span class="sub-badge' + (u.subscription === 'expired' ? ' expired' : u.subscription === 'trial' ? ' trial' : '') + '">' + (planNames[u.subscription] || u.subscription) + '</span> · ' + new Date(u.createdAt || u.trialStart).toLocaleDateString('ar-SA') + '</span>' +
+      '</div>'
+    ).join('') : '<p style="color:var(--text-muted);margin:6px 0;">لا توجد تسجيلات بعد</p>';
+  } catch(e) {}
+}
+
 async function loadAdmin() {
+  await loadStats();
   const tbody = document.getElementById('adminUsersBody');
   tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">جاري التحميل...</td></tr>';
   try {
