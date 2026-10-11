@@ -356,7 +356,8 @@
       </div>
     <p id="selectedPlan" style="text-align:center;color:#666;margin-bottom:15px;">اختر الباقة المناسبة</p>
     <div id="paypalButton" style="text-align:center;"></div>
-    <p style="text-align:center;color:#888;font-size:0.8em;margin-top:10px;">🔒 الدفع عبر PayPal — معلوماتك آمنة</p>
+    <div id="cardButton" style="text-align:center;margin-top:10px;"></div>
+    <p style="text-align:center;color:#888;font-size:0.8em;margin-top:10px;">🔒 الدفع عبر PayPal أو البطاقة البنكية — معلوماتك آمنة</p>
   </div>
 </div>
 
@@ -1157,9 +1158,11 @@ function selectPlan(planId, el) {
       `;
     } else if (typeof paypal !== 'undefined') {
       btn.innerHTML = '<div id="paypalBtnContainer"></div>';
+      document.getElementById('cardButton').innerHTML = '<div id="paypalCardContainer"></div>';
       renderPayPalBtn(planId);
     } else {
       btn.innerHTML = '<div id="paypalBtnContainer"></div>';
+      document.getElementById('cardButton').innerHTML = '<div id="paypalCardContainer"></div>';
       API.get('/api/payments/config').then(cfg => {
         const s = document.createElement('script');
         s.src = 'https://www.paypal.com/sdk/js?client-id=' + cfg.clientId + '&currency=USD';
@@ -1171,7 +1174,7 @@ function selectPlan(planId, el) {
 }
 
 function renderPayPalBtn(planId) {
-  paypal.Buttons({
+  const orderCtx = {
     createOrder: async () => {
       const r = await API.post('/api/payments/create-order', { planId });
       if (r.error) { showToast('❌ ' + r.error, 'error'); throw new Error(r.error); }
@@ -1188,7 +1191,14 @@ function renderPayPalBtn(planId) {
       }
     },
     onError: () => showToast('❌ حدث خطأ في PayPal', 'error')
-  }).render('#paypalBtnContainer');
+  };
+  paypal.Buttons(Object.assign({ style: { layout: 'vertical', label: 'paypal' } }, orderCtx)).render('#paypalBtnContainer');
+  const cardEl = document.getElementById('paypalCardContainer');
+  if (cardEl) {
+    try {
+      paypal.Buttons(Object.assign({ fundingSource: 'card', style: { layout: 'vertical', label: 'card' } }, orderCtx)).render(cardEl);
+    } catch {}
+  }
 }
 
 async function mockPay(planId, orderId) {
