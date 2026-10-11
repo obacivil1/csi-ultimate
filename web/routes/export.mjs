@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { authenticate, getPlanLimits } from '../middleware/auth.mjs';
+import { authenticate, getPlanLimits, effectiveTenderLimit } from '../middleware/auth.mjs';
 import { getJSON } from '../cache.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -34,15 +34,25 @@ function sendCSV(res, data, filename) {
   res.send(buf);
 }
 
-function handleExport(req, res, file, cacheKey, filters, mapFn, filename) {
+// Smallest non-negative cap among the given plan limits; -1 means unlimited.
+function minLimit(...vals) {
+  let m = Infinity;
+  for (const v of vals) {
+    if (v == null) continue;
+    if (v >= 0) m = Math.min(m, v);
+  }
+  return m === Infinity ? -1 : m;
+}
+
+function handleExport(req, res, file, cacheKey, filters, mapFn, filename, rowLimitFn) {
   try {
     const records = loadJSON(file, cacheKey);
     let filtered = [...records];
     if (filters) filters(req.body, filtered);
     const limits = getPlanLimits(req.user?.subscription || 'trial', req.user?.email);
     if (!limits.canExport) return res.status(403).json({ error: 'التصدير غير متاح في خطتك' });
-    let exportLimit = limits.exportRows;
-    if (exportLimit < 0) exportLimit = filtered.length;
+    let exportLimit = rowLimitFn ? rowLimitFn(limits, filtered.length) : limits.exportRows;
+    if (exportLimit == null || exportLimit < 0) exportLimit = filtered.length;
     const data = filtered.slice(0, exportLimit).map(mapFn);
     sendCSV(res, data, filename);
   } catch (e) {
@@ -64,7 +74,8 @@ exportRouter.post('/tenders', authenticate, (req, res) => {
       if (maxDays) { const now = new Date(); for (let i = arr.length - 1; i >= 0; i--) { const d = arr[i].lastOfferPresentationDate ? Math.ceil((new Date(arr[i].lastOfferPresentationDate) - now) / (1000*3600*24)) : -1; if (d < 0 || d > Number(maxDays)) arr.splice(i, 1); } }
     },
     t => ({ 'اسم المنافسة': t.tenderName || '', 'رقم المنافسة': t.tenderNumber || '', 'الجهة الحكومية': t.agencyName || '', 'النشاط': t.tenderActivityName || '', 'النوع': t.tenderTypeName || '', 'تاريخ النشر': (t.submitionDate || '').substring(0, 10), 'آخر موعد': (t.lastOfferPresentationDate || '').substring(0, 10), 'سعر الكراسة': t.condetionalBookletPrice || '' }),
-    'منافسات_' + new Date().toISOString().slice(0, 10)
+    'منافسات_' + new Date().toISOString().slice(0, 10),
+    (limits, total) => minLimit(limits.exportRows, effectiveTenderLimit(limits, total))
   );
 });
 
@@ -79,7 +90,8 @@ exportRouter.post('/contractors', authenticate, (req, res) => {
       if (hasEmail === 'true') for (let i = arr.length - 1; i >= 0; i--) if (!arr[i].email) arr.splice(i, 1);
     },
     c => ({ 'اسم الشركة': c.companyName || '', 'رقم العضوية': c.membershipNo || '', 'المنطقة': c.region_name || '', 'المدينة': c.cityName || '', 'الجوال': c.phone || '', 'البريد الإلكتروني': c.email || '' }),
-    'مقاولين_' + new Date().toISOString().slice(0, 10)
+    'مقاولين_' + new Date().toISOString().slice(0, 10),
+    (limits) => minLimit(limits.maxContractors)
   );
 });
 
@@ -94,7 +106,8 @@ exportRouter.post('/projects', authenticate, (req, res) => {
       if (hasContractor === 'no') for (let i = arr.length - 1; i >= 0; i--) if (arr[i].contractor) arr.splice(i, 1);
     },
     p => ({ 'المشروع': p.title || '', 'المالك': p.owner || '', 'المقاول': p.contractor || '', 'الاستشاري': p.consultant || '', 'القيمة': p.value || '', 'الموقع': p.location || '', 'القطاع': p.sector || '' }),
-    'مشاريع_' + new Date().toISOString().slice(0, 10)
+    'مشاريع_' + new Date().toISOString().slice(0, 10),
+    (limits) => minLimit(limits.maxProjects)
   );
 });
 
@@ -106,6 +119,7 @@ exportRouter.post('/awards', authenticate, (req, res) => {
       if (search) { const s = search.toLowerCase(); for (let i = arr.length - 1; i >= 0; i--) { const a = arr[i]; if (!(a.tenderName || '').toLowerCase().includes(s) && !(a.agency || '').toLowerCase().includes(s)) arr.splice(i, 1); } }
     },
     a => ({ 'المنافسة': a.tenderName || '', 'الجهة': a.agency || '', 'الفائز': a.winner?.name || '', 'قيمة الترسية': a.winner?.value || '', 'عدد المتنافسين': a.biddersCount || 0, 'آخر موعد': a.lastDate || '' }),
-    'ترسيات_' + new Date().toISOString().slice(0, 10)
+    'ترسيات_' + new Date().toISOString().slice(0, 10),
+    (limits) => minLimit(limits.maxAwards)
   );
 });

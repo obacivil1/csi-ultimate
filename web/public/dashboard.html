@@ -332,8 +332,7 @@
     <button class="modal-close" onclick="closeModal('upgradeModal')">✕</button>
     <h2>⬆️ اختر باقتك</h2>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:15px 0;">
-        <div class="plan-card popular" onclick="selectPlan('basic',this)" id="planBasic">
-          <div style="background:var(--gold);color:var(--gold-text);padding:2px 10px;border-radius:50px;font-size:0.7em;font-weight:700;display:inline-block;margin-bottom:5px;">✦ الأكثر طلباً</div>
+        <div class="plan-card" onclick="selectPlan('basic',this)" id="planBasic">
           <h4 style="color:#1F3864;font-size:1em;">الباقة الأساسية</h4>
           <div class="price-tag" style="font-size:1.3em;">999 <small>ريال/شهر</small></div>
           <ul class="features" style="font-size:0.8em;">
@@ -341,9 +340,11 @@
             <li>أرقام وبيانات المقاولين</li>
             <li>فلترة النشاط والجهة</li>
             <li>تنبيهات المناقصات</li>
+            <li>تصدير Excel (1,000)</li>
           </ul>
         </div>
-        <div class="plan-card" onclick="selectPlan('enterprise',this)" id="planEnterprise">
+        <div class="plan-card popular" onclick="selectPlan('enterprise',this)" id="planEnterprise">
+          <div style="background:var(--gold);color:var(--gold-text);padding:2px 10px;border-radius:50px;font-size:0.7em;font-weight:700;display:inline-block;margin-bottom:5px;">✦ الأكثر طلباً</div>
           <h4 style="color:#1F3864;font-size:1em;">الباقة الشاملة</h4>
           <div class="price-tag" style="font-size:1.3em;">1,999 <small>ريال/شهر</small></div>
           <ul class="features" style="font-size:0.8em;">

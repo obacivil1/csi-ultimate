@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { authenticate } from '../middleware/auth.mjs';
+import { authenticate, getPlanLimits } from '../middleware/auth.mjs';
 import { getJSON, invalidate } from '../cache.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -81,6 +81,7 @@ function computeAnalytics(tenders) {
 // GET /api/dashboard/summary - Main dashboard stats
 dashboardRouter.get('/summary', authenticate, (req, res) => {
   const { subscription, trialDaysLeft, subscriptionDaysLeft } = req.user;
+  const limits = getPlanLimits(subscription, req.user.email);
 
   res.json({
     user: {
@@ -96,10 +97,11 @@ dashboardRouter.get('/summary', authenticate, (req, res) => {
     },
     features: {
       canViewTenders: true,
-      canViewContractors: ['basic', 'professional', 'enterprise', 'trial'].includes(subscription),
-      canExport: ['basic', 'professional', 'enterprise'].includes(subscription),
-      canUseAPI: ['enterprise'].includes(subscription),
-      maxExport: subscription === 'trial' ? 50 : subscription === 'basic' ? 1000 : -1
+      canViewContractors: limits.canViewContractors,
+      canExport: limits.canExport,
+      canUseAPI: subscription === 'enterprise',
+      maxExport: limits.exportRows,
+      tenderPct: limits.tenderPct
     }
   });
 });

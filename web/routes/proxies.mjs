@@ -1,8 +1,15 @@
 import { Router } from "express";
 import { hostname } from "os";
 import { listProxies, getProxy, checkProxies } from "../../core/proxy-pool.mjs";
+import { authenticate, isAdmin } from "../middleware/auth.mjs";
 
 export const proxiesRouter = Router();
+
+// Operational data (proxy URLs may embed credentials) — admins only.
+proxiesRouter.use(authenticate, (req, res, next) => {
+  if (!isAdmin(req.user?.email)) return res.status(403).json({ error: 'غير مصرح' });
+  next();
+});
 
 // GET /proxies — حالة البركة كاملة (تشخيصية)
 proxiesRouter.get("/", (_req, res) => {

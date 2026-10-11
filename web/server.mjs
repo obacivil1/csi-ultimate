@@ -49,16 +49,16 @@ app.set('trust proxy', env.TRUST_PROXY);
 // Chart.js + PayPal + Turnstile + Analytics CDNs).
 const cspDirectives = {
   defaultSrc: ["'self'"],
-  scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://www.paypal.com', 'https://www.paypalobjects.com', 'https://www.googletagmanager.com', 'https://challenges.cloudflare.com'],
+  scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://www.paypal.com', 'https://www.paypalobjects.com', 'https://www.sandbox.paypal.com', 'https://www.googletagmanager.com', 'https://challenges.cloudflare.com'],
   scriptSrcAttr: ["'unsafe-inline'"],
   styleSrc: ["'self'", "'unsafe-inline'"],
   imgSrc: ["'self'", 'data:', 'https:'],
   fontSrc: ["'self'", 'https:', 'data:'],
   connectSrc: ["'self'", 'https://www.google-analytics.com', 'https://api-m.paypal.com', 'https://api-m.sandbox.paypal.com', 'https://challenges.cloudflare.com'],
-  frameSrc: ["'self'", 'https://www.paypal.com', 'https://challenges.cloudflare.com'],
+  frameSrc: ["'self'", 'https://www.paypal.com', 'https://www.paypalobjects.com', 'https://www.sandbox.paypal.com', 'https://challenges.cloudflare.com'],
   objectSrc: ["'none'"],
   baseUri: ["'self'"],
-  formAction: ["'self'"],
+  formAction: ["'self'", 'https://www.paypal.com', 'https://www.sandbox.paypal.com'],
   frameAncestors: ["'self'"],
 };
 cspDirectives.upgradeInsecureRequests = env.NODE_ENV === 'production' ? [] : null;

@@ -61,15 +61,22 @@ authRouter.post('/register', requireTurnstile, async (req, res) => {
   if (!email || !password || !name) {
     return res.status(400).json({ error: 'الاسم، البريد الإلكتروني وكلمة المرور مطلوبة' });
   }
+  if (typeof password !== 'string' || password.length < 6) {
+    return res.status(400).json({ error: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' });
+  }
+  if (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+    return res.status(400).json({ error: 'البريد الإلكتروني غير صالح' });
+  }
+  const normalizedEmail = email.trim().toLowerCase();
 
   const users = loadUsers();
-  if (users.find(u => u.email === email)) {
+  if (users.find(u => (u.email || '').toLowerCase() === normalizedEmail)) {
     return res.status(409).json({ error: 'البريد الإلكتروني مسجل مسبقاً' });
   }
 
   const user = {
     id: generateId(),
-    name, email, phone: phone || '', company: company || '',
+    name, email: normalizedEmail, phone: phone || '', company: company || '',
     password: await hashPassword(password),
     subscription: 'trial',
     trialStart: new Date().toISOString(),
@@ -100,7 +107,8 @@ authRouter.post('/login', requireTurnstile, async (req, res) => {
   if (!email || !password) return res.status(400).json({ error: 'البريد الإلكتروني وكلمة المرور مطلوبة' });
 
   const users = loadUsers();
-  const user = users.find(u => u.email === email);
+  const lookup = String(email).trim().toLowerCase();
+  const user = users.find(u => (u.email || '').toLowerCase() === lookup);
   if (!user) return res.status(401).json({ error: 'بريد إلكتروني أو كلمة مرور غير صحيحة' });
 
   const valid = await verifyPassword(password, user.password);

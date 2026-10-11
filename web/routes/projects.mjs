@@ -40,7 +40,7 @@ projectsRouter.get('/', authenticate, (req, res) => {
   // Plan limits
   const limits = getPlanLimits(req.user?.subscription || 'trial', req.user?.email);
   let total = filtered.length;
-  if (limits.maxProjects && total > limits.maxProjects) {
+  if (limits.maxProjects > 0 && total > limits.maxProjects) {
     total = limits.maxProjects;
     filtered = filtered.slice(0, total);
   }
