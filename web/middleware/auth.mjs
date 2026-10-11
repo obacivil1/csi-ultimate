@@ -1,8 +1,7 @@
 import jwt from 'jsonwebtoken';
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getJSON, invalidate } from '../cache.mjs';
+import { register, getStore, setStore } from '../store.mjs';
 import { env } from '../../config/env.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -12,13 +11,14 @@ if (!JWT_SECRET) {
 }
 const USERS_FILE = path.join(__dirname, '..', 'data', 'users.json');
 
+register('users', USERS_FILE);
+
 export function loadUsers() {
-  return getJSON('users', USERS_FILE);
+  return getStore('users');
 }
 
 export function saveUsers(users) {
-  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf8');
-  invalidate('users');
+  setStore('users', users);
 }
 
 const PAID_PLANS = ['basic', 'professional', 'enterprise'];

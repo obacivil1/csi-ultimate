@@ -1,16 +1,21 @@
 import { Router } from 'express';
 import { authenticate, isAdmin, loadUsers, saveUsers } from '../middleware/auth.mjs';
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { register, getStore, setStore } from '../store.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const adminRouter = Router();
 
 const MSGS_FILE = path.join(__dirname, '..', '..', 'data', 'contact_messages.json');
+register('messages', MSGS_FILE);
 
 function loadMessages() {
-  try { return JSON.parse(fs.readFileSync(MSGS_FILE, 'utf8')); } catch { return []; }
+  return getStore('messages');
+}
+
+function saveMessages(msgs) {
+  setStore('messages', msgs);
 }
 
 adminRouter.get('/users', authenticate, (req, res) => {
@@ -85,6 +90,6 @@ adminRouter.put('/messages/:id/read', authenticate, (req, res) => {
   const idx = msgs.findIndex(m => m.id === Number(req.params.id));
   if (idx === -1) return res.status(404).json({ error: 'غير موجود' });
   msgs[idx].read = true;
-  fs.writeFileSync(MSGS_FILE, JSON.stringify(msgs, null, 2), 'utf8');
+  saveMessages(msgs);
   res.json({ ok: true });
 });

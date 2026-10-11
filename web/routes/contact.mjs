@@ -1,12 +1,13 @@
 import { Router } from 'express';
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { register, getStore, setStore } from '../store.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const contactRouter = Router();
 
 const MSGS_FILE = path.join(__dirname, '..', '..', 'data', 'contact_messages.json');
+register('messages', MSGS_FILE);
 
 contactRouter.post('/', (req, res) => {
   const { name, email, subject, message } = req.body;
@@ -16,14 +17,13 @@ contactRouter.post('/', (req, res) => {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: 'البريد الإلكتروني غير صالح' });
   }
-  let msgs = [];
-  try { msgs = JSON.parse(fs.readFileSync(MSGS_FILE, 'utf8')); } catch {}
+  const msgs = getStore('messages');
   msgs.push({
     id: Date.now(),
     name, email, subject, message,
     date: new Date().toISOString(),
     read: false
   });
-  fs.writeFileSync(MSGS_FILE, JSON.stringify(msgs, null, 2), 'utf8');
+  setStore('messages', msgs);
   res.json({ ok: true });
 });

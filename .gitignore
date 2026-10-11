@@ -7,6 +7,7 @@ Thumbs.db
 .env
 web/data/users.json
 web/data/contact_messages.json
+data/contact_messages.json
 
 # Personal report/presentation generators (root-level, non-scraper)
 /*.py

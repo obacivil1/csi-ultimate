@@ -104,6 +104,13 @@ export const env = {
     SECRET_KEY: get("TURNSTILE_SECRET_KEY"),
   },
   CACHE_TTL: num("CACHE_TTL", 3600000),
+  // Durable runtime store (users + messages). Upstash Redis REST keeps mutable
+  // data alive across Render's ephemeral redeploys. Unset → file fallback
+  // (local dev only; production logs a loud warning). See web/store.mjs.
+  STORE: {
+    URL: get("UPSTASH_REDIS_REST_URL"),
+    TOKEN: get("UPSTASH_REDIS_REST_TOKEN"),
+  },
   // In-process node-cron is disabled by default: on Render's ephemeral/sleeping
   // instances it is unreliable. Data updates run in GitHub Actions instead.
   // Set ENABLE_SCHEDULER=1 only for long-lived hosts with persistent storage.

@@ -26,6 +26,7 @@ import { proxiesRouter } from './routes/proxies.mjs';
 import { v1Router } from './routes/v1.mjs';
 import { startScheduler, stopScheduler } from './scheduler.mjs';
 import { preloadWarmup } from './cache.mjs';
+import { initStore, mode as storeMode } from './store.mjs';
 import { seedFromEnv, startHealthChecks, stopHealthChecks } from '../core/proxy-pool.mjs';
 
 import https from 'https';
@@ -268,6 +269,14 @@ app.use((req, res) => {
     res.status(404).json({ error: 'المسار غير موجود' });
   }
 });
+
+// Load the durable runtime store (users, messages) BEFORE accepting traffic: on
+// Render the local filesystem is ephemeral and wiped on every redeploy, so the
+// source of truth lives in Upstash. In file mode this is a no-op read.
+if (env.NODE_ENV === 'production' && storeMode() === 'file') {
+  logger.error('DURABLE STORE NOT CONFIGURED — accounts & paid subscriptions will be LOST on every redeploy. Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN (free tier).');
+}
+await initStore();
 
 const server = app.listen(PORT, () => {
   logger.info('web server started', { port: PORT, env: env.NODE_ENV });
