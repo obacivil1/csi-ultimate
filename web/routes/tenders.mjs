@@ -1,7 +1,8 @@
 import { Router } from 'express';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getPlanLimits, optionalAuth } from '../middleware/auth.mjs';
+import { getPlanLimits, effectiveTenderLimit, optionalAuth } from '../middleware/auth.mjs';
 import { getJSON } from '../cache.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -110,11 +111,14 @@ tendersRouter.get('/', optionalAuth, (req, res) => {
     filtered = filtered.slice(0, GUEST_SAMPLE);
   }
   let total = filtered.length;
-  const limits = getPlanLimits(req.user?.subscription || 'trial', req.user?.email);
-  if (limits.maxTenders > 0 && total > limits.maxTenders) {
-    total = limits.maxTenders;
+  // getPlanLimits returns the shared constant — clone before exposing/overriding.
+  const limits = { ...getPlanLimits(req.user?.subscription || 'trial', req.user?.email) };
+  const maxTenders = effectiveTenderLimit(limits, total);
+  if (maxTenders > 0 && total > maxTenders) {
+    total = maxTenders;
     filtered = filtered.slice(0, total);
   }
+  limits.maxTenders = maxTenders;
   const totalPages = Math.ceil(total / limit);
   const p = Number(page);
   const start = (p - 1) * limit;
@@ -208,11 +212,15 @@ tendersRouter.get('/stats', (req, res) => {
 
   const activeOrAwarded = tenders.filter(t => t.tenderStatusId !== 8);
 
+  let dataUpdatedAt = null;
+  try { dataUpdatedAt = fs.statSync(DATA_FILE).mtime.toISOString(); } catch {}
+
   statsCache = {
     total: activeOrAwarded.length,
     active: active.length,
     construction: construction.length,
     expiringSoon: expiring.length,
+    lastUpdated: dataUpdatedAt,
     types: {
       'شراء مباشر': tenders.filter(t => t.tenderTypeName === 'شراء مباشر').length,
       'منافسة عامة': tenders.filter(t => t.tenderTypeName === 'منافسة عامة').length

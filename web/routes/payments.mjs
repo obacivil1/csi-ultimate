@@ -19,15 +19,12 @@ logger.info('payments module initialised', {
 });
 
 const PLANS = {
-  basic: { id: 'basic', name: 'الباقة الأساسية', price: 500, priceUSD: 133,
-    features: ['البحث في المنافسات الحكومية', 'عرض 15 منافسة يومياً', 'تصدير Excel محدود', 'فلتر حسب النشاط والجهة', 'دعم عبر البريد الإلكتروني'],
-    limit: { dailyTenders: 15, exportRows: 50, contractorAccess: false } },
-  professional: { id: 'professional', name: 'الباقة الاحترافية', price: 1199, priceUSD: 320,
-    features: ['جميع المنافسات (غير محدود)', 'فلتر التشييد والبناء', 'فلتر الأيام المتبقية', 'دليل المقاولين (13,000+)', 'فلتر المقاولين بالمنطقة والمدينة', 'تصدير Excel حتى 1,000 صف', 'تنبيهات المنافسات', 'دعم عبر البريد الإلكتروني'],
-    limit: { dailyTenders: -1, exportRows: 1000, contractorAccess: true } },
-  enterprise: { id: 'enterprise', name: 'الباقة الشاملة', price: 2999, priceUSD: 800,
-    features: ['جميع مزايا الاحترافية', 'تصدير Excel غير محدود', 'API مباشرة للتكامل', 'تحديث يومي آلي', 'إضافة 5 مستخدمين فرعيين', 'استخراج جوالات وإيميلات المقاولين', 'مدير حساب مخصص', 'تدريب الفريق'],
-    limit: { dailyTenders: -1, exportRows: -1, contractorAccess: true, apiAccess: true, maxUsers: 5 } }
+  basic: { id: 'basic', name: 'الباقة الأساسية', price: 999, priceUSD: 266,
+    features: ['30% من المناقصات النشطة', 'أرقام وبيانات المقاولين', 'فلترة حسب النشاط والجهة', 'فلترة الأيام المتبقية', 'تنبيهات المناقصات العاجلة', 'تحديث أسبوعي', 'تصدير Excel', 'دعم فني مباشر'],
+    limit: { tenderPct: 0.30, exportRows: 1000, contractorAccess: true } },
+  enterprise: { id: 'enterprise', name: 'الباقة الشاملة', price: 1999, priceUSD: 533,
+    features: ['100% من جميع المناقصات (النشطة والحكومية)', 'كل مزايا الباقة الأساسية', 'تحديث يومي آلي', 'تصدير Excel غير محدود', 'دعم فني مباشر'],
+    limit: { tenderPct: 1, exportRows: -1, contractorAccess: true } }
 };
 
 // Each paid capture grants a 30-day window (manual monthly pass). There is no

@@ -99,12 +99,24 @@ export function isAdmin(email) {
 }
 
 const PLAN_LIMITS = {
-  trial: { maxTenders: 240, maxContractors: 100, maxAwards: 15, maxProjects: 20, exportRows: 50, canExport: true, canViewContractors: true, contractorAccess: true },
-  expired: { maxTenders: 0, maxContractors: 0, maxAwards: 0, maxProjects: 0, exportRows: 0, canExport: false, canViewContractors: false, contractorAccess: false },
-  basic: { maxTenders: 360, maxContractors: 500, maxAwards: 50, maxProjects: 50, exportRows: 50, canExport: true, canViewContractors: true, contractorAccess: true },
-  professional: { maxTenders: -1, maxContractors: -1, maxAwards: -1, maxProjects: -1, exportRows: 1000, canExport: true, canViewContractors: true, contractorAccess: true },
-  enterprise: { maxTenders: -1, maxContractors: -1, maxAwards: -1, maxProjects: -1, exportRows: -1, canExport: true, canViewContractors: true, contractorAccess: true }
+  trial: { maxTenders: 50, maxContractors: 100, maxAwards: 15, maxProjects: 20, exportRows: 50, canExport: true, canViewContractors: true, contractorAccess: true, tenderPct: null },
+  expired: { maxTenders: 0, maxContractors: 0, maxAwards: 0, maxProjects: 0, exportRows: 0, canExport: false, canViewContractors: false, contractorAccess: false, tenderPct: null },
+  // The entry paid tier shows a fraction of tenders (tenderPct); the top tier shows everything.
+  basic: { maxTenders: -1, maxContractors: -1, maxAwards: -1, maxProjects: -1, exportRows: 1000, canExport: true, canViewContractors: true, contractorAccess: true, tenderPct: 0.30 },
+  enterprise: { maxTenders: -1, maxContractors: -1, maxAwards: -1, maxProjects: -1, exportRows: -1, canExport: true, canViewContractors: true, contractorAccess: true, tenderPct: 1 },
+  // Legacy alias (grandfathered accounts) — same access as the top tier.
+  professional: { maxTenders: -1, maxContractors: -1, maxAwards: -1, maxProjects: -1, exportRows: -1, canExport: true, canViewContractors: true, contractorAccess: true, tenderPct: 1 }
 };
+
+// Effective tender cap for a plan: either a fixed number, or a percentage of the
+// total available tenders (rounded up). Returns -1 when unlimited.
+export function effectiveTenderLimit(limits, availableTotal) {
+  if (!limits) return -1;
+  if (limits.tenderPct != null && limits.tenderPct < 1) {
+    return Math.max(1, Math.ceil(availableTotal * limits.tenderPct));
+  }
+  return limits.maxTenders;
+}
 
 export function getPlanLimits(subscription, userEmail) {
   if (userEmail && isAdmin(userEmail)) return PLAN_LIMITS.enterprise;

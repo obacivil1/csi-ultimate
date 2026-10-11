@@ -119,6 +119,7 @@
     <div class="stat-item"><h3 id="statConstruction">...</h3><p>منافسة تشييد 🔥</p></div>
     <div class="stat-item"><h3 id="statExpiring">...</h3><p>تنتهي خلال 7 أيام</p></div>
     <div class="stat-item"><h3 id="statContractors">...</h3><p>مقاول مصنّف</p></div>
+    <div class="stat-item"><h3 id="statUpdated" style="font-size:0.9em;">...</h3><p>آخر تحديث للبيانات</p></div>
   </div>
 </div>
 
@@ -220,45 +221,48 @@
     </div>
     <div class="pricing-grid">
       <div class="pricing-card">
-        <h3>🎁 تجربة مجانية</h3>
+        <h3>🎁 التجربة المجانية</h3>
         <div class="price">0 <span>ريال</span></div>
         <ul>
           <li>50 منافسة حكومية</li>
           <li>100 مقاول مع بيانات التواصل</li>
           <li>ملف Excel مجاني</li>
-          <li>7 أيام صلاحية</li>
-          <li>تقييم الجودة قبل الشراء</li>
+          <li>صلاحية 7 أيام</li>
+          <li>بدون بطاقة ائتمان</li>
         </ul>
         <button class="btn" onclick="showModal('registerModal')">ابدأ التجربة</button>
       </div>
       <div class="pricing-card featured">
         <div class="popular">الأكثر طلباً</div>
-        <h3>🚀 الباقة الاحترافية</h3>
-        <div class="price">1,199 <span>ريال/شهر</span></div>
-        <div style="font-size:0.85em;color:var(--success);font-weight:700;margin:-5px 0 10px;">💡 السنوي: 9,999 ريال/سنة (وفر 4,389)</div>
+        <h3>🥈 الباقة الأساسية</h3>
+        <div class="price">999 <span>ريال/شهر</span></div>
         <ul>
-          <li>جميع المنافسات النشطة (<span id="pricingTenders">—</span>)</li>
-          <li>جميع المقاولين (<span id="pricingContractors">—</span>)</li>
-          <li>أرقام جوالات وإيميلات</li>
-          <li>فلترة التشييد والمقاولات</li>
+          <li>30% من المناقصات النشطة (<span id="pricingBasicCount">—</span>)</li>
+          <li>أرقام وبيانات المقاولين</li>
+          <li>فلترة حسب النشاط والجهة</li>
+          <li>تنبيهات المناقصات العاجلة</li>
           <li>تحديث أسبوعي</li>
-          <li>تنبيهات المنافسات العاجلة</li>
           <li>دعم فني مباشر</li>
         </ul>
-        <button class="btn" onclick="showModal('registerModal')">ابدأ الاشتراك</button>
+        <div class="plan-cta">
+          <button class="btn plan-cta-btn" onclick="subscribePlan('basic')">اشترك الآن — PayPal / بطاقة</button>
+          <div class="plan-paypal" id="payPal-basic" style="display:none;margin-top:10px;"></div>
+        </div>
       </div>
       <div class="pricing-card">
-        <h3>🏢 الباقة الشاملة</h3>
-        <div class="price" style="font-size:1.6em;">تواصل معنا</div>
+        <h3>🥇 الباقة الشاملة</h3>
+        <div class="price">1,999 <span>ريال/شهر</span></div>
         <ul>
-          <li>كل مزايا الباقة الاحترافية</li>
-          <li>تحديث يومي</li>
-          <li>API للتكامل مع أنظمتك</li>
-          <li>تقارير مخصصة حسب الطلب</li>
-          <li>استشارات تحليل بيانات</li>
-          <li>حسابات فريق (5 مستخدمين)</li>
+          <li>100% من جميع المناقصات (النشطة والحكومية)</li>
+          <li>كل مزايا الباقة الأساسية</li>
+          <li>تحديث يومي آلي</li>
+          <li>تصدير Excel غير محدود</li>
+          <li>دعم فني مباشر</li>
         </ul>
-        <button class="btn" onclick="showModal('registerModal')">تواصل معنا</button>
+        <div class="plan-cta">
+          <button class="btn plan-cta-btn" onclick="subscribePlan('enterprise')">اشترك الآن — PayPal / بطاقة</button>
+          <div class="plan-paypal" id="payPal-enterprise" style="display:none;margin-top:10px;"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -270,7 +274,7 @@
   <p style="font-size:1.1em;opacity:0.9;margin-top:10px;">بدون بطاقة ائتمان — جرب واحكم بنفسك</p>
   <button class="btn" onclick="showModal('registerModal')">📥 ابدأ الفترة المجانية</button>
   <div class="contact-row">
-    <span>📧 البريد: obacivil1@gmail.com</span>
+    <span>✉️ <a href="/contact" style="color:inherit;">تواصل معنا</a></span>
     <span>🌐 csi-ultimate.onrender.com</span>
   </div>
 </div>
@@ -278,7 +282,7 @@
 <footer>
   <p>© 2026 منصة المنافسات والمقاولين السعودية — جميع الحقوق محفوظة</p>
   <p style="margin-top:5px;">مصادر البيانات: منصة اعتماد (tenders.etimad.sa) | موقع مقاول (muqawil.org)</p>
-  <p style="margin-top:5px;font-size:0.8em;">تواصل: <a href="mailto:obacivil1@gmail.com" style="color:#ddd;">obacivil1@gmail.com</a></p>
+  <p style="margin-top:5px;font-size:0.8em;">تواصل: <a href="/contact" style="color:#ddd;">صفحة تواصل معنا</a></p>
 </footer>
 
 <script>
@@ -402,7 +406,7 @@ async function handleRegister(e) {
   closeModal('registerModal');
   showToast('✅ تم التسجيل! الفترة المجانية 7 أيام', 'success');
   updateAuthUI(res.user);
-  setTimeout(() => window.location.href = '/dashboard.html', 1500);
+  setTimeout(() => window.location.href = pendingPlan ? ('/dashboard.html?plan=' + pendingPlan) : '/dashboard.html', 1500);
 }
 
 async function handleLogout() {
@@ -441,10 +445,13 @@ async function updateAuthUI(user) {
     const contStats = await API.get('/api/contractors/stats');
     animateNumber('statContractors', contStats.total || 0);
 
-    const pricingTenders = document.getElementById('pricingTenders');
-    if (pricingTenders) animateNumber('pricingTenders', stats.active || 0);
-    const pricingContractors = document.getElementById('pricingContractors');
-    if (pricingContractors) animateNumber('pricingContractors', contStats.total || 0);
+    const basicCount = document.getElementById('pricingBasicCount');
+    if (basicCount) animateNumber('pricingBasicCount', Math.ceil((stats.active || 0) * 0.30));
+
+    const upd = document.getElementById('statUpdated');
+    if (upd && stats.lastUpdated) {
+      upd.textContent = new Date(stats.lastUpdated).toLocaleDateString('ar-SA', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
   } catch(e) {
     document.querySelectorAll('.stat-item h3').forEach(el => el.textContent = '—');
   }
@@ -501,6 +508,54 @@ function debounceSearch() {
   _searchTimer = setTimeout(loadSampleTenders, 300);
 }
 loadSampleTenders();
+
+// ── Inline plan payment (subscribe directly under each package) ──
+let currentUser = null, pendingPlan = null;
+async function initPlanPayments() {
+  try { const r = await API.get('/api/auth/me'); currentUser = r.user; } catch {}
+  if (!currentUser) return; // anonymous users register first, then pay on /dashboard
+  try {
+    const cfg = await API.get('/api/payments/config');
+    if (!cfg || !cfg.configured) return;
+    await loadPayPalSdk(cfg.clientId);
+    ['basic', 'enterprise'].forEach(renderInlinePayPal);
+    document.querySelectorAll('.plan-cta-btn').forEach(b => b.style.display = 'none');
+  } catch {}
+}
+function loadPayPalSdk(clientId) {
+  if (window.paypal) return Promise.resolve();
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://www.paypal.com/sdk/js?client-id=' + clientId + '&currency=USD';
+    s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+function renderInlinePayPal(planId) {
+  const el = document.getElementById('payPal-' + planId);
+  if (!el || !window.paypal) return;
+  el.style.display = 'block';
+  window.paypal.Buttons({
+    style: { layout: 'vertical', label: 'subscribe' },
+    createOrder: async () => {
+      const r = await API.post('/api/payments/create-order', { planId });
+      if (r.error) { showToast('❌ ' + r.error, 'error'); throw new Error(r.error); }
+      return r.orderId;
+    },
+    onApprove: async (data) => {
+      const r = await API.post('/api/payments/capture-order', { orderId: data.orderID, planId });
+      if (r.success) { showToast('✅ ' + r.message, 'success'); setTimeout(() => location.href = '/dashboard.html', 1500); }
+      else showToast('❌ ' + (r.error || 'فشل الدفع'), 'error');
+    },
+    onError: () => showToast('❌ حدث خطأ في PayPal', 'error')
+  }).render('#payPal-' + planId);
+}
+function subscribePlan(planId) {
+  if (currentUser) { window.location.href = '/dashboard.html?plan=' + planId; return; }
+  pendingPlan = planId;
+  showModal('registerModal');
+}
+initPlanPayments();
 
 // ── Theme ──
 (function() {

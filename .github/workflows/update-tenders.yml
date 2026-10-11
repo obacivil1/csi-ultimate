@@ -40,6 +40,12 @@ jobs:
       - name: بناء قاعدة بيانات المشاريع
         run: node scripts/lead-gen/build-projects-database.mjs
 
+      # Fail loudly if the update produced no (or nearly no) data — an empty
+      # dataset would otherwise "succeed" silently and leave the site stale.
+      - name: فحص صحة البيانات
+        run: |
+          node -e "const d=require('./data/etimad_all_tenders.json'); if(!Array.isArray(d)||d.length<1000){ console.error('البيانات فارغة أو ناقصة: '+(Array.isArray(d)?d.length:'غير مصفوفة')); process.exit(1);} console.log('البيانات سليمة: '+d.length+' منافسة');"
+
       - name: رفع التحديثات
         run: |
           git config user.name 'CSI Bot'

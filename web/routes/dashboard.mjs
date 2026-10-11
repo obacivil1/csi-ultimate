@@ -97,9 +97,9 @@ dashboardRouter.get('/summary', authenticate, (req, res) => {
     features: {
       canViewTenders: true,
       canViewContractors: ['basic', 'professional', 'enterprise', 'trial'].includes(subscription),
-      canExport: ['professional', 'enterprise'].includes(subscription),
+      canExport: ['basic', 'professional', 'enterprise'].includes(subscription),
       canUseAPI: ['enterprise'].includes(subscription),
-      maxExport: subscription === 'trial' ? 50 : subscription === 'basic' ? 200 : -1
+      maxExport: subscription === 'trial' ? 50 : subscription === 'basic' ? 1000 : -1
     }
   });
 });

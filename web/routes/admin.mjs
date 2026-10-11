@@ -27,6 +27,13 @@ adminRouter.get('/stats', authenticate, (req, res) => {
   const users = loadUsers();
   const byPlan = { trial: 0, basic: 0, professional: 0, enterprise: 0, expired: 0 };
   for (const u of users) byPlan[u.subscription] = (byPlan[u.subscription] || 0) + 1;
+  // Subscribers grouped by the packages shown on the site (free = trial).
+  const subscribers = {
+    free: byPlan.trial || 0,
+    basic: byPlan.basic || 0,
+    enterprise: byPlan.enterprise || 0,
+    legacy: byPlan.professional || 0,
+  };
   const msgs = loadMessages();
   const recentSignups = users
     .map(({ password, ...u }) => u)
@@ -38,6 +45,7 @@ adminRouter.get('/stats', authenticate, (req, res) => {
     trialUsers: byPlan.trial || 0,
     expiredUsers: byPlan.expired || 0,
     byPlan,
+    subscribers,
     totalMessages: msgs.length,
     unreadMessages: msgs.filter(m => !m.read).length,
     recentSignups
