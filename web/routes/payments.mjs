@@ -30,6 +30,15 @@ const PLANS = {
     limit: { dailyTenders: -1, exportRows: -1, contractorAccess: true, apiAccess: true, maxUsers: 5 } }
 };
 
+// Each paid capture grants a 30-day window (manual monthly pass). There is no
+// auto-renewal; the subscription is enforced to expire by auth.mjs.
+const SUBSCRIPTION_DAYS = 30;
+function computeSubscriptionEnd() {
+  const d = new Date();
+  d.setDate(d.getDate() + SUBSCRIPTION_DAYS);
+  return d.toISOString();
+}
+
 async function getPayPalToken() {
   const auth = Buffer.from(PAYPAL_CLIENT_ID + ':' + PAYPAL_CLIENT_SECRET).toString('base64');
   const r = await fetch(PAYPAL_API + '/v1/oauth2/token', {
@@ -159,6 +168,7 @@ paymentsRouter.post('/capture-order', async (req, res) => {
       if (!isAdmin(decoded.email)) return res.status(403).json({ error: 'غير مصرح' });
       users[idx].subscription = requestedPlan.id;
       users[idx].subscriptionStart = new Date().toISOString();
+      users[idx].subscriptionEnd = computeSubscriptionEnd();
       users[idx].paypalSubscriptionId = orderId;
       saveUsers(users);
       return res.json({ success: true, message: 'تم تفعيل الاشتراك (اختبار الأدمن)', subscription: requestedPlan.id, plan: requestedPlan.name });
@@ -199,6 +209,7 @@ paymentsRouter.post('/capture-order', async (req, res) => {
 
     users[idx].subscription = paidPlan.id;
     users[idx].subscriptionStart = new Date().toISOString();
+    users[idx].subscriptionEnd = computeSubscriptionEnd();
     users[idx].paypalSubscriptionId = orderId;
     saveUsers(users);
 
@@ -269,6 +280,7 @@ paymentsRouter.post('/paypal-webhook', async (req, res) => {
         if (plan && resource.amount?.currency_code === 'USD' && Number.isFinite(paid) && Math.abs(paid - plan.priceUSD) <= 0.01) {
           users[idx].subscription = plan.id;
           users[idx].subscriptionStart = new Date().toISOString();
+          users[idx].subscriptionEnd = computeSubscriptionEnd();
           saveUsers(users);
           logger.info('webhook activated subscription', { email: users[idx].email, plan: plan.id });
         } else {

@@ -21,6 +21,33 @@ export function saveUsers(users) {
   invalidate('users');
 }
 
+const PAID_PLANS = ['basic', 'professional', 'enterprise'];
+const DAY_MS = 1000 * 60 * 60 * 24;
+
+// Downgrades expired trials/paid passes to 'expired' and exposes the remaining
+// days on the user object. Paid subscriptions carry an explicit subscriptionEnd
+// (set on capture); trials are always 7 days from trialStart.
+export function normalizeSubscription(user, users) {
+  if (user.subscription === 'trial') {
+    const trialEnd = new Date(user.trialStart);
+    trialEnd.setDate(trialEnd.getDate() + 7);
+    if (new Date() > trialEnd) {
+      user.subscription = 'expired';
+      saveUsers(users);
+    } else {
+      user.trialDaysLeft = Math.max(0, Math.ceil((trialEnd - new Date()) / DAY_MS));
+    }
+  } else if (PAID_PLANS.includes(user.subscription) && user.subscriptionEnd) {
+    const end = new Date(user.subscriptionEnd);
+    if (new Date() > end) {
+      user.subscription = 'expired';
+      saveUsers(users);
+    } else {
+      user.subscriptionDaysLeft = Math.max(0, Math.ceil((end - new Date()) / DAY_MS));
+    }
+  }
+}
+
 export function authenticate(req, res, next) {
   const token = req.cookies?.token || req.headers?.authorization?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'تسجيل الدخول مطلوب' });
@@ -31,17 +58,8 @@ export function authenticate(req, res, next) {
     req.user = users.find(u => u.id === decoded.id);
     if (!req.user) return res.status(401).json({ error: 'المستخدم غير موجود' });
 
-    // Check subscription
-    if (req.user.subscription === 'trial') {
-      const trialEnd = new Date(req.user.trialStart);
-      trialEnd.setDate(trialEnd.getDate() + 7);
-      if (new Date() > trialEnd) {
-        req.user.subscription = 'expired';
-        saveUsers(users);
-      } else {
-        req.user.trialDaysLeft = Math.max(0, Math.ceil((trialEnd - new Date()) / (1000 * 60 * 60 * 24)));
-      }
-    }
+    // Check subscription (trial window or paid 30-day pass)
+    normalizeSubscription(req.user, users);
 
     next();
   } catch(e) {
@@ -60,7 +78,7 @@ export function optionalAuth(req, res, next) {
     const decoded = jwt.verify(token, JWT_SECRET);
     const users = loadUsers();
     const user = users.find(u => u.id === decoded.id);
-    if (user) req.user = user;
+    if (user) { normalizeSubscription(user, users); req.user = user; }
   } catch {}
   next();
 }

@@ -474,7 +474,8 @@ async function checkAuth() {
     document.getElementById('subBanner').style.display = 'block';
     document.getElementById('trialText').textContent = 'انتهت الفترة التجريبية. اشترك الآن للاستمرار!';
   } else {
-    badge.textContent = u.subscription === 'professional' ? 'احترافية' : u.subscription === 'basic' ? 'أساسية' : 'شاملة';
+    const planLabel = u.subscription === 'professional' ? 'احترافية' : u.subscription === 'basic' ? 'أساسية' : 'شاملة';
+    badge.textContent = u.subscriptionDaysLeft > 0 ? `${planLabel} (باقي ${u.subscriptionDaysLeft} يوم)` : planLabel;
     badge.className = 'sub-badge';
   }
 
@@ -487,11 +488,15 @@ async function checkAuth() {
     : u.subscription === 'basic' ? 'الباقة الأساسية'
     : u.subscription === 'professional' ? 'الباقة الاحترافية'
     : u.subscription === 'enterprise' ? 'الباقة الشاملة' : u.subscription;
+  if (['basic','professional','enterprise'].includes(u.subscription) && u.subscriptionDaysLeft > 0) {
+    document.getElementById('accPlan').textContent += ` — تنتهي خلال ${u.subscriptionDaysLeft} يوم`;
+  }
 
-  if (['trial','expired','basic'].includes(u.subscription)) {
-    document.getElementById('upgradeBtn').style.display = 'block';
-  } else {
+  // Paid plans can also renew (non-enterprise); expired users must subscribe.
+  if (u.subscription === 'enterprise') {
     document.getElementById('upgradeBtn').style.display = 'none';
+  } else {
+    document.getElementById('upgradeBtn').style.display = 'block';
   }
 
   // Admin panel

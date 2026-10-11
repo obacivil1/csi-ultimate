@@ -2,7 +2,7 @@ import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import bcrypt from 'bcrypt';
-import { loadUsers, saveUsers, JWT_SECRET, getPlanLimits } from '../middleware/auth.mjs';
+import { loadUsers, saveUsers, JWT_SECRET, getPlanLimits, normalizeSubscription } from '../middleware/auth.mjs';
 import { env } from '../../config/env.mjs';
 import { isTurnstileConfigured, verifyTurnstile } from '../../core/turnstile.mjs';
 
@@ -113,19 +113,16 @@ authRouter.post('/login', requireTurnstile, async (req, res) => {
 
   const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
 
-  let trialDaysLeft = 0;
-  if (user.subscription === 'trial') {
-    const trialEnd = new Date(user.trialStart);
-    trialEnd.setDate(trialEnd.getDate() + 7);
-    trialDaysLeft = Math.max(0, Math.ceil((trialEnd - new Date()) / (1000 * 60 * 60 * 24)));
-  }
+  normalizeSubscription(user, users);
 
   res.cookie('token', token, authCookieOptions());
   res.json({
     token, user: {
       id: user.id, name: user.name, email: user.email,
       company: user.company, phone: user.phone,
-      subscription: user.subscription, trialDaysLeft
+      subscription: user.subscription,
+      trialDaysLeft: user.trialDaysLeft || 0,
+      subscriptionDaysLeft: user.subscriptionDaysLeft || 0
     }
   });
 });
@@ -141,18 +138,16 @@ authRouter.get('/me', (req, res) => {
     const user = users.find(u => u.id === decoded.id);
     if (!user) return res.json({ user: null });
 
-    let trialDaysLeft = 0;
-    if (user.subscription === 'trial') {
-      const trialEnd = new Date(user.trialStart);
-      trialEnd.setDate(trialEnd.getDate() + 7);
-      trialDaysLeft = Math.max(0, Math.ceil((trialEnd - new Date()) / (1000 * 60 * 60 * 24)));
-    }
+    normalizeSubscription(user, users);
 
     res.json({
       user: {
         id: user.id, name: user.name, email: user.email,
         company: user.company, phone: user.phone,
-        subscription: user.subscription, trialDaysLeft,
+        subscription: user.subscription,
+        trialDaysLeft: user.trialDaysLeft || 0,
+        subscriptionDaysLeft: user.subscriptionDaysLeft || 0,
+        subscriptionEnd: user.subscriptionEnd || null,
         planLimits: getPlanLimits(user.subscription, user.email)
       }
     });

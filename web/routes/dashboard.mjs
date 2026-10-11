@@ -80,7 +80,7 @@ function computeAnalytics(tenders) {
 
 // GET /api/dashboard/summary - Main dashboard stats
 dashboardRouter.get('/summary', authenticate, (req, res) => {
-  const { subscription, trialDaysLeft } = req.user;
+  const { subscription, trialDaysLeft, subscriptionDaysLeft } = req.user;
 
   res.json({
     user: {
@@ -89,6 +89,7 @@ dashboardRouter.get('/summary', authenticate, (req, res) => {
       company: req.user.company,
       subscription,
       trialDaysLeft: trialDaysLeft || 0,
+      subscriptionDaysLeft: subscriptionDaysLeft || 0,
       isActive: ['basic', 'professional', 'enterprise', 'trial'].includes(subscription),
       isTrial: subscription === 'trial',
       isExpired: subscription === 'expired'
