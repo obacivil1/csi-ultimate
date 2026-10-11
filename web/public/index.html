@@ -25,11 +25,6 @@
 .spinner-lg { width:40px;height:40px;border:4px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.6s linear infinite; }
 @keyframes spin { to { transform:rotate(360deg); } }
 .plan-pp-wrap { display:flex;flex-direction:column;gap:10px;margin-top:12px; }
-.plan-pay-btn { display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px 10px;border-radius:8px;border:2px solid #003087;background:#fff;color:#003087;font-family:inherit;font-size:0.9em;font-weight:700;cursor:pointer;transition:transform .15s, box-shadow .15s; }
-.plan-pay-btn:hover { transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,48,135,.18); }
-.plan-pay-btn.card { border:2px solid #E60000;color:#E60000; }
-.plan-pay-btn .pay-ico { font-size:1.3em;line-height:1; }
-.plan-pay-btn .paypal-ico { background:#003087;color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:0.8em;font-weight:900; }
 .plan-pp { text-align:center; }
 .plan-pp .paypal-buttons, .plan-pp paypal > * { margin:0 auto; }
 </style>
@@ -255,10 +250,8 @@
         </ul>
         <div class="plan-cta">
           <div class="plan-pp-wrap">
-            <div class="plan-pp" id="pp-basic"></div>
-            <button class="plan-pay-btn" id="paybtn-basic" onclick="payPlan('basic','paypal')"><span class="pay-ico paypal-ico">P</span>&nbsp;الاشتراك عبر PayPal</button>
-            <div class="plan-pp" id="ppcard-basic"></div>
-            <button class="plan-pay-btn card" id="cardbtn-basic" onclick="payPlan('basic','card')"><span class="pay-ico">💳</span>&nbsp;الدفع بالبطاقة البنكية</button>
+            <div class="plan-pp" id="pp-basic" style="min-height:45px;"></div>
+            <div class="plan-pp" id="ppcard-basic" style="min-height:45px;"></div>
           </div>
         </div>
       </div>
@@ -274,10 +267,8 @@
         </ul>
         <div class="plan-cta">
           <div class="plan-pp-wrap">
-            <div class="plan-pp" id="pp-enterprise"></div>
-            <button class="plan-pay-btn" id="paybtn-enterprise" onclick="payPlan('enterprise','paypal')"><span class="pay-ico paypal-ico">P</span>&nbsp;الاشتراك عبر PayPal</button>
-            <div class="plan-pp" id="ppcard-enterprise"></div>
-            <button class="plan-pay-btn card" id="cardbtn-enterprise" onclick="payPlan('enterprise','card')"><span class="pay-ico">💳</span>&nbsp;الدفع بالبطاقة البنكية</button>
+            <div class="plan-pp" id="pp-enterprise" style="min-height:45px;"></div>
+            <div class="plan-pp" id="ppcard-enterprise" style="min-height:45px;"></div>
           </div>
         </div>
       </div>
@@ -527,11 +518,10 @@ function debounceSearch() {
 }
 loadSampleTenders();
 
-// ── Inline plan payment: PayPal + bank card directly under each paid package ──
+// ── Official PayPal + card buttons under each paid package (rendered by PayPal SDK) ──
 let currentUser = null, pendingPlan = null;
 async function initPlanPayments() {
   try { const r = await API.get('/api/auth/me'); currentUser = r.user; } catch {}
-  if (!currentUser) return; // anonymous → checkout registration first, then direct payment
   try {
     const cfg = await API.get('/api/payments/config');
     if (!cfg || !cfg.configured) return;
@@ -548,12 +538,14 @@ function loadPayPalSdk(clientId) {
     document.head.appendChild(s);
   });
 }
-function renderInlinePayPal(planId) {
-  const el = document.getElementById('pp-' + planId), cardEl = document.getElementById('ppcard-' + planId);
-  const btn = document.getElementById('paybtn-' + planId), cardBtn = document.getElementById('cardbtn-' + planId);
-  if (!el || !window.paypal) return;
-  const opts = {
-    style: { layout: 'vertical', shape: 'rect' },
+function payPalOrderCtx(planId) {
+  return {
+    onClick: (data, actions) => {
+      if (currentUser) return actions.continue();
+      openRegisterFor('paid', planId);
+      showToast('سجّل حسابك لإتمام الدفع في ' + (planId === 'enterprise' ? 'الباقة الشاملة' : 'الباقة الأساسية'), 'info');
+      return actions.reject();
+    },
     createOrder: async () => {
       const r = await API.post('/api/payments/create-order', { planId });
       if (r.error) { showToast('❌ ' + r.error, 'error'); throw new Error(r.error); }
@@ -566,15 +558,19 @@ function renderInlinePayPal(planId) {
     },
     onError: () => showToast('❌ حدث خطأ في PayPal', 'error')
   };
-  const orderCtx = { createOrder: opts.createOrder, onApprove: opts.onApprove, onError: opts.onError };
-  window.paypal.Buttons(Object.assign({ style: { layout: 'vertical', label: 'paypal' } }, orderCtx)).render(el);
+}
+function renderInlinePayPal(planId) {
+  const el = document.getElementById('pp-' + planId), cardEl = document.getElementById('ppcard-' + planId);
+  if (!el || !window.paypal) return;
+  const ctx = payPalOrderCtx(planId);
   if (cardEl) {
     try {
-      window.paypal.Buttons(Object.assign({ fundingSource: 'card', style: { layout: 'vertical', label: 'card' } }, orderCtx)).render(cardEl);
+      window.paypal.Buttons(Object.assign({ fundingSource: 'card', style: { layout: 'vertical', label: 'card' } }, ctx)).render(cardEl);
+      cardEl.style.display = 'block';
     } catch {}
   }
-  if (btn) btn.style.display = 'none';
-  if (cardBtn) cardBtn.style.display = 'none';
+  window.paypal.Buttons(Object.assign({ style: { layout: 'vertical', label: 'paypal' } }, ctx)).render(el);
+  el.style.display = 'block';
 }
 function openRegisterFor(mode, planId) {
   pendingPlan = mode === 'paid' ? planId : null;
@@ -598,10 +594,6 @@ function openRegisterFor(mode, planId) {
     s.querySelector('a').textContent = 'سجّل الآن مجاناً';
   }
   showModal('registerModal');
-}
-function payPlan(planId, method) {
-  if (currentUser) { window.location.href = '/dashboard.html?plan=' + planId; return; }
-  openRegisterFor('paid', planId);
 }
 initPlanPayments();
 
