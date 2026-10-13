@@ -52,7 +52,7 @@ const cspDirectives = {
   defaultSrc: ["'self'"],
   scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://www.paypal.com', 'https://www.paypalobjects.com', 'https://www.sandbox.paypal.com', 'https://www.googletagmanager.com', 'https://challenges.cloudflare.com'],
   scriptSrcAttr: ["'unsafe-inline'"],
-  styleSrc: ["'self'", "'unsafe-inline'"],
+  styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
   imgSrc: ["'self'", 'data:', 'https:'],
   fontSrc: ["'self'", 'https:', 'data:'],
   connectSrc: ["'self'", 'https://www.google-analytics.com', 'https://www.paypal.com', 'https://www.paypalobjects.com', 'https://api-m.paypal.com', 'https://api-m.sandbox.paypal.com', 'https://www.sandbox.paypal.com', 'https://challenges.cloudflare.com'],

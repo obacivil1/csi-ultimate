@@ -542,7 +542,7 @@ function loadPayPalSdk(clientId) {
 function payPalOrderCtx(planId) {
   return {
     onClick: (data, actions) => {
-      if (currentUser) return actions.continue();
+      if (currentUser) return actions.resolve();
       openRegisterFor('paid', planId);
       showToast('سجّل حسابك لإتمام الدفع في ' + (planId === 'enterprise' ? 'الباقة الشاملة' : 'الباقة الأساسية'), 'info');
       return actions.reject();
