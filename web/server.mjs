@@ -55,7 +55,7 @@ const cspDirectives = {
   styleSrc: ["'self'", "'unsafe-inline'"],
   imgSrc: ["'self'", 'data:', 'https:'],
   fontSrc: ["'self'", 'https:', 'data:'],
-  connectSrc: ["'self'", 'https://www.google-analytics.com', 'https://api-m.paypal.com', 'https://api-m.sandbox.paypal.com', 'https://challenges.cloudflare.com'],
+  connectSrc: ["'self'", 'https://www.google-analytics.com', 'https://www.paypal.com', 'https://www.paypalobjects.com', 'https://api-m.paypal.com', 'https://api-m.sandbox.paypal.com', 'https://www.sandbox.paypal.com', 'https://challenges.cloudflare.com'],
   frameSrc: ["'self'", 'https://www.paypal.com', 'https://www.paypalobjects.com', 'https://www.sandbox.paypal.com', 'https://challenges.cloudflare.com'],
   objectSrc: ["'none'"],
   baseUri: ["'self'"],
