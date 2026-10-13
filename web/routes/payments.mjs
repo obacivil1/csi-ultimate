@@ -44,7 +44,12 @@ async function getPayPalToken() {
     body: 'grant_type=client_credentials'
   });
   const d = await r.json();
-  if (!d.access_token) throw new Error('فشل الحصول على توكن PayPal');
+  if (!d.access_token) {
+    // Surface PayPal's own reason (e.g. invalid_client) for debugging without
+    // leaking the secret. Common cause: sandbox creds used against the live API.
+    const reason = d.error_description || d.error || ('HTTP ' + r.status);
+    throw new Error(`PayPal auth failed (sandbox=${PAYPAL_SANDBOX}): ${reason}`);
+  }
   return d.access_token;
 }
 
