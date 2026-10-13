@@ -86,6 +86,8 @@ paymentsRouter.get('/plans', (req, res) => {
 
 paymentsRouter.get('/config', (req, res) => {
   const configured = !!(PAYPAL_CLIENT_ID && PAYPAL_CLIENT_SECRET);
+  // Never cache: the browser must always get the current client id after an env change.
+  res.set('Cache-Control', 'no-store');
   // clientId is a public identifier (safe to expose); the secret never leaves the server.
   res.json({
     configured,
