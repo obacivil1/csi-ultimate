@@ -358,6 +358,13 @@
     <p id="selectedPlan" style="text-align:center;color:#666;margin-bottom:15px;">اختر الباقة المناسبة</p>
     <div id="paypalButton" style="text-align:center;"></div>
     <div id="cardButton" style="text-align:center;margin-top:10px;"></div>
+    <div id="adminCouponBox" style="display:none;margin-top:14px;border-top:1px dashed #ccc;padding-top:12px;">
+      <p style="font-size:0.85em;color:#666;margin-bottom:6px;">👑 كود خصم الأدمن (100%) — لاختبار الشراء بدون دفع</p>
+      <div style="display:flex;gap:8px;justify-content:center;">
+        <input id="adminCouponInput" type="text" placeholder="ADMIN100" style="padding:8px;border:1px solid #ccc;border-radius:6px;width:170px;text-align:center;">
+        <button class="btn" onclick="redeemAdminCoupon()" style="background:#1F3864;">تفعيل مجاناً</button>
+      </div>
+    </div>
     <p style="text-align:center;color:#888;font-size:0.8em;margin-top:10px;">🔒 الدفع عبر PayPal أو البطاقة البنكية — معلوماتك آمنة</p>
   </div>
 </div>
@@ -492,6 +499,8 @@ async function checkAuth() {
   // Admin panel
   const isAdminUser = u.email === 'obacivil@gmail.com';
   if (isAdminUser) {
+    const couponBox = document.getElementById('adminCouponBox');
+    if (couponBox) couponBox.style.display = 'block';
     const tabsEl = document.querySelector('.dash-tabs .container');
     const adminTab = document.createElement('div');
     adminTab.className = 'dash-tab';
@@ -1199,6 +1208,28 @@ function renderPayPalBtn(planId) {
     try {
       paypal.Buttons(Object.assign({ fundingSource: 'card', style: { layout: 'vertical', label: 'card' } }, orderCtx)).render(cardEl);
     } catch {}
+  }
+}
+
+async function redeemAdminCoupon() {
+  const code = (document.getElementById('adminCouponInput').value || '').trim();
+  if (!code) { showToast('اكتب كود الخصم أولاً', 'error'); return; }
+  const btn = document.querySelector('#adminCouponBox .btn');
+  const original = btn.textContent;
+  btn.disabled = true; btn.textContent = 'جارٍ التفعيل...';
+  try {
+    const r = await API.post('/api/payments/redeem-coupon', { code, planId: selectedPlanId });
+    if (r.success) {
+      closeModal('upgradeModal');
+      showToast('✅ ' + r.message, 'success');
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      showToast('❌ ' + (r.error || 'فشل تطبيق الكود'), 'error');
+      btn.disabled = false; btn.textContent = original;
+    }
+  } catch {
+    showToast('❌ فشل تطبيق الكود', 'error');
+    btn.disabled = false; btn.textContent = original;
   }
 }
 

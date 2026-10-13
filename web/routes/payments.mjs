@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
-import { loadUsers, saveUsers, JWT_SECRET, isAdmin } from '../middleware/auth.mjs';
+import { loadUsers, saveUsers, JWT_SECRET, isAdmin, authenticate } from '../middleware/auth.mjs';
 import { logger } from '../../core/logger.mjs';
 import { env } from '../../config/env.mjs';
 
@@ -220,6 +220,40 @@ paymentsRouter.post('/capture-order', async (req, res) => {
     logger.error('capture-order failed', { error: e.message });
     res.status(500).json({ error: 'فشل تأكيد الدفع' });
   }
+});
+
+// Admin-only 100% discount coupon: activates a plan instantly with no payment so
+// the full upgrade/purchase path can be exercised in production. The code is a
+// server-side secret (ADMIN_DISCOUNT_CODE, default ADMIN100) and the email must be
+// an admin — a normal user can never redeem it.
+const ADMIN_COUPON = (process.env.ADMIN_DISCOUNT_CODE || 'ADMIN100').trim().toUpperCase();
+
+paymentsRouter.post('/redeem-coupon', authenticate, (req, res) => {
+  if (!isAdmin(req.user?.email)) return res.status(403).json({ error: 'هذا الكود خاص بالأدمن' });
+  const { code, planId } = req.body || {};
+  const plan = PLANS[planId];
+  if (!plan) return res.status(400).json({ error: 'باقة غير صالحة' });
+  if (typeof code !== 'string' || code.trim().toUpperCase() !== ADMIN_COUPON) {
+    return res.status(400).json({ error: 'كود الخصم غير صحيح' });
+  }
+
+  const users = loadUsers();
+  const idx = users.findIndex(u => u.id === req.user.id);
+  if (idx === -1) return res.status(404).json({ error: 'المستخدم غير موجود' });
+
+  users[idx].subscription = plan.id;
+  users[idx].subscriptionStart = new Date().toISOString();
+  users[idx].subscriptionEnd = computeSubscriptionEnd();
+  users[idx].paypalSubscriptionId = 'COUPON-' + Date.now();
+  users[idx].couponCode = ADMIN_COUPON;
+  saveUsers(users);
+
+  logger.info('coupon activated subscription', { email: users[idx].email, plan: plan.id });
+  res.json({
+    success: true,
+    message: 'تم تفعيل ' + plan.name + ' بخصم 100% (اختبار الأدمن)',
+    subscription: plan.id, plan: plan.name, subscriptionEnd: users[idx].subscriptionEnd,
+  });
 });
 
 // PayPal webhook — authenticity is verified server-side against PayPal's own

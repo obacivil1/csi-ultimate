@@ -2,7 +2,7 @@ import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import bcrypt from 'bcrypt';
-import { loadUsers, saveUsers, JWT_SECRET, getPlanLimits, normalizeSubscription } from '../middleware/auth.mjs';
+import { loadUsers, saveUsers, JWT_SECRET, getPlanLimits, normalizeSubscription, isAdmin } from '../middleware/auth.mjs';
 import { env } from '../../config/env.mjs';
 import { isTurnstileConfigured, verifyTurnstile } from '../../core/turnstile.mjs';
 
@@ -156,6 +156,7 @@ authRouter.get('/me', (req, res) => {
         trialDaysLeft: user.trialDaysLeft || 0,
         subscriptionDaysLeft: user.subscriptionDaysLeft || 0,
         subscriptionEnd: user.subscriptionEnd || null,
+        isAdmin: isAdmin(user.email),
         planLimits: getPlanLimits(user.subscription, user.email)
       }
     });
