@@ -557,7 +557,7 @@ function payPalOrderCtx(planId) {
       if (r.success) { showToast('✅ ' + r.message, 'success'); setTimeout(() => location.href = '/dashboard.html', 1500); }
       else showToast('❌ ' + (r.error || 'فشل الدفع'), 'error');
     },
-    onError: () => showToast('❌ حدث خطأ في PayPal', 'error')
+    onError: (err) => { console.error('PayPal onError:', err); showToast('❌ ' + ((err && err.message) ? err.message : 'حدث خطأ في PayPal'), 'error') }
   };
 }
 function renderInlinePayPal(planId) {

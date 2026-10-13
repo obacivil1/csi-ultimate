@@ -1200,7 +1200,7 @@ function renderPayPalBtn(planId) {
         showToast('❌ ' + (r.error || 'فشل الدفع'), 'error');
       }
     },
-    onError: () => showToast('❌ حدث خطأ في PayPal', 'error')
+    onError: (err) => { console.error('PayPal onError:', err); showToast('❌ ' + ((err && err.message) ? err.message : 'حدث خطأ في PayPal'), 'error') }
   };
   paypal.Buttons(Object.assign({ style: { layout: 'vertical', label: 'paypal' } }, orderCtx)).render('#paypalBtnContainer');
   const cardEl = document.getElementById('paypalCardContainer');
