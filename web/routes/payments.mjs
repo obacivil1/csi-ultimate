@@ -102,21 +102,6 @@ paymentsRouter.post('/create-order', async (req, res) => {
   const plan = PLANS[planId];
   if (!plan) return res.status(400).json({ error: 'باقة غير صالحة' });
 
-  // Admin test mode — simulates full payment flow with $0
-  const token = req.cookies?.token || req.headers?.authorization?.replace('Bearer ', '');
-  if (token) {
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET);
-      if (isAdmin(decoded.email)) {
-        return res.json({
-          mock: true, orderId: 'ADMIN-' + Date.now(), plan,
-          amount: 0, currency: 'USD',
-          message: '🧪 اختبار عملية الدفع'
-        });
-      }
-    } catch {}
-  }
-
   if (!PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET) {
     return res.status(503).json({ error: 'الدفع غير مهيأ حالياً. حاول لاحقاً.' });
   }
