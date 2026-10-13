@@ -66,6 +66,7 @@ cspDirectives.upgradeInsecureRequests = env.NODE_ENV === 'production' ? [] : nul
 app.use(helmet({
   contentSecurityPolicy: { useDefaults: true, directives: cspDirectives },
   crossOriginEmbedderPolicy: false,
+  crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
   crossOriginResourcePolicy: { policy: 'same-site' },
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   hsts: env.NODE_ENV === 'production' ? { maxAge: 15552000, includeSubDomains: true, preload: false } : false,
