@@ -32,10 +32,32 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: تحديث المنافسات (Etimad)
-        run: node scripts/lead-gen/etimad-update.mjs
+        run: |
+          for attempt in 1 2 3; do
+            echo "== محاولة $attempt/3 لسحب اعتماد =="
+            if node scripts/lead-gen/etimad-update.mjs; then
+              echo "✅ نجح السحب في المحاولة $attempt"
+              exit 0
+            fi
+            echo "⚠️ فشلت المحاولة $attempt"
+            if [ "$attempt" -lt 3 ]; then sleep 20; fi
+          done
+          echo "❌ فشلت كل محاولات سحب اعتماد"
+          exit 1
 
       - name: تحديث المشاريع (SaudiGulf RSS)
-        run: node scripts/lead-gen/scrape-saudi-gulf-projects.mjs
+        run: |
+          for attempt in 1 2 3; do
+            echo "== محاولة $attempt/3 لسحب المشاريع =="
+            if node scripts/lead-gen/scrape-saudi-gulf-projects.mjs; then
+              echo "✅ نجح السحب في المحاولة $attempt"
+              exit 0
+            fi
+            echo "⚠️ فشلت المحاولة $attempt"
+            if [ "$attempt" -lt 3 ]; then sleep 20; fi
+          done
+          echo "❌ فشلت كل محاولات سحب المشاريع"
+          exit 1
 
       - name: بناء قاعدة بيانات المشاريع
         run: node scripts/lead-gen/build-projects-database.mjs
