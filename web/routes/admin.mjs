@@ -93,3 +93,17 @@ adminRouter.put('/messages/:id/read', authenticate, (req, res) => {
   saveMessages(msgs);
   res.json({ ok: true });
 });
+
+adminRouter.post('/messages/:id/reply', authenticate, (req, res) => {
+  if (!isAdmin(req.user?.email)) return res.status(403).json({ error: 'غير مصرح' });
+  const reply = String(req.body?.reply || '').trim();
+  if (!reply) return res.status(400).json({ error: 'الرد فارغ' });
+  const msgs = loadMessages();
+  const idx = msgs.findIndex(m => m.id === Number(req.params.id));
+  if (idx === -1) return res.status(404).json({ error: 'الرسالة غير موجودة' });
+  msgs[idx].reply = reply;
+  msgs[idx].repliedAt = new Date().toISOString();
+  msgs[idx].read = true;
+  saveMessages(msgs);
+  res.json({ ok: true, reply: msgs[idx].reply, repliedAt: msgs[idx].repliedAt });
+});

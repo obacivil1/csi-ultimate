@@ -43,7 +43,8 @@
   // Anti-copy: disable drag selection on tables
   document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('selectstart', e => {
-      if (e.target.closest('.data-table') || e.target.closest('.sample-table')) e.preventDefault();
+      const el = e.target;
+      if (el && typeof el.closest === 'function' && (el.closest('.data-table') || el.closest('.sample-table'))) e.preventDefault();
     });
   });
 </script>
@@ -1080,14 +1081,21 @@ async function loadAdmin() {
     if (!msgs.length) { msgsDiv.innerHTML = '<p style="color:var(--text-muted);">لا توجد رسائل</p>'; return; }
     msgsDiv.innerHTML = msgs.map(m => {
       const urgent = m.subject.toLowerCase().includes('مشكلة') || m.subject.toLowerCase().includes('bug') || m.subject.toLowerCase().includes('خطأ');
-      return '<div style="padding:12px 0;border-bottom:1px solid var(--border-light);' + (!m.read ? 'font-weight:600;' : '') + '">' +
+      const mailto = 'mailto:' + encodeURIComponent(m.email) + '?subject=' + encodeURIComponent('رد: ' + m.subject) + '&body=' + encodeURIComponent((m.reply ? m.reply + '\n\n' : '') + '\n\n— فريق CSI Ultimate');
+      return '<div style="padding:14px;border:1px solid var(--border-light);border-radius:10px;margin-bottom:10px;background:var(--bg-card);' + (!m.read ? 'font-weight:600;' : '') + '">' +
         '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">' +
         '<span><strong>' + esc(m.name) + '</strong> <span style="color:var(--text-muted);font-size:0.85em;font-weight:normal;">&lt;' + esc(m.email) + '&gt;</span></span>' +
         '<span style="color:var(--text-muted);font-size:0.8em;white-space:nowrap;">' + new Date(m.date).toLocaleDateString('ar-SA') + '</span>' +
         '</div>' +
-        '<div style="margin:4px 0;font-size:0.9em;">' + (urgent ? '🔴 ' : '📧 ') + esc(m.subject) + '</div>' +
-        '<div style="color:var(--text-secondary);font-size:0.85em;margin-top:4px;">' + esc(m.message.substring(0, 200)) + (m.message.length > 200 ? '...' : '') + '</div>' +
-        (!m.read ? '<button onclick="markMsgRead(' + m.id + ', this)" style="margin-top:6px;padding:4px 12px;border:1px solid var(--accent);border-radius:6px;background:transparent;color:var(--accent);cursor:pointer;font-size:0.8em;">✓ تحديد مقروء</button>' : '') +
+        '<div style="margin:6px 0;font-size:0.95em;">' + (urgent ? '🔴 ' : '📧 ') + esc(m.subject) + '</div>' +
+        '<div style="color:var(--text-secondary);font-size:0.88em;margin-top:4px;white-space:pre-wrap;">' + esc(m.message) + '</div>' +
+        (m.reply ? '<div style="margin-top:10px;padding:10px;border-radius:8px;background:rgba(46,117,182,0.08);border-right:3px solid var(--accent);"><div style="font-size:0.8em;color:var(--text-muted);margin-bottom:4px;">↩️ ردّك (' + new Date(m.repliedAt).toLocaleDateString('ar-SA') + ')</div><div style="font-size:0.88em;white-space:pre-wrap;">' + esc(m.reply) + '</div></div>' : '') +
+        '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">' +
+        '<textarea id="reply-' + m.id + '" placeholder="اكتب ردك..." rows="2" style="flex:1;min-width:200px;padding:8px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.85em;">' + esc(m.reply || '') + '</textarea>' +
+        '<button onclick="sendReply(' + m.id + ', this)" style="padding:8px 16px;border:none;border-radius:8px;background:var(--accent);color:#fff;cursor:pointer;font-size:0.85em;font-weight:600;">💾 حفظ الرد</button>' +
+        '<a href="' + mailto + '" style="padding:8px 16px;border:1px solid var(--accent);border-radius:8px;background:transparent;color:var(--accent);cursor:pointer;font-size:0.85em;font-weight:600;text-decoration:none;">✉️ إرسال بالبريد</a>' +
+        (!m.read ? '<button onclick="markMsgRead(' + m.id + ', this)" style="padding:8px 16px;border:1px solid var(--accent);border-radius:8px;background:transparent;color:var(--accent);cursor:pointer;font-size:0.85em;">✓ مقروء</button>' : '') +
+        '</div>' +
         '</div>';
     }).join('');
   } catch(e) {
@@ -1112,6 +1120,21 @@ async function markMsgRead(id, btn) {
     showToast('✅ تم', 'success');
   } catch(e) {
     showToast('❌ ' + e.message, 'error');
+  }
+}
+
+async function sendReply(id, btn) {
+  const ta = document.getElementById('reply-' + id);
+  const reply = (ta && ta.value || '').trim();
+  if (!reply) { showToast('❌ اكتب الرد أولاً', 'error'); return; }
+  const old = btn.textContent; btn.disabled = true; btn.textContent = '...';
+  try {
+    await API.post('/api/admin/messages/' + id + '/reply', { reply });
+    showToast('✅ تم حفظ الرد', 'success');
+    loadAdmin();
+  } catch(e) {
+    showToast('❌ ' + e.message, 'error');
+    btn.disabled = false; btn.textContent = old;
   }
 }
 
