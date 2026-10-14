@@ -620,7 +620,11 @@ async function loadTenders() {
     }
     // Check plan limit
     const banner = document.getElementById('planLimitTenders');
-    if (res.plan && res.plan.limits && res.plan.limits.maxTenders > 0 && res.pagination && res.pagination.total >= res.plan.limits.maxTenders) {
+    const lim = res.plan && res.plan.limits;
+    if (lim && lim.maxTenders > 0 && res.pagination && res.pagination.total >= lim.maxTenders) {
+      banner.innerHTML = res.plan.subscription === 'basic'
+        ? '⚡ أنت تشاهد 30% فقط من المناقصات. <a href="#" onclick="showUpgradeModal();return false;" style="color:#1F3864;font-weight:700;">ترقَّ للباقة الشاملة</a> لعرض 100% منها'
+        : '⚡ وصلت للحد المسموح في الفترة التجريبية. <a href="#" onclick="showUpgradeModal();return false;" style="color:#1F3864;font-weight:700;">اشترك الآن</a> للوصول لجميع البيانات';
       banner.style.display = 'block';
     } else {
       banner.style.display = 'none';

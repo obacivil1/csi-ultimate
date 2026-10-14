@@ -44,7 +44,8 @@ test("bare dates still parse to midnight", () => {
 
 test("relative dates still resolve", () => {
   for (const [s, maxMs] of [["today", 1000], ["yesterday", 2 * 86400000], ["3 days ago", 4 * 86400000]]) {
-    const diff = Date.now() - parseDate(s)
+    const ts = parseDate(s)
+    const diff = Date.now() - ts
     assert.ok(diff >= 0 && diff <= maxMs, `${s} → ${diff}ms`)
   }
 })

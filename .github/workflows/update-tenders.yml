@@ -53,6 +53,35 @@ jobs:
           git add data
           git diff --staged --quiet || (git commit -m 'تحديث تلقائي للبيانات' && git push)
 
+      # On success, close any stale data-update-failure tracking issue so the
+      # board reflects reality (the failure step below only opens/appends, never closes).
+      - name: إغلاق بلاغات الفشل القديمة
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const label = 'data-update-failure';
+            const open = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: label,
+            });
+            for (const issue of open.data) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `✅ نجح تحديث البيانات في ${new Date().toISOString()} — يُغلق البلاغ تلقائياً.`,
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed',
+              });
+            }
+
       # If any step above failed, open (or append to) a tracking issue so the
       # failure is never silent. GitHub also emails on failure by default.
       - name: الإبلاغ عن فشل التحديث
