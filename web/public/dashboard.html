@@ -269,6 +269,21 @@
 
     <!-- Panel: Analytics -->
     <div class="dash-panel" id="panelAnalytics">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;box-shadow:0 2px 8px var(--shadow);">
+          <b id="anActive" style="display:block;font-size:1.6em;font-weight:900;color:var(--accent-hover);">—</b><span style="font-size:0.82em;color:var(--text-secondary);">منافسة نشطة الآن</span>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;box-shadow:0 2px 8px var(--shadow);">
+          <b id="anThisMonth" style="display:block;font-size:1.6em;font-weight:900;color:var(--accent-hover);">—</b><span style="font-size:0.82em;color:var(--text-secondary);">طُرحت هذا الشهر</span>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;box-shadow:0 2px 8px var(--shadow);">
+          <b id="anWithin7" style="display:block;font-size:1.6em;font-weight:900;color:var(--accent-hover);">—</b><span style="font-size:0.82em;color:var(--text-secondary);">تنتهي خلال 7 أيام</span>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;box-shadow:0 2px 8px var(--shadow);">
+          <b id="anFreePct" style="display:block;font-size:1.6em;font-weight:900;color:var(--accent-hover);">—</b><span style="font-size:0.82em;color:var(--text-secondary);">كراستها مجانية</span>
+        </div>
+      </div>
+
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:20px;">
         <div style="background:var(--bg-card);border-radius:12px;padding:20px;box-shadow:0 2px 8px var(--shadow);">
           <h3 style="margin-bottom:15px;color:var(--accent-hover);">🏢 أكبر 10 جهات حكومية</h3>
@@ -279,8 +294,33 @@
           <div id="chartActivities" style="height:300px;"><p style="color:var(--text-muted);">جاري التحميل...</p></div>
         </div>
         <div style="background:var(--bg-card);border-radius:12px;padding:20px;box-shadow:0 2px 8px var(--shadow);">
-          <h3 style="margin-bottom:15px;color:var(--accent-hover);">📈 المنافسات شهرياً</h3>
+          <h3 style="margin-bottom:15px;color:var(--accent-hover);">📅 المنافسات حسب شهر الطرح</h3>
           <div id="chartTrend" style="height:300px;"><p style="color:var(--text-muted);">جاري التحميل...</p></div>
+        </div>
+      </div>
+
+      <h3 id="anAdvTitle" style="margin:26px 0 6px;color:var(--accent-hover);">🔒 تحليلات متقدمة</h3>
+      <p id="anAdvSub" style="margin:0 0 16px;color:var(--text-secondary);font-size:0.9em;">أكثر الأنشطة، نوع الطرح، قرب المواعيد، وتحليل رسوم الكراسة.</p>
+      <div style="position:relative;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px;">
+          <div style="background:var(--bg-card);border-radius:12px;padding:20px;box-shadow:0 2px 8px var(--shadow);">
+            <h3 style="margin-bottom:15px;color:var(--accent-hover);">🧩 أكثر الأنشطة تفصيلاً</h3>
+            <div id="chartTopActivities" style="height:300px;"><p style="color:var(--text-muted);">جاري التحميل...</p></div>
+          </div>
+          <div style="background:var(--bg-card);border-radius:12px;padding:20px;box-shadow:0 2px 8px var(--shadow);">
+            <h3 style="margin-bottom:15px;color:var(--accent-hover);">📄 نوع الطرح</h3>
+            <div id="chartTypes" style="height:300px;"><p style="color:var(--text-muted);">جاري التحميل...</p></div>
+          </div>
+          <div style="background:var(--bg-card);border-radius:12px;padding:20px;box-shadow:0 2px 8px var(--shadow);">
+            <h3 style="margin-bottom:15px;color:var(--accent-hover);">⏳ قرب المواعيد النهائية</h3>
+            <div id="chartUrgency" style="height:300px;"><p style="color:var(--text-muted);">جاري التحميل...</p></div>
+          </div>
+        </div>
+        <div id="anLockOverlay" style="display:none;position:absolute;inset:0;background:rgba(148,163,184,0.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);border-radius:12px;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:24px;">
+          <div style="font-size:2.2em;">🔒</div>
+          <h3 style="color:var(--accent-hover);margin:8px 0;">متاحة في الباقات المدفوعة</h3>
+          <p style="color:var(--text-secondary);max-width:440px;">افتح التحليلات المتقدمة (أكثر الأنشطة، نوع الطرح، قرب المواعيد، وتحليل رسوم الكراسة) عبر الترقية.</p>
+          <button class="btn" onclick="showUpgradeModal()">⬆️ ترقية الباقة</button>
         </div>
       </div>
     </div>
@@ -497,8 +537,12 @@ async function checkAuth() {
     document.getElementById('upgradeBtn').style.display = 'block';
   }
 
+  // Plan (used to gate advanced analytics)
+  userPlan = u.subscription || 'trial';
+
   // Admin panel
   const isAdminUser = u.email === 'obacivil@gmail.com';
+  window.__isAdmin = isAdminUser;
   if (isAdminUser) {
     const couponBox = document.getElementById('adminCouponBox');
     if (couponBox) couponBox.style.display = 'block';
@@ -962,57 +1006,80 @@ async function loadAlerts() {
 // ── Analytics Charts ──
 let chartInstances = {};
 let analyticsLoading = false;
+let userPlan = 'trial';
 async function loadAnalytics() {
   if (analyticsLoading) return;
   analyticsLoading = true;
   const colors = ['#2E75B6','#FF6B6B','#48BB78','#FFD93D','#6C63FF','#FF8C42','#2ED573','#FF4757','#1E90FF','#FFA502'];
+  const MO = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const mLabel = m => { const p = String(m).split('-'); return (MO[parseInt(p[1],10)-1] || p[1]) + ' ' + p[0]; };
+  const trunc = (s,n) => (s && s.length > n) ? s.slice(0,n)+'…' : s;
+  const fmt = n => (Number(n) || 0).toLocaleString('en-US');
+  const mk = (id, cfg) => { const el = document.getElementById(id); if (!el) return; el.innerHTML = '<canvas></canvas>'; chartInstances[id] = new Chart(el.querySelector('canvas'), cfg); };
+  const setTxt = (id,v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  const baseOpt = { responsive: true, maintainAspectRatio: false, animation: { duration: 300 }, plugins: { legend: { display: false } } };
+  const donutOpt = { responsive: true, maintainAspectRatio: false, animation: { duration: 300 }, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } } } };
   try {
     const d = await API.get('/api/dashboard/analytics');
     Object.values(chartInstances).forEach(c => { try { c.destroy(); } catch(e) {} });
     chartInstances = {};
 
-    const agEl = document.getElementById('chartAgencies');
-    agEl.innerHTML = '<canvas></canvas>';
-    chartInstances.agencies = new Chart(agEl.querySelector('canvas'), {
+    // KPI cards
+    const thisMonth = new Date().toISOString().slice(0,7);
+    const tm = (d.monthlyTrend || []).find(x => x.month === thisMonth);
+    setTxt('anActive', fmt(d.active));
+    setTxt('anThisMonth', fmt(tm ? tm.count : 0));
+    setTxt('anWithin7', fmt(d.urgency && d.urgency.within7));
+    setTxt('anFreePct', (d.booklet ? d.booklet.freePct : 0) + '%');
+
+    mk('chartAgencies', {
       type: 'bar',
-      data: {
-        labels: d.topAgencies.map(a => a.name.length > 20 ? a.name.slice(0,20)+'…' : a.name),
-        datasets: [{ label: 'عدد المنافسات', data: d.topAgencies.map(a => a.count), backgroundColor: colors.slice(0,d.topAgencies.length) }]
-      },
-      options: { responsive: true, maintainAspectRatio: false, animation: { duration: 300 }, plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+      data: { labels: (d.topAgencies||[]).map(a => trunc(a.name,22)), datasets: [{ label: 'عدد المنافسات', data: (d.topAgencies||[]).map(a => a.count), backgroundColor: colors }] },
+      options: Object.assign({}, baseOpt, { indexAxis: 'y', scales: { x: { beginAtZero: true } } })
     });
 
-    const acEl = document.getElementById('chartActivities');
-    acEl.innerHTML = '<canvas></canvas>';
-    chartInstances.activities = new Chart(acEl.querySelector('canvas'), {
+    mk('chartActivities', {
       type: 'doughnut',
-      data: {
-        labels: d.activityDist.map(a => a.name),
-        datasets: [{ data: d.activityDist.map(a => a.count), backgroundColor: colors }]
-      },
-      options: { responsive: true, maintainAspectRatio: false, animation: { duration: 300 }, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+      data: { labels: (d.activityDist||[]).map(a => a.name), datasets: [{ data: (d.activityDist||[]).map(a => a.count), backgroundColor: colors }] },
+      options: donutOpt
     });
 
-    const trEl = document.getElementById('chartTrend');
-    trEl.innerHTML = '<canvas></canvas>';
-    const months = d.monthlyTrend.map(m => {
-      const [y, mo] = m.month.split('-');
-      const names = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
-      return names[parseInt(mo)-1] + ' ' + y;
+    mk('chartTrend', {
+      type: 'bar',
+      data: { labels: (d.monthlyTrend||[]).map(m => mLabel(m.month)), datasets: [{ label: 'عدد المنافسات', data: (d.monthlyTrend||[]).map(m => m.count), backgroundColor: '#2E75B6' }] },
+      options: Object.assign({}, baseOpt, { scales: { y: { beginAtZero: true } } })
     });
-    chartInstances.trend = new Chart(trEl.querySelector('canvas'), {
-      type: 'line',
-      data: {
-        labels: months,
-        datasets: [{ label: 'عدد المنافسات', data: d.monthlyTrend.map(m => m.count), borderColor: '#2E75B6', backgroundColor: 'rgba(46,117,182,0.1)', fill: true, tension: 0.3 }]
-      },
-      options: { responsive: true, maintainAspectRatio: false, animation: { duration: 300 }, plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+
+    // Advanced charts (paid)
+    mk('chartTopActivities', {
+      type: 'bar',
+      data: { labels: (d.topActivities||[]).map(a => trunc(a.name,24)), datasets: [{ label: 'عدد المنافسات', data: (d.topActivities||[]).map(a => a.count), backgroundColor: colors }] },
+      options: Object.assign({}, baseOpt, { indexAxis: 'y', scales: { x: { beginAtZero: true } } })
     });
+
+    mk('chartTypes', {
+      type: 'doughnut',
+      data: { labels: (d.types||[]).map(a => a.name), datasets: [{ data: (d.types||[]).map(a => a.count), backgroundColor: colors }] },
+      options: donutOpt
+    });
+
+    const u = d.urgency || {};
+    mk('chartUrgency', {
+      type: 'bar',
+      data: { labels: ['خلال 7 أيام','خلال 14 يوم','خلال 30 يوم'], datasets: [{ label: 'عدد المنافسات', data: [u.within7||0, u.within14||0, u.within30||0], backgroundColor: ['#EF4444','#F59E0B','#22C55E'] }] },
+      options: Object.assign({}, baseOpt, { scales: { y: { beginAtZero: true } } })
+    });
+
+    // Plan gate: advanced block is for paid plans (admin always has access)
+    const paid = ['basic','professional','enterprise'].includes(userPlan) || window.__isAdmin;
+    const lock = document.getElementById('anLockOverlay');
+    if (lock) lock.style.display = paid ? 'none' : 'flex';
+    const advTitle = document.getElementById('anAdvTitle');
+    if (advTitle) advTitle.textContent = paid ? '⭐ تحليلات متقدمة' : '🔒 تحليلات متقدمة';
   } catch(e) {
-    ['chartAgencies','chartActivities','chartTrend'].forEach(id => {
-      document.getElementById(id).innerHTML = '<p style="color:var(--danger);">⚠️ فشل تحميل التحليلات</p>';
+    ['chartAgencies','chartActivities','chartTrend','chartTopActivities','chartTypes','chartUrgency'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = '<p style="color:var(--danger);">⚠️ فشل تحميل التحليلات</p>';
     });
   } finally {
     analyticsLoading = false;
