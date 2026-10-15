@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { getJSON } from '../cache.mjs';
+import { computeTenderAnalytics } from '../analytics.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const metaRouter = Router();
@@ -102,6 +103,21 @@ export function getMeta() {
   return metaCache;
 }
 
+let insightsCache = null;
+let insightsCacheTime = 0;
+export function getInsights() {
+  const now = Date.now();
+  if (insightsCache && now - insightsCacheTime < META_TTL) return insightsCache;
+  const tenders = getJSON('tenders', FILES.tenders) || [];
+  insightsCache = {
+    generatedAt: new Date().toISOString(),
+    lastUpdated: mtime(FILES.tenders),
+    ...computeTenderAnalytics(tenders),
+  };
+  insightsCacheTime = now;
+  return insightsCache;
+}
+
 export function getSampleTenders(n = 5) {
   const tenders = getJSON('tenders', FILES.tenders) || [];
   const now = new Date();
@@ -142,7 +158,11 @@ export function renderHome(html) {
   let rows = '';
   try {
     const m = getMeta();
+    const ins = getInsights();
     rows = renderSampleRows(5);
+    const thisMonth = new Date().toISOString().slice(0, 7);
+    const tm = (ins.monthlyTrend.find(x => x.month === thisMonth) || {}).count || 0;
+    const top = ins.topAgencies[0] || { name: '—', count: 0 };
     const map = {
       TENDERS_TOTAL: num(m.tenders.total),
       TENDERS_TOTAL_PLUS: plus(m.tenders.total),
@@ -155,6 +175,10 @@ export function renderHome(html) {
       PROJECTS_TOTAL: num(m.projects.total),
       LAST_SYNC: fmtExact(m.lastUpdated),
       LAST_SYNC_AGO: ago(m.lastUpdated),
+      INSIGHT_TOP_AGENCY: esc(top.name.length > 30 ? top.name.slice(0, 30) + '…' : top.name),
+      INSIGHT_TOP_AGENCY_COUNT: num(top.count),
+      INSIGHT_FREE_PCT: String(ins.booklet.freePct),
+      INSIGHT_THIS_MONTH: num(tm),
     };
     for (const [k, v] of Object.entries(map)) out = out.split('{{' + k + '}}').join(v);
   } catch { /* fall through to placeholders */ }
@@ -167,6 +191,12 @@ metaRouter.get('/freshness', (req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=600, s-maxage=600');
   const m = getMeta();
   res.json({ ...m, lastSyncAgo: ago(m.lastUpdated), lastSyncText: fmtExact(m.lastUpdated) });
+});
+
+metaRouter.get('/insights', (req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=600, s-maxage=600');
+  const ins = getInsights();
+  res.json({ ...ins, lastSyncAgo: ago(ins.lastUpdated), lastSyncText: fmtExact(ins.lastUpdated) });
 });
 
 metaRouter.get('/sample.csv', (req, res) => {

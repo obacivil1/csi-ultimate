@@ -258,6 +258,9 @@ app.get('/contact', (req, res) => {
 app.get('/sources', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'sources.html'));
 });
+app.get('/insights', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'insights.html'));
+});
 
 // Static files (css, js, images — not index/dashboard)
 app.use(express.static(path.join(__dirname, 'public')));

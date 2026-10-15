@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تحليلات السوق — المنافسات الحكومية السعودية | CSI Ultimate</title>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="description" content="تحليلات مجانية لسوق المنافسات الحكومية السعودية: الاتجاه الشهري، أكثر الجهات طرحاً، توزيع الأنشطة، نسبة المنافسات بدون رسوم كراسة. بيانات محدّثة من منصة اعتماد.">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+body { background:var(--bg); color:var(--text); font-family:'Cairo',sans-serif; padding:30px 16px; }
+.wrap { max-width:1050px; margin:0 auto; }
+.head { text-align:center; margin-bottom:26px; }
+.head h1 { color:var(--accent-hover); margin-bottom:8px; }
+.head p { color:var(--text-secondary); }
+.sync-pill { display:inline-flex;align-items:center;gap:8px;background:rgba(34,197,94,0.12);color:#15803d;border-radius:999px;padding:6px 14px;font-size:0.82em;font-weight:700;margin-top:8px; }
+.dot { width:8px;height:8px;border-radius:50%;background:#22c55e;animation:fp 2s infinite; }
+@keyframes fp { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+.kpis { display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:22px; }
+.kpi { background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:18px;text-align:center;box-shadow:0 2px 8px var(--shadow); }
+.kpi b { display:block;font-size:1.7em;font-weight:900;color:var(--accent-hover); }
+.kpi span { font-size:0.82em;color:var(--text-secondary); }
+.card { background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:20px;box-shadow:0 2px 8px var(--shadow);margin-bottom:20px; }
+.card h2 { color:var(--accent-hover);font-size:1.1em;margin:0 0 14px; }
+.chart-box { position:relative;height:320px; }
+.chart-box.sm { height:280px; }
+.grid2 { display:grid;grid-template-columns:1fr 1fr;gap:20px; }
+@media (max-width:760px){ .grid2 { grid-template-columns:1fr; } }
+.cta { text-align:center;margin:26px 0; }
+.cta a { display:inline-block;background:var(--accent);color:#fff;padding:12px 26px;border-radius:8px;font-weight:700;text-decoration:none;margin:4px; }
+.cta a.alt { background:transparent;color:var(--accent);border:2px solid var(--accent); }
+.back { display:block;text-align:center;margin-top:20px;color:var(--accent);font-weight:600;text-decoration:none; }
+.loading { text-align:center;color:var(--text-muted);padding:40px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1>📊 تحليلات سوق المنافسات الحكومية</h1>
+    <p>رؤى مجانية من بيانات منصة اعتماد — بدون تسجيل</p>
+    <span class="sync-pill"><span class="dot"></span> آخر مزامنة: <span id="lastSync">جارٍ التحميل…</span></span>
+  </div>
+
+  <div id="loading" class="loading">جارٍ تحميل التحليلات…</div>
+
+  <div id="content" style="display:none;">
+    <div class="kpis">
+      <div class="kpi"><b id="kpiActive">—</b><span>منافسة نشطة الآن</span></div>
+      <div class="kpi"><b id="kpiThisMonth">—</b><span>طُرحت هذا الشهر</span></div>
+      <div class="kpi"><b id="kpiWithin7">—</b><span>تنتهي خلال 7 أيام</span></div>
+      <div class="kpi"><b id="kpiFree">—</b><span>كراستها مجانية</span></div>
+    </div>
+
+    <div class="card">
+      <h2>📅 توزيع المنافسات حسب شهر الطرح</h2>
+      <div class="chart-box"><canvas id="chartTrend"></canvas></div>
+      <p style="color:var(--text-muted);font-size:0.8em;margin:12px 0 0;text-align:center;">تُعرض الأشهر المتاحة في قاعدة البيانات (نافذة المصدر محدودة).</p>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>🏛️ أكثر الجهات طرحاً</h2>
+        <div class="chart-box sm"><canvas id="chartAgencies"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>🧩 أكثر الأنشطة (بالتفصيل)</h2>
+        <div class="chart-box sm"><canvas id="chartActivities"></canvas></div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>📄 نوع الطرح</h2>
+        <div class="chart-box sm"><canvas id="chartTypes"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>⏳ قرب المواعيد النهائية</h2>
+        <div class="chart-box sm"><canvas id="chartUrgency"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>💰 رسوم كراسة الشروط (تحليل)</h2>
+      <div class="kpis" style="margin:0;">
+        <div class="kpi"><b id="bkFree">—</b><span>منافسات كراستها مجانية</span></div>
+        <div class="kpi"><b id="bkPaidAvg">—</b><span>متوسط سعر الكراسة المدفوعة (ر.س)</span></div>
+        <div class="kpi"><b id="bkMax">—</b><span>أعلى سعر كراسة (ر.س)</span></div>
+      </div>
+      <p style="color:var(--text-muted);font-size:0.82em;margin-top:14px;text-align:center;">المرجع النهائي هو منصة اعتماد؛ الأرقام تقديرية للاستئناس.</p>
+    </div>
+
+    <div class="cta">
+      <a href="/">🎁 ابدأ تجربة مجانية 7 أيام</a>
+      <a href="/api/meta/sample.csv" download class="alt">⬇️ نزّل عيّنة بيانات مجانية</a>
+    </div>
+    <a href="/" class="back">← العودة للصفحة الرئيسية</a>
+  </div>
+</div>
+<script>
+const MONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+const COLORS = ['#2E75B6','#FF7A45','#22C55E','#F59E0B','#8B5CF6','#EC4899','#14B8A6','#EF4444','#0EA5E9','#84CC16','#A855F7','#F97316'];
+
+function monthLabel(m){ const [y, mo] = m.split('-'); return MONTHS[parseInt(mo,10)-1] + ' ' + y; }
+function fmt(n){ return (n||0).toLocaleString('en-US'); }
+function set(id, v){ const el = document.getElementById(id); if (el) el.textContent = v; }
+
+(async function () {
+  try {
+    const d = await fetch('/api/meta/insights').then(r => r.json());
+    set('lastSync', d.lastSyncText || d.lastSyncAgo || '—');
+
+    const thisMonth = new Date().toISOString().slice(0, 7);
+    const tm = (d.monthlyTrend || []).find(x => x.month === thisMonth);
+    set('kpiActive', fmt(d.active));
+    set('kpiThisMonth', fmt(tm ? tm.count : 0));
+    set('kpiWithin7', fmt(d.urgency && d.urgency.within7));
+    set('kpiFree', (d.booklet ? d.booklet.freePct : 0) + '%');
+
+    set('bkFree', (d.booklet ? fmt(d.booklet.free) : 0));
+    set('bkPaidAvg', (d.booklet ? fmt(d.booklet.paidAvg) : 0));
+    set('bkMax', (d.booklet ? fmt(d.booklet.max) : 0));
+
+    const base = { responsive: true, maintainAspectRatio: false, animation: { duration: 350 }, plugins: { legend: { display: false } } };
+    const trunc = (s, n) => (s && s.length > n ? s.slice(0, n) + '…' : s);
+
+    new Chart(document.getElementById('chartTrend'), {
+      type: 'bar',
+      data: {
+        labels: (d.monthlyTrend || []).map(m => monthLabel(m.month)),
+        datasets: [{ label: 'عدد المنافسات', data: (d.monthlyTrend || []).map(m => m.count), backgroundColor: '#2E75B6' }]
+      },
+      options: { ...base, scales: { y: { beginAtZero: true } } }
+    });
+
+    new Chart(document.getElementById('chartAgencies'), {
+      type: 'bar',
+      data: {
+        labels: (d.topAgencies || []).map(a => trunc(a.name, 22)),
+        datasets: [{ label: 'عدد المنافسات', data: (d.topAgencies || []).map(a => a.count), backgroundColor: COLORS }]
+      },
+      options: { ...base, indexAxis: 'y', scales: { x: { beginAtZero: true } } }
+    });
+
+    new Chart(document.getElementById('chartActivities'), {
+      type: 'bar',
+      data: {
+        labels: (d.topActivities || []).map(a => trunc(a.name, 24)),
+        datasets: [{ label: 'عدد المنافسات', data: (d.topActivities || []).map(a => a.count), backgroundColor: '#22C55E' }]
+      },
+      options: { ...base, indexAxis: 'y', scales: { x: { beginAtZero: true } } }
+    });
+
+    new Chart(document.getElementById('chartTypes'), {
+      type: 'doughnut',
+      data: { labels: (d.types || []).map(x => x.name), datasets: [{ data: (d.types || []).map(x => x.count), backgroundColor: COLORS }] },
+      options: { ...base, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } } } }
+    });
+
+    new Chart(document.getElementById('chartUrgency'), {
+      type: 'bar',
+      data: {
+        labels: ['خلال 7 أيام', 'خلال 14 يوم', 'خلال 30 يوم'],
+        datasets: [{ label: 'عدد المنافسات', data: [d.urgency && d.urgency.within7, d.urgency && d.urgency.within14, d.urgency && d.urgency.within30], backgroundColor: ['#EF4444','#F59E0B','#22C55E'] }]
+      },
+      options: { ...base, scales: { y: { beginAtZero: true } } }
+    });
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+  } catch (e) {
+    document.getElementById('loading').textContent = '⚠️ تعذّر تحميل التحليلات حالياً. حدّث الصفحة لاحقاً.';
+  }
+})();
+</script>
+</body>
+</html>
