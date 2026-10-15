@@ -5,14 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>منصة المنافسات والمقاولين</title>
 <link rel="stylesheet" href="/css/style.css">
-<meta name="description" content="منصة المنافسات والمقاولين السعودية — أكبر قاعدة بيانات للمنافسات الحكومية وبيانات المقاولين المعتمدين. 8,160+ منافسة، 13,514 مقاول، 611 مشروع. محدثة يومياً من منصة اعتماد.">
+<meta name="description" content="منصة المنافسات والمقاولين السعودية — قاعدة بيانات للمنافسات الحكومية ومصدر مرجعي للمقاولين المصنّفين. {{TENDERS_TOTAL_PLUS}} منافسة، {{CONTRACTORS_TOTAL_PLUS}} مقاول، {{PROJECTS_TOTAL}} مشروع. تُحدَّث آلياً من منصة اعتماد ومقاول.">
 <meta name="keywords" content="منافسات حكومية, مقاولين سعوديين, منصة اعتماد, مشاريع السعودية, مناقصات, tenders Saudi Arabia, contractors">
 <meta property="og:title" content="منصة المنافسات والمقاولين السعودية">
-<meta property="og:description" content="8,160+ منافسة حكومية و13,514 مقاول معتمد — محدثة يومياً">
+<meta property="og:description" content="{{TENDERS_TOTAL_PLUS}} منافسة حكومية و{{CONTRACTORS_TOTAL_PLUS}} مقاول مصنّف — تُحدَّث آلياً">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://csi-ultimate.onrender.com">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="alternate icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏗️</text></svg>">
+<noscript><style>#splash{display:none !important;}</style></noscript>
 <!-- Google Analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-XXXXXXXXXX');</script>
@@ -27,6 +28,15 @@
 .plan-pp-wrap { display:flex;flex-direction:column;gap:10px;margin-top:12px; }
 .plan-pp { text-align:center; }
 .plan-pp .paypal-buttons, .plan-pp paypal > * { margin:0 auto; }
+.freshness-box { max-width:900px;margin:0 auto;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:22px 24px;box-shadow:0 2px 10px var(--shadow); }
+.freshness-head { display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:0.95em;color:var(--text-secondary);margin-bottom:16px; }
+.freshness-dot { width:9px;height:9px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,0.2);animation:fpulse 2s infinite; }
+@keyframes fpulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+.freshness-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px;text-align:center; }
+.freshness-grid b { display:block;font-size:1.5em;font-weight:900;color:var(--accent-hover); }
+.freshness-grid span { font-size:0.82em;color:var(--text-secondary); }
+.freshness-note { margin-top:16px;font-size:0.82em;color:var(--text-muted);text-align:center; }
+.freshness-note a { color:var(--accent); }
 </style>
 <div id="splash"><h2>🏗️ CSI Ultimate</h2><div class="spinner-lg"></div></div>
 <script>document.addEventListener('DOMContentLoaded',()=>{setTimeout(()=>document.getElementById('splash').classList.add('hide'),500);});</script>
@@ -101,7 +111,7 @@
 
 <!-- Header -->
 <div class="landing-header">
-  <div class="badge">🇸🇦 بيانات حكومية رسمية — محدثة يومياً</div>
+  <div class="badge">🇸🇦 بيانات من مصادر رسمية — تُحدَّث آلياً</div>
   <div class="header-widgets">
     <span class="hw-clock" id="liveClock">--:--:--</span>
     <span class="hw-weather" id="liveWeather">🌡️ --°C</span>
@@ -109,8 +119,8 @@
   <h1>🏗️ منصة المنافسات والمقاولين السعودية</h1>
   <p class="subtitle">Saudi Tenders, Contractors & Projects Database 2026</p>
   <p style="font-size:1.1em;max-width:650px;margin:15px auto 0;opacity:0.85;">
-    8,160+ منافسة حكومية • 13,514 مقاول معتمد • 611 مشروع كبرى<br>
-    كل ما تحتاج لتطوير أعمالك في قطاع المشتريات الحكومية
+    {{TENDERS_TOTAL_PLUS}} منافسة حكومية • {{CONTRACTORS_TOTAL_PLUS}} مقاول مصنّف • {{PROJECTS_TOTAL}} مشروع كبرى<br>
+    فرص مباشرة من المصادر الرسمية — محدّثة آلياً كل 6 ساعات
   </p>
   <button class="cta-btn" onclick="openRegisterFor('free', null)">🚀 ابدأ الفترة المجانية — 7 أيام</button>
 </div>
@@ -118,12 +128,36 @@
 <!-- Live Stats -->
 <div class="stats-bar">
   <div class="stats-grid" id="liveStats">
-    <div class="stat-item"><h3 id="statTotal">...</h3><p>منافسة حكومية</p></div>
-    <div class="stat-item"><h3 id="statActive">...</h3><p>منافسة نشطة</p></div>
-    <div class="stat-item"><h3 id="statConstruction">...</h3><p>منافسة تشييد 🔥</p></div>
-    <div class="stat-item"><h3 id="statExpiring">...</h3><p>تنتهي خلال 7 أيام</p></div>
-    <div class="stat-item"><h3 id="statContractors">...</h3><p>مقاول مصنّف</p></div>
-    <div class="stat-item"><h3 id="statUpdated" style="font-size:0.9em;">...</h3><p>آخر تحديث للبيانات</p></div>
+    <div class="stat-item"><h3 id="statTotal">{{TENDERS_TOTAL}}</h3><p>منافسة حكومية</p></div>
+    <div class="stat-item"><h3 id="statActive">{{TENDERS_ACTIVE}}</h3><p>منافسة نشطة</p></div>
+    <div class="stat-item"><h3 id="statConstruction">{{TENDERS_CONSTRUCTION}}</h3><p>منافسة تشييد 🔥</p></div>
+    <div class="stat-item"><h3 id="statExpiring">{{TENDERS_EXPIRING}}</h3><p>تنتهي خلال 7 أيام</p></div>
+    <div class="stat-item"><h3 id="statContractors">{{CONTRACTORS_TOTAL}}</h3><p>مقاول مصنّف</p></div>
+    <div class="stat-item"><h3 id="statUpdated" style="font-size:0.9em;">{{LAST_SYNC_AGO}}</h3><p>آخر تحديث للبيانات</p></div>
+  </div>
+</div>
+
+<!-- Freshness / Trust -->
+<div class="section" style="padding:25px 0 5px;">
+  <div class="container">
+    <div class="freshness-box">
+      <div class="freshness-head">
+        <span class="freshness-dot"></span>
+        <b>آخر مزامنة للبيانات:</b>
+        <span id="freshLastSync">{{LAST_SYNC}}</span>
+        <span id="freshLastSyncAgo" style="opacity:0.8;">({{LAST_SYNC_AGO}})</span>
+      </div>
+      <div class="freshness-grid">
+        <div><b id="freshTenders">{{TENDERS_TOTAL}}</b><span>منافسة في القاعدة</span></div>
+        <div><b id="freshActive">{{TENDERS_ACTIVE}}</b><span>منافسة نشطة الآن</span></div>
+        <div><b id="freshContractors">{{CONTRACTORS_TOTAL}}</b><span>مقاول مصنّف</span></div>
+        <div><b id="freshProjects">{{PROJECTS_TOTAL}}</b><span>مشروع موثّق</span></div>
+      </div>
+      <p class="freshness-note">
+        المصادر: منصة اعتماد + هيئة المقاولين (مقاول) + مشاريع السعودية — تُجمَع وتُنشر آلياً كل 6 ساعات.
+        <a href="/sources">اقرأ المنهجية والمصادر ←</a>
+      </p>
+    </div>
   </div>
 </div>
 
@@ -138,12 +172,12 @@
       <div class="feature-card">
         <div class="icon">📋</div>
         <h3>جميع المنافسات النشطة</h3>
-        <p>أكثر من 8,000 منافسة حكومية محدثة من منصة اعتماد — مع فلترة حسب النشاط والجهة والمنطقة</p>
+        <p>أكثر من {{TENDERS_TOTAL}} منافسة حكومية محدّثة آلياً من منصة اعتماد — مع فلترة حسب النشاط والجهة والمنطقة</p>
       </div>
       <div class="feature-card">
         <div class="icon">🏢</div>
-        <h3>دليل المقاولين المعتمدين</h3>
-        <p>13,514 مقاول مصنّف عبر 13 منطقة سعودية مع بيانات التواصل (جوال + بريد إلكتروني)</p>
+        <h3>دليل المقاولين المصنّفين</h3>
+        <p>{{CONTRACTORS_TOTAL}} مقاول مصنّف عبر مناطق المملكة — مع بيانات تواصل متاحة لمئات الشركات ({{CONTRACTORS_CONTACT}} شركة)</p>
       </div>
       <div class="feature-card">
         <div class="icon">🔥</div>
@@ -153,7 +187,7 @@
       <div class="feature-card">
         <div class="icon">🏗️</div>
         <h3>تركيز على التشييد والمقاولات</h3>
-        <p>أكثر من 3,000 منافسة في قطاع التشييد والبناء — مصفاة خصيصاً للمقاولين</p>
+        <p>{{TENDERS_CONSTRUCTION}} منافسة في قطاع التشييد والبناء — مصفّاة خصيصاً للمقاولين</p>
       </div>
       <div class="feature-card">
         <div class="icon">📊</div>
@@ -192,13 +226,14 @@
       <thead><tr>
         <th>اسم المنافسة</th><th>الجهة الحكومية</th><th>النشاط</th><th>آخر موعد</th><th>المدة</th>
       </tr></thead>
-      <tbody id="sampleTenders">
-        <tr><td colspan="5" style="text-align:center;color:#999;">جاري التحميل...</td></tr>
-      </tbody>
+      <tbody id="sampleTenders">{{SAMPLE_ROWS}}</tbody>
     </table></div>
     <p style="text-align:center;margin-top:15px;color:#666;">
-      <a href="#" onclick="event.preventDefault();openRegisterFor('free', null);" style="color:#2E75B6;font-weight:600;">
-        📥 سجّل مجاناً لعرض جميع المنافسات (8,160+) ←
+      <a href="/api/meta/sample.csv" download style="display:inline-block;background:var(--accent);color:#fff;padding:10px 22px;border-radius:8px;font-weight:700;text-decoration:none;margin:4px;">
+        ⬇️ نزّل عيّنة مجانية (Excel/CSV) — بدون تسجيل
+      </a>
+      <a href="#" onclick="event.preventDefault();openRegisterFor('free', null);" style="display:inline-block;padding:10px 22px;border-radius:8px;font-weight:700;text-decoration:none;color:#2E75B6;margin:4px;">
+        📥 سجّل مجاناً لعرض جميع المنافسات ({{TENDERS_TOTAL_PLUS}}) ←
       </a>
     </p>
   </div>
@@ -208,9 +243,9 @@
 <div class="section" style="padding:30px 0;background:var(--bg-card);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
   <div class="container">
     <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:40px;text-align:center;">
-      <div><div style="font-size:2em;font-weight:900;color:var(--accent-hover);">8,160+</div><div style="font-size:0.85em;color:var(--text-secondary);">منافسة حكومية</div></div>
-      <div><div style="font-size:2em;font-weight:900;color:var(--accent-hover);">13,514</div><div style="font-size:0.85em;color:var(--text-secondary);">مقاول مصنّف</div></div>
-      <div><div style="font-size:2em;font-weight:900;color:var(--accent-hover);">611</div><div style="font-size:0.85em;color:var(--text-secondary);">مشروع كبرى</div></div>
+      <div><div style="font-size:2em;font-weight:900;color:var(--accent-hover);">{{TENDERS_TOTAL_PLUS}}</div><div style="font-size:0.85em;color:var(--text-secondary);">منافسة حكومية</div></div>
+      <div><div style="font-size:2em;font-weight:900;color:var(--accent-hover);">{{CONTRACTORS_TOTAL_PLUS}}</div><div style="font-size:0.85em;color:var(--text-secondary);">مقاول مصنّف</div></div>
+      <div><div style="font-size:2em;font-weight:900;color:var(--accent-hover);">{{PROJECTS_TOTAL}}</div><div style="font-size:0.85em;color:var(--text-secondary);">مشروع كبرى</div></div>
       <div><div><span style="font-size:1.5em;">🇸🇦🌐</span></div><div style="font-size:0.85em;color:var(--text-secondary);">مصادر رسمية: اعتماد + مقاول</div></div>
     </div>
   </div>
@@ -291,6 +326,7 @@
 <footer>
   <p>© 2026 منصة المنافسات والمقاولين السعودية — جميع الحقوق محفوظة</p>
   <p style="margin-top:5px;">مصادر البيانات: منصة اعتماد (tenders.etimad.sa) | موقع مقاول (muqawil.org)</p>
+  <p style="margin-top:5px;font-size:0.9em;"><a href="/sources" style="color:#ddd;">📚 المصادر والمنهجية</a></p>
   <p style="margin-top:5px;font-size:0.8em;">تواصل: <a href="/contact" style="color:#ddd;">صفحة تواصل معنا</a></p>
 </footer>
 
@@ -446,6 +482,7 @@ async function updateAuthUI(user) {
 // ── Load Stats ──
 (async function() {
   try {
+    const set = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.textContent = v; };
     const stats = await API.get('/api/tenders/stats');
     animateNumber('statTotal', stats.total || 0);
     animateNumber('statActive', stats.active || 0);
@@ -454,18 +491,31 @@ async function updateAuthUI(user) {
 
     const contStats = await API.get('/api/contractors/stats');
     animateNumber('statContractors', contStats.total || 0);
+    set('freshContractors', (contStats.total || 0).toLocaleString('en-US'));
 
     const basicCount = document.getElementById('pricingBasicCount');
     if (basicCount) animateNumber('pricingBasicCount', Math.ceil((stats.active || 0) * 0.30));
 
     const upd = document.getElementById('statUpdated');
-    if (upd && stats.lastUpdated) {
-      upd.textContent = new Date(stats.lastUpdated).toLocaleDateString('ar-SA', { day: 'numeric', month: 'short', year: 'numeric' });
+    if (upd && stats.lastUpdated) upd.textContent = fmtAgo(stats.lastUpdated);
+
+    // Freshness box fallback (filled server-side too — keeps it in sync if SSR missed)
+    set('freshTenders', (stats.total || 0).toLocaleString('en-US'));
+    set('freshActive', (stats.active || 0).toLocaleString('en-US'));
+    if (stats.lastUpdated) {
+      set('freshLastSyncAgo', '(' + fmtAgo(stats.lastUpdated) + ')');
     }
   } catch(e) {
     document.querySelectorAll('.stat-item h3').forEach(el => el.textContent = '—');
   }
 })();
+function fmtAgo(iso) {
+  const diff = Date.now() - new Date(iso).getTime();
+  if (diff < 60000) return 'قبل لحظات';
+  const m = Math.floor(diff / 60000); if (m < 60) return 'قبل ' + m + ' دقيقة';
+  const h = Math.floor(m / 60); if (h < 24) return 'قبل ' + h + ' ساعة';
+  return 'قبل ' + Math.floor(h / 24) + ' يوم';
+}
 function animateNumber(id, target) {
   const el = document.getElementById(id);
   let current = 0;

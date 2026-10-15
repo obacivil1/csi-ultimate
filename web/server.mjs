@@ -20,6 +20,7 @@ import { exportRouter } from './routes/export.mjs';
 import { alertsRouter } from './routes/alerts.mjs';
 import { adminRouter } from './routes/admin.mjs';
 import { contactRouter } from './routes/contact.mjs';
+import { metaRouter, renderHome } from './routes/meta.mjs';
 import { engineRouter, ENGINE_PUBLIC_DIR } from './routes/engine.mjs';
 import { siteProfileRouter } from './routes/site-profile.mjs';
 import { proxiesRouter } from './routes/proxies.mjs';
@@ -186,6 +187,7 @@ app.use('/api/export', exportRouter);
 app.use('/api/alerts', alertsRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/contact', contactRouter);
+app.use('/api/meta', metaRouter);
 app.use('/api', siteProfileRouter);
 app.use('/api', engineRouter);
 app.use('/api/proxies', proxiesRouter);
@@ -235,7 +237,7 @@ app.get('/', (req, res) => {
   getWeatherHtml(w => {
     fs.readFile(indexHtmlPath, 'utf8', (err, html) => {
       if (err) { res.sendFile(indexHtmlPath); return; }
-      res.send(injectWeather(html, w));
+      res.send(renderHome(injectWeather(html, w)));
     });
   });
 });
@@ -253,6 +255,9 @@ app.get('/privacy', (req, res) => {
 app.get('/contact', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'contact.html'));
 });
+app.get('/sources', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sources.html'));
+});
 
 // Static files (css, js, images — not index/dashboard)
 app.use(express.static(path.join(__dirname, 'public')));
@@ -263,7 +268,7 @@ app.use((req, res) => {
     getWeatherHtml(w => {
       fs.readFile(indexHtmlPath, 'utf8', (err, html) => {
         if (err) { res.sendFile(indexHtmlPath); return; }
-        res.send(injectWeather(html, w));
+        res.send(renderHome(injectWeather(html, w)));
       });
     });
   } else {
