@@ -1,0 +1,39 @@
+name: keep-alive
+
+# Render (الباقة المجانية) يُنيم الخدمة بعد ~15 دقيقة خمول، فينتظر أول زائر
+# 30–60 ثانية. هذا الإجراء يضرب /api/health كل 10 دقائق لإبقاء السيرفر صاحياً.
+#
+# ملاحظة: جدولة GitHub قد تتأخر بضع دقائق وقت الذروة. للحصول على أقصى موثوقية
+# يُستحسن إضافة مراقب خارجي (UptimeRobot / cron-job.org) بفاصل 5 دقائق أيضاً.
+#
+# يبقى مفعّلاً ما دام المستودع نشطاً، وعمليات «تحديث البيانات» كل 6 ساعات كافية.
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: keep-alive
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /api/health
+        run: |
+          URL="https://csi-ultimate.onrender.com/api/health"
+          for i in 1 2 3 4 5; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 "$URL" || echo "000")
+            echo "attempt $i -> HTTP $code"
+            if [ "$code" = "200" ]; then
+              echo "✅ السيرفر صاحٍ"
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "⚠️ لم يستجب السيرفر بعد 5 محاولات"
+          exit 1
