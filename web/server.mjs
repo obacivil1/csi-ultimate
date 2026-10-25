@@ -72,6 +72,11 @@ app.use(helmet({
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   hsts: env.NODE_ENV === 'production' ? { maxAge: 15552000, includeSubDomains: true, preload: false } : false,
 }));
+// Helmet لا يضبط Permissions-Policy افتراضياً؛ نعطّل الأجهزة غير المستخدمة.
+app.use((_req, res, next) => {
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  next();
+});
 
 app.use(compression());
 const DEFAULT_ORIGINS = [

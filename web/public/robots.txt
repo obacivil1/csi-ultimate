@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# لوحة التحكم وواجهات الـAPI ليست محتوى للفهرسة
+Disallow: /dashboard.html
+Disallow: /api/
+
+Sitemap: https://csi-ultimate.onrender.com/sitemap.xml
