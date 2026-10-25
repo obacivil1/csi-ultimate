@@ -5,6 +5,7 @@ import bcrypt from 'bcrypt';
 import { loadUsers, saveUsers, JWT_SECRET, getPlanLimits, normalizeSubscription, isAdmin } from '../middleware/auth.mjs';
 import { env } from '../../config/env.mjs';
 import { isTurnstileConfigured, verifyTurnstile } from '../../core/turnstile.mjs';
+import { track } from '../metrics.mjs';
 
 export const authRouter = Router();
 
@@ -87,6 +88,7 @@ authRouter.post('/register', requireTurnstile, async (req, res) => {
 
   users.push(user);
   saveUsers(users);
+  track('signup');
 
   const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
   const trialEnd = new Date();
@@ -122,6 +124,7 @@ authRouter.post('/login', requireTurnstile, async (req, res) => {
   const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
 
   normalizeSubscription(user, users);
+  track('login');
 
   res.cookie('token', token, authCookieOptions());
   res.json({

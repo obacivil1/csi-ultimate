@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { getJSON } from '../cache.mjs';
 import { computeTenderAnalytics } from '../analytics.mjs';
+import { track } from '../metrics.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const metaRouter = Router();
@@ -208,6 +209,7 @@ metaRouter.get('/sample.csv', (req, res) => {
     'المتبقي (أيام)': r.remainingDays ?? '',
   }));
   if (!rows.length) return res.status(503).json({ error: 'لا توجد بيانات متاحة حالياً' });
+  track('download_sample');
   const headers = Object.keys(rows[0]);
   let csv = headers.join(',') + '\r\n';
   for (const row of rows) {

@@ -28,6 +28,7 @@ import { v1Router } from './routes/v1.mjs';
 import { startScheduler, stopScheduler } from './scheduler.mjs';
 import { preloadWarmup } from './cache.mjs';
 import { initStore, mode as storeMode } from './store.mjs';
+import { initMetrics, track, flushMetrics } from './metrics.mjs';
 import { seedFromEnv, startHealthChecks, stopHealthChecks } from '../core/proxy-pool.mjs';
 
 import https from 'https';
@@ -238,7 +239,15 @@ const dashHtmlPath = path.join(__dirname, 'public', 'dashboard.html');
 function injectWeather(html, w) {
   return html.replace('🌡️ --°C', `${w.temperature}°C · ${w.desc}`);
 }
+// Launch analytics: count real page views only (skip obvious crawlers/monitors).
+// Only aggregate counters are stored — no IPs, cookies or identifiers.
+const BOT_UA = /bot|crawl|spider|slurp|bingpreview|facebookexternalhit|headless|lighthouse|uptime|monitor|pingdom|curl|wget|python-requests|axios/i;
+function trackPage(req, event) {
+  if (BOT_UA.test(req.get('user-agent') || '')) return;
+  track(event);
+}
 app.get('/', (req, res) => {
+  trackPage(req, 'visit_home');
   getWeatherHtml(w => {
     fs.readFile(indexHtmlPath, 'utf8', (err, html) => {
       if (err) { res.sendFile(indexHtmlPath); return; }
@@ -264,6 +273,7 @@ app.get('/sources', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'sources.html'));
 });
 app.get('/insights', (req, res) => {
+  trackPage(req, 'view_insights');
   res.sendFile(path.join(__dirname, 'public', 'insights.html'));
 });
 
@@ -291,6 +301,7 @@ if (env.NODE_ENV === 'production' && storeMode() === 'file') {
   logger.error('DURABLE STORE NOT CONFIGURED — accounts & paid subscriptions will be LOST on every redeploy. Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN (free tier).');
 }
 await initStore();
+await initMetrics();
 
 const server = app.listen(PORT, () => {
   logger.info('web server started', { port: PORT, env: env.NODE_ENV });
@@ -317,12 +328,13 @@ const server = app.listen(PORT, () => {
 
 // إيقاف رشيق: يوقف الاستماع والمجدوِل وفحوصات البروكسي ثم يخرج
 let shuttingDown = false;
-function shutdown(signal) {
+async function shutdown(signal) {
   if (shuttingDown) return;
   shuttingDown = true;
   logger.warn('shutdown initiated', { signal });
   stopScheduler();
   stopHealthChecks();
+  await flushMetrics();
   server.close(() => {
     logger.info('shutdown complete');
     process.exit(0);

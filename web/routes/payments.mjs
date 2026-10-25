@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { loadUsers, saveUsers, JWT_SECRET, isAdmin, authenticate } from '../middleware/auth.mjs';
 import { logger } from '../../core/logger.mjs';
 import { env } from '../../config/env.mjs';
+import { track } from '../metrics.mjs';
 
 export const paymentsRouter = Router();
 
@@ -53,12 +54,23 @@ async function getPayPalToken() {
   return d.access_token;
 }
 
-// The plan is bound to the order at creation time (custom_id) and re-derived
-// from PayPal's own response — never trusted from the client. Fallback to the
-// client value only for legacy orders, and always cross-checked against amount.
+// The plan AND the purchasing account are bound to the order at creation time
+// via custom_id ("<planId>|<userId>") and re-derived from PayPal's own response
+// — never trusted from the client. Legacy orders used custom_id = planId only.
+const CUSTOM_ID_SEP = '|';
+function makeCustomId(planId, userId) {
+  return `${planId}${CUSTOM_ID_SEP}${userId}`;
+}
+function parseCustomId(customId) {
+  const [planId, userId] = String(customId || '').split(CUSTOM_ID_SEP);
+  return { planId: planId || null, userId: userId || null };
+}
+function orderOwnerId(order) {
+  return parseCustomId(order?.purchase_units?.[0]?.custom_id).userId;
+}
 function resolveOrderPlan(order, fallbackPlanId) {
-  const customId = order?.purchase_units?.[0]?.custom_id;
-  if (customId && PLANS[customId]) return PLANS[customId];
+  const parsed = parseCustomId(order?.purchase_units?.[0]?.custom_id);
+  if (parsed.planId && PLANS[parsed.planId]) return PLANS[parsed.planId];
   if (fallbackPlanId && PLANS[fallbackPlanId]) return PLANS[fallbackPlanId];
   return null;
 }
@@ -97,7 +109,7 @@ paymentsRouter.get('/config', (req, res) => {
   });
 });
 
-paymentsRouter.post('/create-order', async (req, res) => {
+paymentsRouter.post('/create-order', authenticate, async (req, res) => {
   const { planId } = req.body;
   const plan = PLANS[planId];
   if (!plan) return res.status(400).json({ error: 'باقة غير صالحة' });
@@ -116,7 +128,7 @@ paymentsRouter.post('/create-order', async (req, res) => {
         purchase_units: [{
           amount: { currency_code: 'USD', value: plan.priceUSD.toString() },
           description: plan.name,
-          custom_id: plan.id,
+          custom_id: makeCustomId(plan.id, req.user.id),
           reference_id: plan.id,
         }]
       })
@@ -124,6 +136,7 @@ paymentsRouter.post('/create-order', async (req, res) => {
     const order = await r.json();
     if (order.error) return res.status(500).json({ error: order.error_description || 'فشل إنشاء الدفع' });
 
+    track('checkout_start');
     res.json({ orderId: order.id, plan, amount: plan.priceUSD, currency: 'USD' });
   } catch (e) {
     logger.error('create-order failed', { error: e.message });
@@ -172,7 +185,28 @@ paymentsRouter.post('/capture-order', async (req, res) => {
     }
 
     // Real PayPal capture — verification against PayPal, never trust the client id.
+    // Preflight the order first so ownership is verified BEFORE any money moves:
+    // an order created by another account must never activate this user's plan.
     const ppToken = await getPayPalToken();
+    try {
+      const or = await fetch(PAYPAL_API + '/v2/checkout/orders/' + orderId, {
+        headers: { 'Authorization': 'Bearer ' + ppToken },
+      });
+      const orderInfo = await or.json();
+      if (orderInfo.error) {
+        logger.warn('capture: order lookup failed', { orderId, error: orderInfo.error });
+        return res.status(400).json({ error: 'تعذّر العثور على الطلب. أعد المحاولة.' });
+      }
+      const ownerId = orderOwnerId(orderInfo);
+      if (ownerId && ownerId !== decoded.id) {
+        logger.warn('capture: order owner mismatch — rejected', { orderId });
+        return res.status(403).json({ error: 'هذا الطلب لا يخص حسابك' });
+      }
+    } catch (e) {
+      logger.error('capture: order preflight failed', { error: e.message });
+      return res.status(502).json({ error: 'تعذّر التحقق من الطلب. حاول لاحقاً.' });
+    }
+
     const r = await fetch(PAYPAL_API + '/v2/checkout/orders/' + orderId + '/capture', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + ppToken, 'Content-Type': 'application/json' }
@@ -201,6 +235,7 @@ paymentsRouter.post('/capture-order', async (req, res) => {
     users[idx].subscriptionEnd = computeSubscriptionEnd();
     users[idx].paypalSubscriptionId = orderId;
     saveUsers(users);
+    track('purchase');
 
     res.json({ success: true, message: 'تم تفعيل الاشتراك بنجاح', subscription: paidPlan.id, plan: paidPlan.name, captureId: payment.captureId });
   } catch (e) {
@@ -294,21 +329,38 @@ paymentsRouter.post('/paypal-webhook', async (req, res) => {
   if (event.event_type === 'PAYMENT.CAPTURE.COMPLETED') {
     const resource = event.resource || {};
     const orderId = resource.supplementary_data?.related_ids?.order_id;
-    const plan = resource.custom_id ? PLANS[resource.custom_id] : null;
-    if (orderId) {
+    const parsed = parseCustomId(resource.custom_id);
+    const plan = parsed.planId ? PLANS[parsed.planId] : null;
+    const paid = parseFloat(resource.amount?.value);
+    const amountOk = !!plan && resource.amount?.currency_code === 'USD'
+      && Number.isFinite(paid) && Math.abs(paid - plan.priceUSD) <= 0.01;
+
+    if (!orderId) {
+      logger.warn('webhook: missing order id — ignored');
+    } else if (!amountOk) {
+      logger.warn('webhook amount/plan mismatch — not activating', { orderId, paid, expected: plan?.priceUSD, currency: resource.amount?.currency_code });
+    } else {
       const users = loadUsers();
-      const idx = users.findIndex(u => u.paypalSubscriptionId === orderId);
-      if (idx > -1) {
-        const paid = parseFloat(resource.amount?.value);
-        if (plan && resource.amount?.currency_code === 'USD' && Number.isFinite(paid) && Math.abs(paid - plan.priceUSD) <= 0.01) {
-          users[idx].subscription = plan.id;
-          users[idx].subscriptionStart = new Date().toISOString();
-          users[idx].subscriptionEnd = computeSubscriptionEnd();
-          saveUsers(users);
-          logger.info('webhook activated subscription', { email: users[idx].email, plan: plan.id });
-        } else {
-          logger.warn('webhook amount/plan mismatch — not activating', { orderId, paid, expected: plan?.priceUSD, currency: resource.amount?.currency_code });
-        }
+      // Resolve the buyer from the server-set custom_id (so a lost capture
+      // response cannot leave a paid user unactivated), with the stored order
+      // id as a fallback for legacy orders. Webhook signatures were verified
+      // above, so custom_id is trustworthy server-side data.
+      const idx = users.findIndex(u =>
+        (parsed.userId && u.id === parsed.userId) || u.paypalSubscriptionId === orderId
+      );
+      if (idx === -1) {
+        logger.warn('webhook: no matching user — not activating', { orderId });
+      } else if (users[idx].paypalSubscriptionId === orderId) {
+        // Idempotent: PayPal may retry deliveries; never extend twice for one order.
+        logger.info('webhook: order already activated — skipped', { orderId });
+      } else {
+        users[idx].subscription = plan.id;
+        users[idx].subscriptionStart = new Date().toISOString();
+        users[idx].subscriptionEnd = computeSubscriptionEnd();
+        users[idx].paypalSubscriptionId = orderId;
+        saveUsers(users);
+        track('webhook_activation');
+        logger.info('webhook activated subscription', { email: users[idx].email, plan: plan.id });
       }
     }
   }

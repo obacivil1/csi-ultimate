@@ -344,6 +344,10 @@
         <h3 style="margin-bottom:15px;color:var(--accent-hover);">👑 لوحة الأدمن</h3>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px;" id="adminStats"></div>
         <div style="border:1px solid var(--border-light);border-radius:10px;padding:14px;margin-bottom:18px;">
+          <h4 style="margin-bottom:12px;color:var(--accent-hover);">📊 قياس الإطلاق (آخر 14 يوماً — UTC)</h4>
+          <div id="adminMetrics"><p style="color:var(--text-muted);margin:0;">جاري التحميل...</p></div>
+        </div>
+        <div style="border:1px solid var(--border-light);border-radius:10px;padding:14px;margin-bottom:18px;">
           <h4 style="margin-bottom:6px;color:var(--accent-hover);">🕒 آخر التسجيلات</h4>
           <div id="adminRecentBody"></div>
         </div>
@@ -1120,8 +1124,51 @@ async function loadStats() {
   } catch(e) {}
 }
 
+// ── Launch metrics (aggregate counters only) ──
+async function loadMetrics() {
+  const box = document.getElementById('adminMetrics');
+  if (!box) return;
+  try {
+    const m = await API.get('/api/admin/metrics');
+    if (m.error) { box.innerHTML = '<p style="color:var(--danger);margin:0;">⚠️ ' + esc(m.error) + '</p>'; return; }
+    const t = m.totals || {};
+    const pct = (a, b) => b > 0 ? (Math.round((a / b) * 1000) / 10) + '%' : '—';
+    const cards = [
+      ['👁️ زيارات الرئيسية', t.visit_home || 0],
+      ['📈 مشاهدات التحليلات', t.view_insights || 0],
+      ['⬇️ تنزيلات العيّنة', t.download_sample || 0],
+      ['🆕 تسجيلات', t.signup || 0],
+      ['💳 بدء الدفع', t.checkout_start || 0],
+      ['✅ مشتريات', t.purchase || 0]
+    ];
+    const rows = (m.daily || []).slice().reverse();
+    box.innerHTML =
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:12px;">' +
+        cards.map(([label, val]) =>
+          '<div style="background:var(--bg);border:1px solid var(--border-light);border-radius:8px;padding:10px;text-align:center;">' +
+            '<div style="font-size:0.8em;color:var(--text-muted);margin-bottom:4px;">' + label + '</div>' +
+            '<div style="font-size:1.4em;font-weight:700;">' + Number(val).toLocaleString('en-US') + '</div>' +
+          '</div>'
+        ).join('') +
+      '</div>' +
+      '<p style="font-size:0.85em;color:var(--text-muted);margin:0 0 10px;">' +
+        'تحويل الزيارة → تسجيل: <strong>' + pct(t.signup || 0, t.visit_home || 0) + '</strong>' +
+        ' · تحويل التسجيل → شراء: <strong>' + pct(t.purchase || 0, t.signup || 0) + '</strong>' +
+        ' · عدّادات مجمّعة فقط (بلا IP أو معرّفات)' +
+      '</p>' +
+      (rows.length
+        ? '<div style="overflow-x:auto;"><table class="data-table" style="width:100%;font-size:0.8em;">' +
+            '<thead><tr><th>اليوم (UTC)</th><th>زيارات</th><th>تحليلات</th><th>عيّنة</th><th>تسجيلات</th><th>دفع</th><th>شراء</th></tr></thead><tbody>' +
+            rows.map(d => '<tr><td>' + esc(d.date) + '</td><td>' + (d.visit_home || 0) + '</td><td>' + (d.view_insights || 0) + '</td><td>' + (d.download_sample || 0) + '</td><td>' + (d.signup || 0) + '</td><td>' + (d.checkout_start || 0) + '</td><td>' + (d.purchase || 0) + '</td></tr>').join('') +
+            '</tbody></table></div>'
+        : '<p style="font-size:0.85em;color:var(--text-muted);margin:0;">لا توجد أحداث مسجّلة بعد.</p>');
+  } catch {
+    box.innerHTML = '<p style="color:var(--danger);margin:0;">⚠️ فشل تحميل القياسات</p>';
+  }
+}
+
 async function loadAdmin() {
-  await loadStats();
+  await Promise.all([loadStats(), loadMetrics()]);
   const tbody = document.getElementById('adminUsersBody');
   tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">جاري التحميل...</td></tr>';
   try {
@@ -1246,35 +1293,34 @@ function selectPlan(planId, el) {
   document.getElementById('selectedPlan').textContent = `✅ اخترت: ${names[planId]} — ${prices[planId]}`;
   
   const btn = document.getElementById('paypalButton');
-  btn.innerHTML = '<p style="color:#666;margin:10px 0;">⏳ جاري تجهيز الدفع...</p>';
+  const cardBtn = document.getElementById('cardButton');
+  btn.innerHTML = '<p style="color:var(--text-muted);margin:10px 0;">⏳ جاري تجهيز الدفع...</p>';
+  if (cardBtn) cardBtn.innerHTML = '';
 
-  API.post('/api/payments/create-order', { planId }).then(r => {
-    if (r.mock) {
-      const isAdmin = r.orderId.startsWith('ADMIN-');
-      btn.innerHTML = isAdmin ? `
-        <div style="text-align:center;">
-          <p style="margin:10px 0;font-size:0.9em;">🧪 اختبار عملية الدفع — سيتم محاكاة الدفع بدون خصم</p>
-          <button class="btn" onclick="mockPay('${planId}','${r.orderId}')" style="background:#0070BA;">🔁 تجربة الدفع</button>
-        </div>
-      ` : `
-        <p style="color:#FFA500;margin:10px 0;font-size:0.9em;">⚠️ PayPal غير مهيأ — للاختبار، اضغط تأكيد</p>
-        <button class="btn" onclick="mockPay('${planId}','${r.orderId}')" style="background:#28A745;">✅ تأكيد الاشتراك (وهمي)</button>
-      `;
-    } else if (typeof paypal !== 'undefined') {
-      btn.innerHTML = '<div id="paypalBtnContainer"></div>';
-      document.getElementById('cardButton').innerHTML = '<div id="paypalCardContainer"></div>';
-      renderPayPalBtn(planId);
-    } else {
-      btn.innerHTML = '<div id="paypalBtnContainer"></div>';
-      document.getElementById('cardButton').innerHTML = '<div id="paypalCardContainer"></div>';
-      API.get('/api/payments/config').then(cfg => {
-        const s = document.createElement('script');
-        s.src = 'https://www.paypal.com/sdk/js?client-id=' + cfg.clientId + '&currency=USD';
-        s.onload = () => renderPayPalBtn(planId);
-        document.head.appendChild(s);
-      });
+  const render = () => {
+    btn.innerHTML = '<div id="paypalBtnContainer"></div>';
+    if (cardBtn) cardBtn.innerHTML = '<div id="paypalCardContainer"></div>';
+    renderPayPalBtn(planId);
+  };
+
+  if (typeof paypal !== 'undefined') { render(); return; }
+
+  // Create the order only when the buyer actually clicks PayPal (createOrder
+  // below) — creating one here would leave a dangling order and double-count
+  // checkout intent in the launch metrics.
+  API.get('/api/payments/config').then(cfg => {
+    if (!cfg || !cfg.configured || !cfg.clientId) {
+      btn.innerHTML = '<p style="color:var(--danger);margin:10px 0;">⚠️ الدفع غير مهيأ حالياً. تواصل معنا لتفعيل اشتراكك.</p>';
+      return;
     }
-  }).catch(() => { btn.innerHTML = '<p style="color:var(--danger);">❌ فشل تحميل الدفع</p>'; });
+    const s = document.createElement('script');
+    s.src = 'https://www.paypal.com/sdk/js?client-id=' + cfg.clientId + '&currency=USD';
+    s.onload = render;
+    s.onerror = () => { btn.innerHTML = '<p style="color:var(--danger);margin:10px 0;">❌ تعذّر تحميل PayPal. حدّث الصفحة وحاول مجدداً.</p>'; };
+    document.head.appendChild(s);
+  }).catch(() => {
+    btn.innerHTML = '<p style="color:var(--danger);margin:10px 0;">❌ فشل تحميل إعدادات الدفع</p>';
+  });
 }
 
 function renderPayPalBtn(planId) {
@@ -1324,20 +1370,6 @@ async function redeemAdminCoupon() {
   } catch {
     showToast('❌ فشل تطبيق الكود', 'error');
     btn.disabled = false; btn.textContent = original;
-  }
-}
-
-async function mockPay(planId, orderId) {
-  const btn = document.querySelector('#paypalButton .btn');
-  btn.disabled = true; btn.innerHTML = 'جاري التفعيل... <span class="spinner"></span>';
-  const r = await API.post('/api/payments/capture-order', { orderId: orderId || ('MOCK-' + Date.now()), planId });
-  if (r.success) {
-    closeModal('upgradeModal');
-    showToast('✅ تم تفعيل الاشتراك (وهمي)', 'success');
-    setTimeout(() => location.reload(), 1500);
-  } else {
-    showToast('❌ ' + (r.error || 'فشل'), 'error');
-    btn.disabled = false; btn.textContent = '✅ تأكيد الاشتراك (وهمي)';
   }
 }
 

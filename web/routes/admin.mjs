@@ -3,6 +3,7 @@ import { authenticate, isAdmin, loadUsers, saveUsers } from '../middleware/auth.
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { register, getStore, setStore } from '../store.mjs';
+import { getMetrics } from '../metrics.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const adminRouter = Router();
@@ -17,6 +18,13 @@ function loadMessages() {
 function saveMessages(msgs) {
   setStore('messages', msgs);
 }
+
+// Launch-conversion counters (aggregate only): visited pages, signups, sample
+// downloads, checkout starts and completed purchases. Admin-only.
+adminRouter.get('/metrics', authenticate, (req, res) => {
+  if (!isAdmin(req.user?.email)) return res.status(403).json({ error: 'غير مصرح' });
+  res.json(getMetrics({ days: 14 }));
+});
 
 adminRouter.get('/users', authenticate, (req, res) => {
   if (!isAdmin(req.user?.email)) return res.status(403).json({ error: 'غير مصرح' });
