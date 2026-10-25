@@ -26,6 +26,7 @@ export const EVENTS = [
 
 let data = null;
 let timer = null;
+let remoteLoaded = false;
 
 function env() {
   const url = (process.env.UPSTASH_REDIS_REST_URL || '').trim().replace(/\/$/, '');
@@ -72,9 +73,14 @@ export async function initMetrics() {
     try {
       const raw = await upstash(['GET', KEY]);
       data = merge(raw ? JSON.parse(raw) : null);
+      remoteLoaded = true;
       return;
     } catch (e) {
+      // Never overwrite lifetime counters with an empty blob after a failed
+      // load: skip remote persistence for this process instead.
       console.error(`[metrics] upstream load failed: ${e.message}`);
+      data = emptyData();
+      return;
     }
   }
   try {
@@ -82,12 +88,17 @@ export async function initMetrics() {
   } catch {
     data = emptyData();
   }
+  remoteLoaded = true;
 }
 
 function persist() {
   const json = JSON.stringify(data);
   const { url, token } = env();
   if (url && token) {
+    if (!remoteLoaded) {
+      console.error('[metrics] skipping save — initial remote load failed (existing counters preserved)');
+      return Promise.resolve();
+    }
     return upstash(['SET', KEY, json]).catch(e => console.error(`[metrics] save failed: ${e.message}`));
   }
   try {
