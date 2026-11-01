@@ -2,5 +2,5 @@
 -r requirements.txt
 reportlab==5.0.0
 arabic-reshaper==3.0.1
-python-bidi==0.6.11
+python-bidi==0.6.12
 cryptography==49.0.0
